@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build
+web/dist/
+
+# Environment
+web/.env.local
+.env.local
+
+# Firebase
+.firebase/
+
+# OS
+.DS_Store
+
+# Logs
+*.log

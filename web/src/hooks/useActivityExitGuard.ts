@@ -1,0 +1,71 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useBlocker } from 'react-router-dom'
+
+type UseActivityExitGuardOptions = {
+  when: boolean
+  onConfirmExit: () => void
+}
+
+export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGuardOptions) {
+  const allowNavigationRef = useRef(false)
+  const [showModal, setShowModal] = useState(false)
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      when &&
+      !allowNavigationRef.current &&
+      currentLocation.pathname !== nextLocation.pathname,
+  )
+
+  useEffect(() => {
+    if (!when) return
+
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (allowNavigationRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [when])
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setShowModal(true)
+    }
+  }, [blocker.state])
+
+  useEffect(() => {
+    if (!when) {
+      allowNavigationRef.current = false
+    }
+  }, [when])
+
+  const allowNavigation = useCallback(() => {
+    allowNavigationRef.current = true
+  }, [])
+
+  const stay = useCallback(() => {
+    setShowModal(false)
+    if (blocker.state === 'blocked') {
+      blocker.reset()
+    }
+  }, [blocker])
+
+  const confirmExit = useCallback(() => {
+    onConfirmExit()
+    allowNavigationRef.current = true
+    setShowModal(false)
+    if (blocker.state === 'blocked') {
+      blocker.proceed()
+    }
+  }, [blocker, onConfirmExit])
+
+  return {
+    modalOpen: showModal || blocker.state === 'blocked',
+    stay,
+    confirmExit,
+    allowNavigation,
+  }
+}
