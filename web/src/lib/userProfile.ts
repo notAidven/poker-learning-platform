@@ -86,6 +86,11 @@ export async function completeProfileSetup(
 
   const usernameKey = normalizeUsername(username)
   const displayUsername = username.trim()
+  // Firebase Auth normalizes the account email to lowercase, so
+  // `request.auth.token.email` is always lowercase. firestore.rules pins the
+  // usernames doc to `email == request.auth.token.email`, so we must write the
+  // lowercased form or the hardened rule rejects the whole transaction.
+  const normalizedEmail = email.trim().toLowerCase()
 
   const userRef = doc(db, 'users', uid)
   const usernameRef = doc(db, 'usernames', usernameKey)
@@ -98,7 +103,7 @@ export async function completeProfileSetup(
 
     const userSnap = await transaction.get(userRef)
     const base: UserProfile = {
-      email,
+      email: normalizedEmail,
       username: displayUsername,
       profileAnimal,
       profileComplete: true,
@@ -121,6 +126,6 @@ export async function completeProfileSetup(
       })
     }
 
-    transaction.set(usernameRef, { uid, email })
+    transaction.set(usernameRef, { uid, email: normalizedEmail })
   })
 }
