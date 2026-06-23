@@ -7,37 +7,35 @@ export const skillCheck5: SkillCheckDefinition = {
     {
       id: 'q1',
       prompt:
-        'In the birthday problem (365-day year), about how many people are needed so a shared birthday is **more likely than not**?',
-      choices: [
-        { id: 'a', label: '10' },
-        { id: 'b', label: '23' },
-        { id: 'c', label: '50' },
-        { id: 'd', label: '183' },
-      ],
-      correctChoiceId: 'b',
+        'Birthday problem: simulate groups of **23 people** until you see the match rate near 50%, then **enter 23** — the classic threshold group size.',
+      interaction: 'birthday-simulation',
+      config: { people: 23, minTrials: 8 },
+      answer: { count: 23 },
+      incorrectFeedback:
+        'With 23 people, a shared birthday becomes more likely than not — enter **23**.',
     },
     {
       id: 'q2',
-      prompt: 'How many **derangements** $D_3$ exist for 3 letters (no letter in its correct envelope)?',
-      choices: [
-        { id: 'a', label: '1' },
-        { id: 'b', label: '2' },
-        { id: 'c', label: '3' },
-        { id: 'd', label: '6' },
-      ],
-      correctChoiceId: 'b',
+      prompt:
+        'Place letters **A, B, C** into envelopes **A, B, C** so **no letter matches** its envelope. Build one derangement, then **enter $D_3$**.',
+      interaction: 'derangement-match',
+      config: { labels: ['A', 'B', 'C'] },
+      answer: { derangementCount: 2 },
+      incorrectFeedback:
+        'Only BCA and CAB work — there are **2** derangements. Enter $D_3 = 2$.',
     },
     {
       id: 'q3',
       prompt:
-        '3 letters are randomly placed in 3 envelopes. $|D_3| = 2$ and $|\\Omega| = 3! = 6$. What is $P(\\text{no letter correct})$?',
-      choices: [
-        { id: 'a', label: '$\\frac{1}{6}$' },
-        { id: 'b', label: '$\\frac{1}{3}$' },
-        { id: 'c', label: '$\\frac{1}{2}$' },
-        { id: 'd', label: '$\\frac{2}{3}$' },
-      ],
-      correctChoiceId: 'b',
+        '**3 distinct guests** sit in **3 chairs** (every ordering is one outcome). Seat everyone, then **enter $3!$** — total placements in $\\Omega$.',
+      interaction: 'seat-permutation',
+      config: {
+        guests: ['X', 'Y', 'Z'],
+        countLabel: 'Enter |Ω| = 3! — total permutations:',
+      },
+      answer: { totalArrangements: 6 },
+      incorrectFeedback:
+        '$|\\Omega| = 3! = 6$ permutations. With $D_3 = 2$, $P(\\text{all wrong}) = \\frac{2}{6} = \\frac{1}{3}$.',
     },
   ],
 }

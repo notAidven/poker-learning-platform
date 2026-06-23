@@ -1,4 +1,8 @@
+import { coinPatterns, countHeads } from '../../types/lesson'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
+
+const exactlyTwoHeadsFour = coinPatterns(4).filter((p) => countHeads(p) === 2)
+const exactlyTwoHeadsThree = coinPatterns(3).filter((p) => countHeads(p) === 2)
 
 export const skillCheck4: SkillCheckDefinition = {
   lessonId: '4',
@@ -6,37 +10,44 @@ export const skillCheck4: SkillCheckDefinition = {
   questions: [
     {
       id: 'q1',
-      prompt: 'Choose **2 from 5** (order does not matter). What is $\\binom{5}{2}$?',
-      choices: [
-        { id: 'a', label: '5' },
-        { id: 'b', label: '10' },
-        { id: 'c', label: '20' },
-        { id: 'd', label: '25' },
-      ],
-      correctChoiceId: 'b',
+      prompt:
+        'Choose **2 students from 5** for a committee (order does not matter). Select any 2, then **enter $\\binom{5}{2}$**.',
+      interaction: 'select-combination',
+      config: {
+        items: ['Ana', 'Ben', 'Cara', 'Dan', 'Eve'],
+        selectCount: 2,
+      },
+      answer: { combinationCount: 10 },
+      incorrectFeedback:
+        'Order does not matter — enter $\\binom{5}{2} = \\frac{5 \\times 4}{2 \\times 1} = 10$.',
     },
     {
       id: 'q2',
-      prompt: 'Flip **4 fair coins**. How many patterns have **exactly 2 heads** ($|A| = \\binom{4}{2}$)?',
-      choices: [
-        { id: 'a', label: '4' },
-        { id: 'b', label: '6' },
-        { id: 'c', label: '8' },
-        { id: 'd', label: '16' },
-      ],
-      correctChoiceId: 'b',
+      prompt:
+        'Flip **4 fair coins**. **Event $A$:** exactly **2 heads**. Select every pattern in $A$, then **enter $|A|$**.',
+      interaction: 'coin-event-grid',
+      config: {
+        coins: 4,
+        maxHeads: 4,
+        countLabel: 'Enter |A| — patterns with exactly 2 heads?',
+      },
+      answer: { patterns: exactlyTwoHeadsFour, count: 6 },
+      incorrectFeedback:
+        'Select all patterns with exactly 2 H’s — there are $\\binom{4}{2} = 6$ — then enter $|A| = 6$.',
     },
     {
       id: 'q3',
       prompt:
-        'Flip **3 fair coins**. $|A| = 3$ patterns with exactly 2 heads and $|\\Omega| = 8$. What is $P(A)$?',
-      choices: [
-        { id: 'a', label: '$\\frac{1}{8}$' },
-        { id: 'b', label: '$\\frac{3}{8}$' },
-        { id: 'c', label: '$\\frac{1}{2}$' },
-        { id: 'd', label: '$\\frac{3}{4}$' },
-      ],
-      correctChoiceId: 'b',
+        'Flip **3 fair coins**. **Event $A$:** exactly **2 heads**. Select every pattern in $A$, then **enter $|A|$** ($|\\Omega| = 8$).',
+      interaction: 'coin-event-grid',
+      config: {
+        coins: 3,
+        maxHeads: 3,
+        countLabel: 'Enter |A| — patterns with exactly 2 heads?',
+      },
+      answer: { patterns: exactlyTwoHeadsThree, count: 3 },
+      incorrectFeedback:
+        'Patterns with exactly 2 H’s: HHT, HTH, THH — enter $|A| = 3$, so $P(A) = \\frac{3}{8}$.',
     },
   ],
 }

@@ -1,10 +1,10 @@
 import { lessons } from '../data/lessons'
-import { getLesson, hasLessonContent } from '../data/lessonContent'
+import { hasLessonContent } from '../data/lessonContent'
+import { hasSkillCheck } from '../data/skillCheckContent'
 import { auth } from './firebase'
-import { awardLessonCompletion } from './gamificationFirestore'
+import { awardLessonCompletion, touchStreakForActivity } from './gamificationFirestore'
 import { computeLessonXp, type LessonXpBreakdown } from './gamification'
 import { loadLessonSession, clearLessonSession } from './lessonSession'
-import { isProblemStep } from '../types/lesson'
 import {
   defaultLessonStats,
   ensureStatsCache,
@@ -34,6 +34,7 @@ export function getLessonStats(lessonId: string): LessonStats {
       skillCheckCorrect: null,
       skillCheckTotal: null,
       pendingProblemAttempts: null,
+      pendingProblemStepIds: null,
       lastLessonXpBreakdown: null,
     }
   }
@@ -59,6 +60,7 @@ export function saveLessonFinished(
   lessonId: string,
   lessonAccuracy: number,
   problemAttempts: Record<string, number>,
+  problemStepIds: string[],
 ) {
   const map = ensureStatsCache()
   const current = map[lessonId] ?? defaultLessonStats()
@@ -68,6 +70,7 @@ export function saveLessonFinished(
     lessonFinished: true,
     lessonAccuracy,
     pendingProblemAttempts: { ...problemAttempts },
+    pendingProblemStepIds: [...problemStepIds],
   }
   writeStatsMap(map)
   queueStatsFirestoreWrite(lessonId, map[lessonId])
@@ -79,49 +82,88 @@ export type SkillCheckSaveResult = {
   xpBreakdown: LessonXpBreakdown | null
 }
 
-export function saveSkillCheckResult(
+/**
+ * Shared completion path used by both a passed skill check and a lesson that
+ * has no skill check. Updates local stats and, for signed-in users, hands off
+ * to the atomic Firestore transaction (`awardLessonCompletion`) which:
+ *   - awards XP exactly once (idempotent via the persisted `xpAwarded` flag), and
+ *   - advances the streak once per day for any qualifying pass (incl. retakes).
+ */
+function applyLessonCompletion(
   lessonId: string,
-  correct: number,
-  total: number,
+  skillCheckCorrect: number | null,
+  skillCheckTotal: number | null,
 ): SkillCheckSaveResult {
   const map = ensureStatsCache()
   const current = map[lessonId] ?? defaultLessonStats()
   const isFirstCompletion = !current.completed
 
-  const lesson = getLesson(lessonId)
-  const problemStepIds =
-    lesson?.steps.filter(isProblemStep).map((step) => step.id) ?? []
+  const problemStepIds = current.pendingProblemStepIds ?? Object.keys(current.pendingProblemAttempts ?? {})
   const xpBreakdown = isFirstCompletion
     ? computeLessonXp(current.pendingProblemAttempts ?? {}, problemStepIds)
     : null
 
-  map[lessonId] = {
+  const nextStats: LessonStats = {
     ...current,
     attempted: true,
     lessonFinished: true,
     completed: true,
-    skillCheckCorrect: correct,
-    skillCheckTotal: total,
+    skillCheckCorrect,
+    skillCheckTotal,
     pendingProblemAttempts: null,
     lastLessonXpBreakdown: xpBreakdown
       ? { base: xpBreakdown.base, bonus: xpBreakdown.bonus }
       : current.lastLessonXpBreakdown,
   }
+  map[lessonId] = nextStats
   writeStatsMap(map)
   syncCompletedIds(map)
-  queueStatsFirestoreWrite(lessonId, map[lessonId])
   notifyProgressUpdated(true)
 
-  if (isFirstCompletion && xpBreakdown) {
-    const uid = auth.currentUser?.uid
-    if (uid) {
-      void awardLessonCompletion(uid, xpBreakdown.total).catch((err) => {
-        console.warn('Failed to award lesson completion XP:', err)
-      })
-    }
+  const uid = auth.currentUser?.uid
+  if (uid) {
+    // The transaction persists the progress doc (completion + xpAwarded), so we
+    // intentionally do NOT also queue a separate stats write here — that would
+    // race with the atomic award. XP is added only on the first completion;
+    // a retake just refreshes stats and advances the streak.
+    void awardLessonCompletion(uid, lessonId, xpBreakdown?.total ?? 0, nextStats).catch(
+      (err) => {
+        console.warn('Failed to award lesson completion:', err)
+      },
+    )
   }
 
   return { isFirstCompletion, xpBreakdown }
+}
+
+export function saveSkillCheckResult(
+  lessonId: string,
+  correct: number,
+  total: number,
+): SkillCheckSaveResult {
+  return applyLessonCompletion(lessonId, correct, total)
+}
+
+/**
+ * Complete a lesson that has no skill check (latent-safety, QA P2-3 / item #12).
+ * Finishing the lesson body IS the full completion: mark completed and award XP
+ * directly. All 6 current lessons have skill checks, so this is a guard for
+ * future content rather than a path exercised today.
+ */
+export function completeLessonWithoutSkillCheck(lessonId: string): SkillCheckSaveResult {
+  return applyLessonCompletion(lessonId, null, null)
+}
+
+/**
+ * Credit a qualifying daily activity that should keep a streak alive without
+ * awarding XP — e.g. finishing a review of an already-completed lesson (P1 #4).
+ */
+export function recordReviewActivity(): void {
+  const uid = auth.currentUser?.uid
+  if (!uid) return
+  void touchStreakForActivity(uid).catch((err) => {
+    console.warn('Failed to record review activity for streak:', err)
+  })
 }
 
 /** @deprecated Use saveSkillCheckResult after the skill check */
@@ -143,11 +185,30 @@ export function isLessonInProgress(lessonId: string, stepCount: number): boolean
 
 export function getNextLessonPath(completedIds: string[]): string {
   for (const lesson of lessons) {
-    if (!completedIds.includes(lesson.id) && hasLessonContent(lesson.id)) {
-      return `/lesson/${lesson.id}`
+    if (completedIds.includes(lesson.id) || !hasLessonContent(lesson.id)) continue
+
+    // If the lesson body is already finished but its skill check is still
+    // pending, send the learner straight to the skill check rather than
+    // restarting the lesson body (QA deferred / item #9).
+    const stats = getLessonStats(lesson.id)
+    if (stats.lessonFinished && !stats.completed && hasSkillCheck(lesson.id)) {
+      return `/lesson/${lesson.id}/skill-check`
     }
+    return `/lesson/${lesson.id}`
   }
   return '/course'
+}
+
+/**
+ * Sequential-unlock check shared by Home, the course path, and the route guards
+ * (PM P1 #5). Lesson 1 is always open; lesson N requires lesson N-1 completed.
+ * Unknown lesson ids return `true` so the page's own "not found" view can handle
+ * them instead of redirecting.
+ */
+export function isLessonUnlocked(lessonId: string, completedIds: string[]): boolean {
+  const index = lessons.findIndex((l) => l.id === lessonId)
+  if (index <= 0) return true
+  return completedIds.includes(lessons[index - 1].id)
 }
 
 export function skillCheckScorePercent(stats: LessonStats): number | null {
@@ -174,6 +235,7 @@ export function resetLessonForRestart(lessonId: string) {
     lessonFinished: false,
     lessonAccuracy: null,
     pendingProblemAttempts: null,
+    pendingProblemStepIds: null,
   }
   writeStatsMap(map)
   queueStatsFirestoreWrite(lessonId, map[lessonId])

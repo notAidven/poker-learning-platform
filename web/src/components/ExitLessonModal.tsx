@@ -4,9 +4,21 @@ type ExitLessonModalProps = {
   open: boolean
   onStay: () => void
   onExit: () => void
+  title?: string
+  description?: string
+  stayLabel?: string
+  exitLabel?: string
 }
 
-export function ExitLessonModal({ open, onStay, onExit }: ExitLessonModalProps) {
+export function ExitLessonModal({
+  open,
+  onStay,
+  onExit,
+  title = 'Leave this lesson?',
+  description = 'Your progress is saved — you can pick up right where you left off anytime.',
+  stayLabel = 'Stay',
+  exitLabel = 'Leave',
+}: ExitLessonModalProps) {
   const stayRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -64,11 +76,10 @@ export function ExitLessonModal({ open, onStay, onExit }: ExitLessonModalProps) 
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="exit-lesson-title" className="text-lg font-bold text-slate-900">
-          Leave this lesson?
+          {title}
         </h2>
         <p id="exit-lesson-desc" className="mt-2 text-sm text-slate-600">
-          If you leave now, you will lose any XP earned in this attempt and have to restart the
-          lesson from the beginning.
+          {description}
         </p>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -78,14 +89,14 @@ export function ExitLessonModal({ open, onStay, onExit }: ExitLessonModalProps) 
             onClick={onStay}
             className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
-            Stay
+            {stayLabel}
           </button>
           <button
             type="button"
             onClick={onExit}
             className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Exit lesson
+            {exitLabel}
           </button>
         </div>
       </div>

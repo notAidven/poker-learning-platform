@@ -9,7 +9,6 @@ import {
   skillCheckScorePercent,
   type LessonStats,
 } from '../lib/lessonProgress'
-import { getLesson } from '../data/lessonContent'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 
@@ -22,9 +21,7 @@ type LessonPathModalProps = {
 
 export function LessonPathModal({ lesson, status, open, onClose }: LessonPathModalProps) {
   const stats = getLessonStats(lesson.id)
-  const content = getLesson(lesson.id)
-  const stepCount = content?.steps.length ?? 1
-  const inProgress = isLessonInProgress(lesson.id, stepCount)
+  const inProgress = isLessonInProgress(lesson.id, 100)
   const hasContent = hasLessonContent(lesson.id)
 
   useEffect(() => {

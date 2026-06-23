@@ -18,23 +18,49 @@ service cloud.firestore {
             && data.lastActivityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
     }
 
+    // Whitelist of every field the app ever writes to a user doc. Blocks
+    // injecting arbitrary fields (M1).
+    function validUserFields(data) {
+      return data.keys().hasOnly([
+        'email', 'username', 'profileAnimal', 'profileComplete',
+        'level', 'totalXp', 'streak', 'lastActivityDate', 'createdAt'
+      ]);
+    }
+
+    // Identity fields can never change to a different value once set (M1).
+    function identityFieldsUnchanged(prev, next) {
+      return (!('email' in prev) || prev.email == null || next.email == prev.email)
+        && (!('username' in prev) || prev.username == null || next.username == prev.username);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && validGamificationFields(request.resource.data);
-      allow update: if isOwner(userId) && validGamificationFields(request.resource.data);
+      allow create: if isOwner(userId)
+        && validUserFields(request.resource.data)
+        && validGamificationFields(request.resource.data);
+      allow update: if isOwner(userId)
+        && validUserFields(request.resource.data)
+        && validGamificationFields(request.resource.data)
+        && identityFieldsUnchanged(resource.data, request.resource.data);
 
       match /lessonProgress/{lessonId} {
         allow read, write: if isOwner(userId);
       }
     }
 
-    // Public read enables username → email lookup before sign-in.
+    // Username → email lookup before sign-in. Single-doc `get` is public so the
+    // login form can resolve an exact username, but `list` is blocked so the
+    // collection can't be enumerated / bulk-harvested (C1). Each doc holds only
+    // {uid, email}; create is pinned to the caller's own uid + token email and
+    // that exact key set (C1/M2).
     match /usernames/{username} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if false;
       allow create: if request.auth != null
         && !exists(/databases/$(database)/documents/usernames/$(username))
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.email is string;
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(['uid', 'email']);
       allow update, delete: if false;
     }
   }

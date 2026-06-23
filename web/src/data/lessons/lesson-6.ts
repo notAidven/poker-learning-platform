@@ -15,6 +15,14 @@ export const lesson6: LessonDefinition = {
 - **Intersection** $A \\cap B$: in **both** $A$ and $B$.
 
 Venn diagrams shade these regions. Count outcomes in each region before computing probabilities.`,
+      visual: {
+        type: 'two-events',
+        labelOmega: 'Ω',
+        labelA: 'A',
+        labelB: 'B',
+        intersectionOutcomes: ['A ∩ B'],
+        caption: 'Overlap = A ∩ B · both circles together = A ∪ B · outside A (still in Ω) = Aᶜ',
+      },
     },
     {
       type: 'problem',
@@ -164,6 +172,16 @@ $$|A \\cup B| = |A| + |B| - |A \\cap B|$$
 **Complement:** $|A^c| = |\\Omega| - |A|$ when every outcome is either in $A$ or not.
 
 These formulas turn Venn regions into counts — then $P(A) = |A|/|\\Omega|$ as before.`,
+      visual: {
+        type: 'two-events',
+        labelOmega: 'Ω',
+        labelA: 'A',
+        labelB: 'B',
+        eventOutcomes: ['8'],
+        outcomes: ['8', '6'],
+        intersectionOutcomes: ['4'],
+        caption: 'Regions: 8 + 4 + 6 = 18 = |A| + |B| − |A ∩ B| (overlap counted once)',
+      },
     },
     {
       type: 'problem',
@@ -177,7 +195,7 @@ These formulas turn Venn regions into counts — then $P(A) = |A|/|\\Omega|$ as 
         intersection: 4,
         universeSize: 30,
         task: 'enter-complement',
-        countLabel: 'Enter $|A^c| = |\\Omega| - |A|$:',
+        countLabel: 'Enter |Aᶜ| = |Ω| − |A|:',
       },
       answer: { count: 18 },
       feedback: {

@@ -15,6 +15,12 @@ export const lesson3: LessonDefinition = {
 **Step 3:** **Multiply** — each choice at stage 1 can pair with **every** choice at stage 2.
 
 If there are more stages, keep multiplying. This is the **multiplication principle** — it builds $|\\Omega|$ when you cannot (or should not) write every outcome by hand.`,
+      visual: {
+        type: 'sample-space',
+        labelOmega: 'Ω (shirt · pants)',
+        outcomes: ['R·K', 'R·B', 'Bl·K', 'Bl·B', 'G·K', 'G·B'],
+        caption: 'Each shirt pairs with every pants: 3 × 2 = 6 outfits fill Ω',
+      },
     },
     {
       type: 'problem',
@@ -113,6 +119,12 @@ $$|\\Omega| = n \\times (n-1) \\times \\cdots \\times 1 = n!$$
 Read $n!$ as “$n$ factorial.” Examples: $3! = 6$, $4! = 24$.
 
 This is the same multiplication principle — each stage (chair) has one fewer guest available than the stage before.`,
+      visual: {
+        type: 'sample-space',
+        labelOmega: 'Ω (seat A, B, C)',
+        outcomes: ['ABC', 'ACB', 'BAC', 'BCA', 'CAB', 'CBA'],
+        caption: '3 distinct guests in 3 chairs: 3! = 3 × 2 × 1 = 6 orderings',
+      },
     },
     {
       type: 'problem',

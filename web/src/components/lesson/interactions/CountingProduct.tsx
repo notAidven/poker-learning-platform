@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { CountingProductAnswer, CountingProductConfig } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { FractionAnswerInput } from './FractionAnswerInput'
 import { NumericAnswerInput } from './NumericAnswerInput'
+import { fractionMatches, hasValidFractionInput } from './fractionAnswer'
 import { countMatches, hasValidCountInput } from './numericAnswer'
 
 type CountingProductProps = InteractionProps & {
@@ -18,9 +20,12 @@ export function CountingProduct({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: CountingProductProps) {
   const [picks, setPicks] = useState<(string | null)[]>(() => config.stages.map(() => null))
   const [countInput, setCountInput] = useState('')
+  const [fractionNum, setFractionNum] = useState('')
+  const [fractionDen, setFractionDen] = useState('')
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
 
@@ -28,6 +33,9 @@ export function CountingProduct({
   const countLabel =
     config.countLabel ??
     'Now enter |Ω| — how many total combinations (multiply the options at each stage)?'
+  const probabilityLabel =
+    config.probabilityLabel ?? 'What is P(ω) for one outcome? (fraction)'
+  const requiresProbability = answer.probability !== undefined
 
   function pick(stageIndex: number, option: string) {
     if (locked) return
@@ -38,11 +46,16 @@ export function CountingProduct({
     })
   }
 
+  function probabilityValid() {
+    if (!requiresProbability || !answer.probability) return true
+    return fractionMatches(fractionNum, fractionDen, answer.probability)
+  }
+
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
     const allPicked = picks.every((p) => p !== null)
-    if (allPicked && countMatches(countInput, answer.product)) {
+    if (allPicked && countMatches(countInput, answer.product) && probabilityValid()) {
       setSolved(true)
       onCorrect()
     } else {
@@ -56,10 +69,14 @@ export function CountingProduct({
     setSolved(false)
     setPicks(config.stages.map(() => null))
     setCountInput('')
+    setFractionNum('')
+    setFractionDen('')
   }
 
   const allPicked = picks.every((p) => p !== null)
-  const canSubmit = allPicked && hasValidCountInput(countInput) && !locked
+  const countReady = hasValidCountInput(countInput)
+  const fractionReady = !requiresProbability || hasValidFractionInput(fractionNum, fractionDen)
+  const canSubmit = allPicked && countReady && fractionReady && !locked
 
   return (
     <div className="space-y-5">
@@ -78,7 +95,7 @@ export function CountingProduct({
                   type="button"
                   disabled={locked}
                   onClick={() => pick(si, opt)}
-                  className={`chip-3d rounded-xl border px-4 py-2 text-sm font-medium ${
+                  className={`chip-3d min-h-11 rounded-xl border px-4 py-2 text-sm font-medium ${
                     active
                       ? 'border-brand-600 bg-brand-100 chip-3d--active'
                       : 'border-slate-200 bg-white hover:border-brand-300'
@@ -93,13 +110,26 @@ export function CountingProduct({
       ))}
 
       {allPicked && (
-        <NumericAnswerInput
-          id="counting-product-total"
-          label={countLabel}
-          value={countInput}
-          onChange={setCountInput}
-          disabled={locked}
-        />
+        <>
+          <NumericAnswerInput
+            id="counting-product-total"
+            label={countLabel}
+            value={countInput}
+            onChange={setCountInput}
+            disabled={locked}
+          />
+          {requiresProbability && countReady && (
+            <FractionAnswerInput
+              id="counting-product-probability"
+              label={probabilityLabel}
+              numerator={fractionNum}
+              denominator={fractionDen}
+              onNumeratorChange={setFractionNum}
+              onDenominatorChange={setFractionDen}
+              disabled={locked}
+            />
+          )}
+        </>
       )}
 
       {!allPicked && (
@@ -112,6 +142,7 @@ export function CountingProduct({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

@@ -15,3 +15,9 @@ export function countMatches(raw: string, expected: number): boolean {
   const entered = parseCountInput(raw)
   return entered !== null && entered === expected
 }
+
+/** Whole-number percent answer with ±tolerance (default 1). */
+export function percentMatches(raw: string, expectedPercent: number, tolerance = 1): boolean {
+  const entered = parseCountInput(raw)
+  return entered !== null && Math.abs(entered - expectedPercent) <= tolerance
+}

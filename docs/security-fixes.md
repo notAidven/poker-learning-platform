@@ -1,0 +1,94 @@
+# Security Fixes — Pre-production Hardening
+
+**Date:** 2026-06-23
+**Scope:** Findings from the security audit + PM review, applied to `firestore.rules`, the auth/progress-sync layer, and the E2E bypass. Build stays green (`cd web && npm run build`).
+
+> ⚠️ **Rules are NOT auto-deployed.** Editing `firestore.rules` only changes the local file. You must deploy it (see [Deploy steps](#deploy-steps)) for any of the C1/M1/M2 protections below to take effect in production.
+
+---
+
+## C1 (critical) — Public `usernames` collection leaked email + allowed bulk harvest
+
+**Before:** `match /usernames/{username} { allow read: if true; }` with each doc storing `{ uid, email }`. `allow read` covers **both** single-doc `get` **and** collection `list`, so anyone could enumerate the whole collection and scrape every user's email.
+
+**After (`firestore.rules`):**
+
+- Split read into `allow get: if true;` (single exact-key lookup — keeps username→email login working) and `allow list: if false;` (blocks enumeration / bulk harvest).
+- Tightened `create` so a doc can only be written by its owner, pinned to the caller's own uid and verified token email, and limited to exactly the `{uid, email}` keys:
+
+  ```
+  allow create: if request.auth != null
+    && !exists(/databases/$(database)/documents/usernames/$(username))
+    && request.resource.data.uid == request.auth.uid
+    && request.resource.data.email == request.auth.token.email
+    && request.resource.data.keys().hasOnly(['uid', 'email']);
+  ```
+
+  This also closes **M2** (the old rule only checked `email is string`, so any string could be written).
+
+### Residual risk + recommended future step (not done now)
+
+Single-doc `get` is still public, so the login form can resolve `username → email` before sign-in. That means an attacker who already **knows a username** can still confirm it exists and read the associated email via a direct `get`. Fully hiding the email requires moving the lookup server-side:
+
+- Add a **Cloud Function `resolveUsername`** that takes a username and either returns nothing or mints a **custom auth token** (custom-token login), so the email never leaves the backend and the `usernames` docs no longer need to store an email at all.
+- This was intentionally **not** implemented now because Cloud Functions require the **Blaze (paid) plan** and we're avoiding adding paid infra for this pass.
+
+### Also recommended: enable **Firebase App Check**
+
+Turn on [App Check](https://firebase.google.com/docs/app-check) (reCAPTCHA Enterprise / v3 for web) and enforce it on Firestore. This attests requests come from our real app and blocks scripted abuse of the still-public `get` path and the auth endpoints — a cheap, high-leverage mitigation that complements the rules above.
+
+---
+
+## M1 (medium) — Firestore user-doc validation + identity integrity
+
+**Before:** `users/{userId}` writes only validated gamification field *types*; any extra field could be injected, and `email`/`username` could be overwritten.
+
+**After (`firestore.rules`):**
+
+- `validUserFields(...)` whitelists exactly the fields the app writes: `email, username, profileAnimal, profileComplete, level, totalXp, streak, lastActivityDate, createdAt` — applied on both `create` and `update`.
+- `identityFieldsUnchanged(...)` pins `email` and `username` on `update`: once set (non-null) they can't change to a different value. Profile setup still works (initial null→value set is allowed); the gamification transaction (`totalXp/level/streak/lastActivityDate`) leaves identity fields untouched.
+
+---
+
+## XP integrity (PM P1 #6) — idempotent lesson-completion XP
+
+**Before:** XP was awarded in a `users/{uid}`-only transaction, gated only by the **local** `completed` flag. A stale second device, a double-tap, or a re-completion could double-award.
+
+**After (`gamificationFirestore.ts` / `lessonProgress.ts`):** completion now runs in **one** transaction that reads `users/{uid}/lessonProgress/{lessonId}`, writes `completed: true` + an `xpAwarded: true` flag, and bumps `users/{uid}` XP **only if `xpAwarded` was not already set**. The persisted flag (not local state) is the single source of truth, so re-completion / double-tap / multi-device can never double-award. The base+bonus amount logic is unchanged.
+
+---
+
+## H1 (high) — Shared-device account contamination
+
+**Before:** logout never cleared local progress, and `syncProgressOnAuth` uploaded the previous user's local data into a newly-signed-in user's empty Firestore.
+
+**After:** added `clearLocalProgress()` (`lessonProgressStore.ts`) and call it on logout (`AuthContext.logOut`), at the start of `syncProgressOnAuth(null)`, and when the authenticated uid changes from a different previous uid. Local→remote upload now happens **only** for a genuine pre-auth/anonymous session (no real uid synced earlier this session); a freshly signed-in different account clears local and treats remote as the source of truth.
+
+---
+
+## H2 (high) — E2E auth bypass could ship to prod
+
+**Before:** `E2E_BYPASS_AUTH = import.meta.env.VITE_E2E_BYPASS_AUTH === 'true'` — a leaked env var in a prod build would disable auth.
+
+**After (`e2eBypass.ts`):** `E2E_BYPASS_AUTH = import.meta.env.DEV && import.meta.env.VITE_E2E_BYPASS_AUTH === 'true'`. `import.meta.env.DEV` is statically `false` after `vite build`, so a production bundle can never enable the bypass (the dead branch is also tree-shaken out).
+
+---
+
+## L1 (low) — Login username enumeration
+
+**Before:** an unknown username threw `"No account found with that username."`, distinguishing it from a wrong password.
+
+**After (`AuthContext.signInWithUsername`):** both unknown-username and wrong-password now surface the identical generic `"Incorrect username or password."` (the password cases already mapped to that in `authErrors.ts`).
+
+---
+
+## Deploy steps
+
+These rules changes have **no effect** until deployed:
+
+```bash
+# from the repository root (where firestore.rules + firebase.json live)
+npx -y firebase-tools@latest deploy --only firestore:rules
+```
+
+After deploy, verify in the [Firestore Rules console](https://console.firebase.google.com/project/brilliant-alpha-clone-54be9/firestore/rules) and smoke-test: username login still works, and a `list` on `usernames` is denied.

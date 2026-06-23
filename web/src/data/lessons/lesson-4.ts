@@ -17,6 +17,12 @@ When order **does** matter, use permutations ($n!$). When it **does not**, count
 $$\\binom{n}{k} = \\frac{n!}{k!(n-k)!}$$
 
 Read $\\binom{n}{k}$ as “$n$ choose $k$.”`,
+      visual: {
+        type: 'sample-space',
+        labelOmega: 'Ω (pick 2 of A, B, C)',
+        outcomes: ['{A, B}', '{A, C}', '{B, C}'],
+        caption: 'Order ignored, so {A,B} = {B,A}: C(3,2) = 3 committees in Ω',
+      },
     },
     {
       type: 'problem',
@@ -111,6 +117,14 @@ If you later ask “probability of one specific topping trio,” event $A$ has $
 So $|A| = \\binom{n}{k}$ and $P(\\text{exactly } k \\text{ heads}) = \\binom{n}{k} / 2^n$.
 
 The **binomial theorem** expands $(x+y)^n$ using these same coefficients.`,
+      visual: {
+        type: 'event-subset',
+        labelOmega: 'Ω (3 flips)',
+        labelA: 'A: exactly 2 H',
+        outcomes: ['HHH', 'HHT', 'HTH', 'HTT', 'THH', 'THT', 'TTH', 'TTT'],
+        eventOutcomes: ['HHT', 'HTH', 'THH'],
+        caption: 'Choose which 2 of 3 flips are heads: |A| = C(3,2) = 3 of |Ω| = 8',
+      },
     },
     {
       type: 'problem',

@@ -27,6 +27,7 @@ export function VennDiagram({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: VennDiagramProps) {
   const setA = config.setALabel ?? 'A'
   const setB = config.setBLabel ?? 'B'
@@ -50,8 +51,8 @@ export function VennDiagram({
   const countLabel =
     config.countLabel ??
     (task === 'enter-complement'
-      ? `Enter $|${setA}^c|$ — outcomes in the universe but **not** in ${setA}:`
-      : `Enter $|${setA} \\cup ${setB}|$ using inclusion–exclusion:`)
+      ? `Enter |${setA}ᶜ| — outcomes in the universe but not in ${setA}:`
+      : `Enter |${setA} ∪ ${setB}| using inclusion–exclusion:`)
 
   const expectedRegions = useMemo(() => {
     if (task === 'select-intersection') return ['ab'] as VennRegion[]
@@ -118,10 +119,10 @@ export function VennDiagram({
     <div className="space-y-5">
       <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
         <p>
-          $|{setA}| = {sizeA}$ · $|{setB}| = {sizeB}$ · $|{setA} \\cap {setB}| = {intersection}$
+          |{setA}| = {sizeA} · |{setB}| = {sizeB} · |{setA} ∩ {setB}| = {intersection}
         </p>
         {config.universeSize !== undefined && (
-          <p className="mt-1">$|\\Omega| = {config.universeSize}$</p>
+          <p className="mt-1">|Ω| = {config.universeSize}</p>
         )}
         <p className="mt-2 text-xs text-slate-500">
           Regions: {setA} only = {aOnly}, {setB} only = {bOnly}, overlap = {intersection}
@@ -200,6 +201,7 @@ export function VennDiagram({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

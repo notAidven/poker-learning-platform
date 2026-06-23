@@ -1,14 +1,13 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { ExitLessonModal } from '../components/ExitLessonModal'
 import { LessonPlayer } from '../components/lesson/LessonPlayer'
-import { getLesson, hasLessonContent } from '../data/lessonContent'
+import { hasLessonContent, loadLesson } from '../data/lessonContent'
 import { lessons } from '../data/lessons'
+import type { LessonDefinition } from '../types/lesson'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
-import {
-  abandonLessonAttempt,
-  getLessonStats,
-} from '../lib/lessonProgress'
+import { useCompletedLessons } from '../hooks/useCompletedLessons'
+import { getLessonStats, isLessonUnlocked } from '../lib/lessonProgress'
 import { loadLessonSession } from '../lib/lessonSession'
 
 type LessonProgressState = {
@@ -19,35 +18,75 @@ type LessonProgressState = {
 export function LessonPage() {
   const { lessonId = '' } = useParams()
   const meta = lessons.find((l) => l.id === lessonId)
-  const content = getLesson(lessonId)
   const stats = getLessonStats(lessonId)
+  const { completedIds } = useCompletedLessons()
+  const [content, setContent] = useState<LessonDefinition | undefined>()
+  const [contentLoading, setContentLoading] = useState(() => hasLessonContent(lessonId))
+
+  useEffect(() => {
+    if (!hasLessonContent(lessonId)) {
+      setContent(undefined)
+      setContentLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setContentLoading(true)
+    void loadLesson(lessonId).then((lesson) => {
+      if (!cancelled) {
+        setContent(lesson)
+        setContentLoading(false)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [lessonId])
+
   const stepCount = content?.steps.length ?? 1
   const savedSession = useMemo(
     () => loadLessonSession(lessonId, stepCount),
     [lessonId, stepCount],
   )
 
+  // A completed lesson opened here is a "review": it always restarts from step 0,
+  // so its persisted session is ignored for progress tracking.
   const [progress, setProgress] = useState<LessonProgressState>(() => ({
-    stepIndex: savedSession.stepIndex,
-    solvedCount: savedSession.solvedStepIds.length,
+    stepIndex: stats.completed ? 0 : savedSession.stepIndex,
+    solvedCount: stats.completed ? 0 : savedSession.solvedStepIds.length,
   }))
+  const [lessonFinished, setLessonFinished] = useState(
+    stats.completed ? false : stats.lessonFinished,
+  )
 
+  useEffect(() => {
+    if (!content) return
+    setProgress({
+      stepIndex: stats.completed ? 0 : savedSession.stepIndex,
+      solvedCount: stats.completed ? 0 : savedSession.solvedStepIds.length,
+    })
+  }, [content, stats.completed, savedSession.stepIndex, savedSession.solvedStepIds.length])
+
+  const isReview = stats.completed
+  const hasLiveProgress = progress.stepIndex > 0 || progress.solvedCount > 0
+  const hasSavedProgress =
+    savedSession.stepIndex > 0 || savedSession.solvedStepIds.length > 0
+
+  // Guard while a run is active: an in-progress lesson, or a review of a completed
+  // lesson. Reviews always restart from step 0, so only live progress counts there.
   const isMidLesson =
     Boolean(content) &&
-    !stats.completed &&
-    !stats.lessonFinished &&
-    (progress.stepIndex > 0 ||
-      progress.solvedCount > 0 ||
-      savedSession.stepIndex > 0 ||
-      savedSession.solvedStepIds.length > 0)
+    !lessonFinished &&
+    (isReview ? hasLiveProgress : hasLiveProgress || hasSavedProgress)
 
-  const handleConfirmExit = useCallback(() => {
-    abandonLessonAttempt(lessonId)
-  }, [lessonId])
-
+  // Resume-where-you-left-off: leaving mid-lesson preserves the in-progress
+  // session (localStorage + Firestore) so the next visit reopens at the saved
+  // stepIndex + solvedStepIds. We deliberately do NOT clear the session here —
+  // confirming "Leave" just allows navigation away. (Completed-lesson reviews
+  // still restart from step 0; that reset lives in LessonPlayer.)
   const { modalOpen, stay, confirmExit, allowNavigation } = useActivityExitGuard({
     when: isMidLesson,
-    onConfirmExit: handleConfirmExit,
   })
 
   const handleProgressChange = useCallback((next: LessonProgressState) => {
@@ -65,7 +104,13 @@ export function LessonPage() {
     )
   }
 
-  if (!content || !hasLessonContent(lessonId)) {
+  // Sequential unlock on direct URLs (P1 #5): redirect to the course path if the
+  // prior lesson hasn't been completed yet.
+  if (!isLessonUnlocked(lessonId, completedIds)) {
+    return <Navigate to="/course" replace />
+  }
+
+  if (!hasLessonContent(lessonId)) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-xl font-bold">{meta.title}</h1>
@@ -75,6 +120,14 @@ export function LessonPage() {
         <Link to="/course" className="mt-4 inline-block text-brand-600">
           ← Back to course
         </Link>
+      </div>
+    )
+  }
+
+  if (contentLoading || !content) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-500" aria-live="polite">
+        Loading lesson…
       </div>
     )
   }
@@ -98,6 +151,7 @@ export function LessonPage() {
         <LessonPlayer
           lesson={content}
           onProgressChange={handleProgressChange}
+          onLessonFinished={() => setLessonFinished(true)}
           allowNavigation={allowNavigation}
         />
       </div>

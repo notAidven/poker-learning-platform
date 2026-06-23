@@ -2,18 +2,7 @@ import { useState } from 'react'
 import type { ProblemStep } from '../../types/lesson'
 import { MathContent } from './MathContent'
 import { WhyExplanationModal } from './WhyExplanationModal'
-import { CoinEventGrid } from './interactions/CoinEventGrid'
-import { CoinFlipLab } from './interactions/CoinFlipLab'
-import { CountingProduct } from './interactions/CountingProduct'
-import { DieSampleSpace } from './interactions/DieSampleSpace'
-import { FairnessScale } from './interactions/FairnessScale'
-import { SeatPermutation } from './interactions/SeatPermutation'
-import { SelectCombination } from './interactions/SelectCombination'
-import { CoinFlipProbability } from './interactions/CoinFlipProbability'
-import { BirthdaySimulation } from './interactions/BirthdaySimulation'
-import { DerangementMatch } from './interactions/DerangementMatch'
-import { VennDiagram } from './interactions/VennDiagram'
-import { TwoDiceGrid } from './interactions/TwoDiceGrid'
+import { InteractionRenderer } from './InteractionRenderer'
 
 type ProblemStepViewProps = {
   step: ProblemStep
@@ -74,54 +63,18 @@ export function ProblemStepView({
   const locked = solved || alreadySolved
   const whyContent = step.feedback.why ?? step.feedback.correct
 
-  const interactionProps = {
-    onCorrect: handleCorrect,
-    onIncorrect: handleIncorrect,
-    onAttemptReset: handleAttemptReset,
-    disabled: locked,
-    initialSolved: alreadySolved,
-  }
-
   return (
     <div className="space-y-5">
       <MathContent className="text-base font-medium text-slate-900">{step.prompt}</MathContent>
 
-      {step.interaction === 'coin-flip-lab' && (
-        <CoinFlipLab key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'die-sample-space' && (
-        <DieSampleSpace key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'fairness-scale' && (
-        <FairnessScale key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'two-dice-grid' && (
-        <TwoDiceGrid key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'coin-event-grid' && (
-        <CoinEventGrid key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'counting-product' && (
-        <CountingProduct key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'seat-permutation' && (
-        <SeatPermutation key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'select-combination' && (
-        <SelectCombination key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'coin-flip-probability' && (
-        <CoinFlipProbability key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'birthday-simulation' && (
-        <BirthdaySimulation key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'derangement-match' && (
-        <DerangementMatch key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
-      {step.interaction === 'venn-diagram' && (
-        <VennDiagram key={step.id} config={step.config} answer={step.answer} {...interactionProps} />
-      )}
+      <InteractionRenderer
+        step={step}
+        onCorrect={handleCorrect}
+        onIncorrect={handleIncorrect}
+        onAttemptReset={handleAttemptReset}
+        disabled={locked}
+        initialSolved={alreadySolved}
+      />
 
       {showIncorrect && !solved && (
         <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">

@@ -52,6 +52,22 @@ export function computeLessonXp(
   return { base, bonus, total: base + bonus }
 }
 
+/**
+ * Skill-check pass policy (PM P1 #3 — product-tunable, documented in
+ * `docs/qa-review.md`). A learner must answer at least 2 of 3 correctly to
+ * pass: mark the lesson `completed`, award XP, and unlock the next lesson.
+ * Below the threshold they keep their lesson body progress and may retake the
+ * skill check freely.
+ */
+export const SKILL_CHECK_PASS_RATIO = 2 / 3
+
+/** True when a skill-check score is a pass (≥ 2/3, e.g. 2 of 3 correct). */
+export function isSkillCheckPassing(correct: number, total: number): boolean {
+  if (total <= 0) return true
+  // Small epsilon so 2/3 (0.6666…) reliably clears the 2/3 threshold.
+  return correct / total >= SKILL_CHECK_PASS_RATIO - 1e-9
+}
+
 /** Calendar days use Central American Time (UTC−6, no DST). */
 export const STREAK_TIMEZONE = 'America/Guatemala'
 

@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { PageLoader } from './ui/PageLoader'
 
 type ProtectedRouteProps = {
   requireProfile?: boolean
@@ -9,11 +10,7 @@ export function ProtectedRoute({ requireProfile = true }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-slate-500">Loading…</p>
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -31,11 +28,7 @@ export function GuestOnlyRoute() {
   const { user, profile, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-slate-500">Loading…</p>
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (user && profile?.profileComplete) {
@@ -53,11 +46,7 @@ export function ProfileSetupRoute() {
   const { user, profile, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-slate-500">Loading…</p>
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {

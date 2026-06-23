@@ -3,7 +3,12 @@ import { useBlocker } from 'react-router-dom'
 
 type UseActivityExitGuardOptions = {
   when: boolean
-  onConfirmExit: () => void
+  /**
+   * Optional side effect to run when the user confirms leaving (e.g. a genuine
+   * reset). A normal mid-lesson leave omits this so the saved session is kept
+   * and the learner resumes where they left off.
+   */
+  onConfirmExit?: () => void
 }
 
 export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGuardOptions) {
@@ -54,7 +59,7 @@ export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGua
   }, [blocker])
 
   const confirmExit = useCallback(() => {
-    onConfirmExit()
+    onConfirmExit?.()
     allowNavigationRef.current = true
     setShowModal(false)
     if (blocker.state === 'blocked') {

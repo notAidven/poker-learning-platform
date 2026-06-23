@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDocs,
   serverTimestamp,
@@ -53,6 +54,9 @@ export async function fetchAllLessonProgress(
                 ),
               )
             : null,
+        pendingProblemStepIds: Array.isArray(data.pendingProblemStepIds)
+          ? data.pendingProblemStepIds.filter((id) => typeof id === 'string')
+          : null,
         lastLessonXpBreakdown:
           data.lastLessonXpBreakdown &&
           typeof data.lastLessonXpBreakdown.base === 'number' &&
@@ -91,13 +95,20 @@ export async function writeLessonProgress(
   lessonId: string,
   payload: LessonProgressPayload,
 ): Promise<void> {
-  const body: FirestoreLessonProgressDoc = {
-    ...payload.stats,
-    updatedAt: serverTimestamp() as Timestamp,
-  }
+  const hasActiveSession = Boolean(
+    payload.session &&
+      (payload.session.stepIndex > 0 || payload.session.solvedStepIds.length > 0),
+  )
 
-  if (payload.session && (payload.session.stepIndex > 0 || payload.session.solvedStepIds.length > 0)) {
-    body.session = payload.session
+  // Loose record so we can write deleteField() to actually remove a stale session
+  // under merge:true — omitting the key would otherwise leave the old value behind,
+  // resurrecting mid-lesson progress after a completed-lesson review restart,
+  // skill-check reset, or lesson completion. (A normal mid-lesson leave keeps the
+  // session so the learner resumes where they left off, so no clear happens then.)
+  const body: Record<string, unknown> = {
+    ...payload.stats,
+    updatedAt: serverTimestamp(),
+    session: hasActiveSession ? payload.session : deleteField(),
   }
 
   await setDoc(progressDoc(uid, lessonId), body, { merge: true })

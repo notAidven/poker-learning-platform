@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { LessonMeta } from '../data/lessons'
 import { LessonPathModal } from './LessonPathModal'
+import { CheckIcon, LockIcon, StarIcon } from './icons'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 
@@ -11,10 +12,20 @@ type CoursePathProps = {
 }
 
 const NODE_RADIUS = 36
+/** Node radius including the 5px status ring — keeps nodes clear of the edges */
+const NODE_OUTER_RADIUS = 42
 const ROW_HEIGHT = 132
+const LABEL_GAP = 12
+/** Smallest width a side label may shrink to before we rely on wrap/clamp */
+const MIN_LABEL_WIDTH = 64
+/** Largest label width — matches the previous sm:max-w-[11rem] look */
+const MAX_LABEL_WIDTH = 176
 
-/** Horizontal offset from center — Duolingo-style zigzag down the path */
-const PATH_OFFSETS = [0, 84, -84, 84, -84, 0]
+/** Zigzag direction per row (sign only) — Duolingo-style path down the page.
+ *  The magnitude is derived from the live width so nodes + connectors stay aligned. */
+const PATH_DIRECTIONS = [0, 1, -1, 1, -1, 0]
+/** Zigzag amplitude as a fraction of the track width on roomy layouts */
+const OFFSET_RATIO = 0.21
 
 function getLessonStatus(
   lesson: LessonMeta,
@@ -29,9 +40,29 @@ function getLessonStatus(
   return 'locked'
 }
 
+/** Horizontal zigzag offset (px) for a row, clamped so the node (with its ring)
+ *  and its outer label both stay inside the current track width at every breakpoint. */
+function offsetFor(index: number, width: number) {
+  const dir = PATH_DIRECTIONS[index] ?? 0
+  if (dir === 0 || width <= 0) return 0
+  const ideal = OFFSET_RATIO * width
+  const maxByNode = width / 2 - NODE_OUTER_RADIUS
+  const maxByLabel = width / 2 - NODE_RADIUS - LABEL_GAP - MIN_LABEL_WIDTH
+  const max = Math.max(0, Math.min(maxByNode, maxByLabel))
+  return dir * Math.min(ideal, max)
+}
+
+/** Outer space available for a row's side label (px), given its node position. */
+function labelWidthFor(index: number, width: number) {
+  if (width <= 0) return MAX_LABEL_WIDTH
+  const center = width / 2 + offsetFor(index, width)
+  const outerEdge = offsetFor(index, width) >= 0 ? width - center : center
+  return Math.min(MAX_LABEL_WIDTH, Math.max(0, outerEdge - NODE_RADIUS - LABEL_GAP))
+}
+
 function nodeCenter(index: number, width: number) {
   return {
-    x: width / 2 + (PATH_OFFSETS[index] ?? 0),
+    x: width / 2 + offsetFor(index, width),
     y: index * ROW_HEIGHT + NODE_RADIUS + 20,
   }
 }
@@ -44,74 +75,91 @@ function connectorPath(from: number, to: number, width: number) {
 }
 
 export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
-  const width = 400
   const height = lessons.length * ROW_HEIGHT + 56
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<{
     lesson: LessonMeta
     status: LessonStatus
   } | null>(null)
 
+  // Measure the actual track width so the SVG connectors and the DOM lesson
+  // nodes share ONE pixel coordinate system at every breakpoint.
+  useLayoutEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+    const measure = () => setWidth(el.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
       <div className="relative mx-auto w-full max-w-md rounded-[2rem] bg-gradient-to-b from-sky-50/80 via-white to-violet-50/50 px-2 py-10 sm:max-w-lg sm:px-6">
-        <svg
-          className="pointer-events-none absolute inset-x-0 top-10 w-full overflow-visible"
-          height={height}
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="xMidYMin meet"
-          aria-hidden
-        >
-          {lessons.slice(0, -1).map((_, i) => {
-            const from = getLessonStatus(lessons[i], i, lessons, completedIds)
-            const active = from === 'completed' || from === 'current'
-            return (
-              <path
-                key={i}
-                d={connectorPath(i, i + 1, width)}
-                fill="none"
-                stroke={active ? '#60a5fa' : '#cbd5e1'}
-                strokeWidth={10}
-                strokeLinecap="round"
-                opacity={active ? 1 : 0.85}
-              />
-            )
-          })}
-        </svg>
+        <div ref={trackRef} className="relative mx-auto w-full" style={{ height }}>
+          <svg
+            className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            viewBox={`0 0 ${Math.max(width, 1)} ${height}`}
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            {width > 0 &&
+              lessons.slice(0, -1).map((_, i) => {
+                const from = getLessonStatus(lessons[i], i, lessons, completedIds)
+                const active = from === 'completed' || from === 'current'
+                return (
+                  <path
+                    key={i}
+                    d={connectorPath(i, i + 1, width)}
+                    fill="none"
+                    stroke={active ? '#60a5fa' : '#cbd5e1'}
+                    strokeWidth={10}
+                    strokeLinecap="round"
+                    opacity={active ? 1 : 0.85}
+                  />
+                )
+              })}
+          </svg>
 
-        <ol className="relative m-0 list-none p-0" style={{ minHeight: height }}>
-          {lessons.map((lesson, index) => {
-            const status = getLessonStatus(lesson, index, lessons, completedIds)
-            const offset = PATH_OFFSETS[index] ?? 0
-            const isLast = index === lessons.length - 1
-            const labelOnRight = offset >= 0
+          <ol className="relative m-0 list-none p-0" style={{ height }}>
+            {lessons.map((lesson, index) => {
+              const status = getLessonStatus(lesson, index, lessons, completedIds)
+              const center = nodeCenter(index, width)
+              const isLast = index === lessons.length - 1
+              const labelOnRight = offsetFor(index, width) >= 0
 
-            return (
-              <li
-                key={lesson.id}
-                className="absolute left-1/2 flex items-center gap-3"
-                style={{
-                  top: index * ROW_HEIGHT + 20,
-                  transform: `translateX(calc(-50% + ${offset}px))`,
-                }}
-              >
-                {!labelOnRight && (
-                  <LessonSideLabel lesson={lesson} status={status} align="right" />
-                )}
+              return (
+                <li
+                  key={lesson.id}
+                  className="absolute"
+                  style={{
+                    left: width > 0 ? center.x : '50%',
+                    top: center.y,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <div className="relative flex items-center justify-center">
+                    <PathNode
+                      lesson={lesson}
+                      status={status}
+                      isLast={isLast}
+                      onSelect={() => setSelectedLesson({ lesson, status })}
+                    />
 
-                <PathNode
-                  lesson={lesson}
-                  status={status}
-                  isLast={isLast}
-                  onSelect={() => setSelectedLesson({ lesson, status })}
-                />
-
-                {labelOnRight && (
-                  <LessonSideLabel lesson={lesson} status={status} align="left" />
-                )}
-              </li>
-            )
-          })}
-        </ol>
+                    <LessonSideLabel
+                      lesson={lesson}
+                      status={status}
+                      side={labelOnRight ? 'right' : 'left'}
+                      width={width > 0 ? labelWidthFor(index, width) : undefined}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </div>
       </div>
 
       {selectedLesson && (
@@ -129,17 +177,25 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
 function LessonSideLabel({
   lesson,
   status,
-  align,
+  side,
+  width,
 }: {
   lesson: LessonMeta
   status: LessonStatus
-  align: 'left' | 'right'
+  side: 'left' | 'right'
+  width?: number
 }) {
+  // Absolutely positioned next to the node so the node's center stays exactly on
+  // the connector attach point. An explicit width (the measured outer space) makes
+  // the label wrap to fill that space instead of collapsing to its longest word.
+  const position =
+    side === 'right' ? 'left-full ml-3 text-left' : 'right-full mr-3 text-right'
   return (
     <p
-      className={`max-w-[9.5rem] text-xs font-semibold leading-snug sm:max-w-[11rem] sm:text-sm ${
-        align === 'right' ? 'text-right' : 'text-left'
-      } ${status === 'locked' ? 'text-slate-400' : 'text-slate-800'}`}
+      className={`pointer-events-none absolute top-1/2 line-clamp-4 -translate-y-1/2 text-xs font-semibold leading-snug sm:text-sm ${position} ${
+        status === 'locked' ? 'text-slate-400' : 'text-slate-800'
+      }`}
+      style={{ width, maxWidth: width }}
     >
       {lesson.title}
     </p>
@@ -171,11 +227,11 @@ function PathNode({
 
   const content =
     status === 'completed' ? (
-      <CheckIcon />
+      <CheckIcon className="h-8 w-8" strokeWidth={3} />
     ) : status === 'locked' ? (
-      <LockIcon />
+      <LockIcon className="h-6 w-6" />
     ) : isLast ? (
-      <StarIcon />
+      <StarIcon className="h-8 w-8" />
     ) : (
       <span className="text-2xl font-bold">{lesson.id}</span>
     )
@@ -196,33 +252,5 @@ function PathNode({
         )}
       </div>
     </button>
-  )
-}
-
-function CheckIcon() {
-  return (
-    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-      <path
-        fillRule="evenodd"
-        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-        clipRule="evenodd"
-      />
-    </svg>
-  )
-}
-
-function StarIcon() {
-  return (
-    <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.2 22 12 18.56 5.8 22 7 14.14l-5-4.87 7.1-1.01L12 2z" />
-    </svg>
   )
 }

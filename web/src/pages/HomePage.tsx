@@ -6,6 +6,19 @@ import { useAuth } from '../contexts/AuthContext'
 import { useCompletedLessons } from '../hooks/useCompletedLessons'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
 import { getNextLessonPath } from '../lib/lessonProgress'
+import { Badge } from '../components/ui/Badge'
+import { buttonVariants } from '../components/ui/Button'
+import { NightPanel } from '../components/ui/NightPanel'
+import { StatToken } from '../components/ui/StatToken'
+import { cx } from '../components/ui/cx'
+import {
+  CheckIcon,
+  DiceIcon,
+  FlameIcon,
+  LockIcon,
+  StarIcon,
+  TrendingUpIcon,
+} from '../components/icons'
 
 export function HomePage() {
   const { profile } = useAuth()
@@ -21,124 +34,209 @@ export function HomePage() {
     return completedIds.includes(lessons[index - 1].id)
   }
 
-  return (
-    <div className="space-y-8">
-      <section className="rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-6 text-white shadow-lg sm:p-8">
-        <p className="text-sm font-medium text-brand-100">{course.title}</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-4xl">
-          {course.heroLine}
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm text-brand-100 sm:text-base">
-          {course.heroDescription}
-        </p>
+  const nextIndex = lessons.findIndex(
+    (lesson, index) =>
+      lessonUnlocked(index) && hasLessonContent(lesson.id) && !completedIds.includes(lesson.id),
+  )
+  const completedCount = lessons.filter((l) => completedIds.includes(l.id)).length
+  const startedJourney = completedCount > 0 || streak > 0 || totalXp > 0
 
-        <div className="mt-6 flex flex-col gap-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link
-              to={continueTo}
-              className="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
-            >
-              Continue learning
-            </Link>
-            <div className="flex flex-wrap items-center gap-4 rounded-xl bg-white/10 px-4 py-3 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-xl" aria-hidden>
-                  🔥
-                </span>
-                <div>
-                  <p className="text-brand-100">Streak</p>
-                  <p className="text-lg font-bold">{streak}</p>
-                </div>
-              </div>
-              <div className="h-8 w-px bg-white/20" aria-hidden />
-              <div>
-                <p className="text-brand-100">Level</p>
-                <p className="text-lg font-bold">{levelProgress.level}</p>
-              </div>
-              <div className="h-8 w-px bg-white/20" aria-hidden />
-              <div>
-                <p className="text-brand-100">XP</p>
-                <p className="text-lg font-bold">{totalXp}</p>
-              </div>
+  return (
+    <div className="space-y-10">
+      <NightPanel className="p-6 sm:p-9 lg:p-10">
+        <div className="grid items-center gap-8 lg:grid-cols-[1.35fr_1fr]">
+          <div className="anim-fade-up">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gold-300 ring-1 ring-inset ring-white/15">
+              {course.title}
+            </span>
+            <h1 className="mt-4 font-display text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
+              {course.heroLine}
+            </h1>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+              {course.heroDescription}
+            </p>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link to={continueTo} className={buttonVariants({ variant: 'gold', size: 'lg' })}>
+                {startedJourney ? 'Continue learning' : 'Start the course'}
+                <span aria-hidden>→</span>
+              </Link>
+              <Link to="/course" className={buttonVariants({ variant: 'glass', size: 'lg' })}>
+                View the path
+              </Link>
             </div>
           </div>
 
-          <div className="rounded-xl bg-white/10 px-4 py-3">
-            <div className="flex items-center justify-between text-xs font-medium text-brand-100">
-              <span>Level {levelProgress.level}</span>
-              <span>
-                {levelProgress.xpInLevel} / {levelProgress.xpToNext} XP to level{' '}
-                {levelProgress.level + 1}
-              </span>
-            </div>
-            <div
-              className="mt-2 h-2 overflow-hidden rounded-full bg-white/20"
-              role="progressbar"
-              aria-valuenow={levelProgress.progressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Progress to next level"
-            >
-              <div
-                className="h-full rounded-full bg-white transition-all duration-500"
-                style={{ width: `${levelProgress.progressPercent}%` }}
+          <div
+            className="anim-fade-up rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5"
+            style={{ animationDelay: '120ms' }}
+          >
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+              Your progress
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-2.5">
+              <StatToken
+                icon={<FlameIcon className="h-6 w-6" />}
+                value={streak}
+                label="Day streak"
+                accent="gold"
+                orientation="col"
+                delayMs={180}
               />
+              <StatToken
+                icon={<TrendingUpIcon className="h-6 w-6" />}
+                value={levelProgress.level}
+                label="Level"
+                accent="sky"
+                orientation="col"
+                delayMs={260}
+              />
+              <StatToken
+                icon={<StarIcon className="h-6 w-6" />}
+                value={totalXp}
+                label="Total XP"
+                accent="brand"
+                orientation="col"
+                delayMs={340}
+              />
+            </div>
+
+            <div className="mt-3 rounded-2xl border border-white/10 bg-night-950/40 p-4">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="font-semibold text-white/85">Level {levelProgress.level}</span>
+                <span className="tnum text-white/55">
+                  {levelProgress.xpInLevel} / {levelProgress.xpToNext} XP to level{' '}
+                  {levelProgress.level + 1}
+                </span>
+              </div>
+              <div
+                className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-night-950/70 ring-1 ring-inset ring-white/10"
+                role="progressbar"
+                aria-valuenow={levelProgress.progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Level ${levelProgress.level} progress`}
+              >
+                <div
+                  className="xp-meter-fill h-full rounded-full transition-[width] duration-700"
+                  style={{ width: `${Math.max(levelProgress.progressPercent, 4)}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </NightPanel>
 
       <section>
-        <div className="mb-4 flex items-end justify-between gap-4">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">Your course</h2>
-            <p className="text-sm text-slate-500">{course.courseSummary}</p>
+            <h2 className="font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
+              Your course
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{course.courseSummary}</p>
           </div>
-          <Link to="/course" className="text-sm font-semibold text-brand-600">
+          <Link
+            to="/course"
+            className="text-sm font-semibold text-brand-600 transition hover:text-brand-700"
+          >
             View path →
           </Link>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {lessons.map((lesson, index) => {
-            const unlocked = lessonUnlocked(index) && hasLessonContent(lesson.id)
-            const done = completedIds.includes(lesson.id)
-
-            if (unlocked) {
-              return (
-                <Link
-                  key={lesson.id}
-                  to={`/lesson/${lesson.id}`}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-300 hover:shadow-md"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                    Lesson {lesson.id}
-                    {done && ' · ✓'}
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold">{lesson.title}</h3>
-                  <p className="mt-2 text-sm text-slate-500">{lesson.unit}</p>
-                </Link>
-              )
-            }
-
-            return (
-              <article
-                key={lesson.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm opacity-90"
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                  Lesson {lesson.id}
-                </p>
-                <h3 className="mt-1 text-base font-semibold">{lesson.title}</h3>
-                <p className="mt-2 text-sm text-slate-500">{lesson.unit}</p>
-                <p className="mt-2 text-xs font-medium text-slate-400">
-                  {hasLessonContent(lesson.id) ? 'Locked' : 'Coming soon'}
-                </p>
-              </article>
-            )
-          })}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {lessons.map((lesson, index) => (
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
+              index={index}
+              unlocked={lessonUnlocked(index) && hasLessonContent(lesson.id)}
+              done={completedIds.includes(lesson.id)}
+              isNext={index === nextIndex}
+              hasContent={hasLessonContent(lesson.id)}
+            />
+          ))}
         </div>
       </section>
     </div>
+  )
+}
+
+type LessonCardProps = {
+  lesson: (typeof lessons)[number]
+  index: number
+  unlocked: boolean
+  done: boolean
+  isNext: boolean
+  hasContent: boolean
+}
+
+function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: LessonCardProps) {
+  const chip = (
+    <span
+      className={cx(
+        'grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-lg font-bold',
+        done && 'bg-emerald-500 text-white shadow-[0_2px_0_#059669]',
+        !done && unlocked && 'bg-brand-600 text-white shadow-[0_2px_0_var(--color-brand-800)]',
+        !done && !unlocked && 'bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200',
+      )}
+      aria-hidden
+    >
+      {done ? <CheckIcon className="h-6 w-6" /> : unlocked ? lesson.id : <LockIcon className="h-5 w-5" />}
+    </span>
+  )
+
+  const badge = done ? (
+    <Badge tone="emerald">Completed</Badge>
+  ) : isNext ? (
+    <Badge tone="gold">Up next</Badge>
+  ) : unlocked ? (
+    <Badge tone="brand">Open</Badge>
+  ) : hasContent ? (
+    <Badge tone="slate">Locked</Badge>
+  ) : (
+    <Badge tone="slate">Coming soon</Badge>
+  )
+
+  const inner = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        {chip}
+        {badge}
+      </div>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        {lesson.unit}
+      </p>
+      <h3 className="mt-1 text-base font-semibold leading-snug text-ink">{lesson.title}</h3>
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+        <DiceIcon className="h-3.5 w-3.5 shrink-0" />
+        {lesson.primaryInteraction}
+      </p>
+    </>
+  )
+
+  const baseCard = 'anim-fade-up flex flex-col rounded-2xl border p-5 shadow-card'
+
+  if (unlocked) {
+    return (
+      <Link
+        to={`/lesson/${lesson.id}`}
+        className={cx(
+          baseCard,
+          'group border-slate-200 bg-white transition hover:-translate-y-1 hover:border-brand-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2',
+        )}
+        style={{ animationDelay: `${index * 60}ms` }}
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <article
+      className={cx(baseCard, 'border-slate-200/80 bg-white/60')}
+      style={{ animationDelay: `${index * 60}ms` }}
+    >
+      {inner}
+    </article>
   )
 }

@@ -7,6 +7,7 @@ import {
 } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { DieFace } from './DieFace'
 import { NumericAnswerInput } from './NumericAnswerInput'
 import { countMatches, hasValidCountInput } from './numericAnswer'
 
@@ -23,6 +24,7 @@ export function TwoDiceGrid({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: TwoDiceGridProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [countInput, setCountInput] = useState('')
@@ -98,7 +100,9 @@ export function TwoDiceGrid({
               <th className="p-1" />
               {[1, 2, 3, 4, 5, 6].map((d) => (
                 <th key={d} className="p-1 font-semibold">
-                  {d}
+                  <span className="two-dice-header-face">
+                    <DieFace value={d} size="xs" />
+                  </span>
                 </th>
               ))}
             </tr>
@@ -106,18 +110,20 @@ export function TwoDiceGrid({
           <tbody>
             {rows.map((row, ri) => (
               <tr key={ri}>
-                <td className="p-1 font-semibold text-slate-500">{ri + 1}</td>
+                <td className="p-1 font-semibold text-slate-500">
+                  <span className="two-dice-header-face">
+                    <DieFace value={ri + 1} size="xs" />
+                  </span>
+                </td>
                 {row.map(({ key, d1, d2, sum }) => {
                   const active = selected.has(key)
                   const ok = submitted && answer.cells.includes(key)
                   const bad = submitted && active && !answer.cells.includes(key)
 
-                  let cls =
-                    'grid-cell-3d mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-lg border font-bold'
-                  if (ok) cls += ' border-emerald-500 bg-emerald-100 grid-cell-3d--selected'
-                  else if (bad) cls += ' border-red-400 bg-red-50'
-                  else if (active) cls += ' border-brand-600 bg-brand-100 grid-cell-3d--selected'
-                  else cls += ' border-slate-200 bg-white hover:border-brand-300 hover:bg-brand-50'
+                  let cls = 'grid-cell-3d mx-auto flex items-center justify-center'
+                  if (ok) cls += ' grid-cell-3d--ok'
+                  else if (bad) cls += ' grid-cell-3d--bad'
+                  else if (active) cls += ' grid-cell-3d--selected'
 
                   return (
                     <td key={key} className="p-0.5">
@@ -126,11 +132,10 @@ export function TwoDiceGrid({
                         disabled={locked}
                         onClick={() => toggle(key)}
                         className={cls}
+                        aria-label={`Outcome (${d1}, ${d2}), sum ${sum}`}
+                        aria-pressed={active}
                       >
-                        <span className="text-[10px] leading-none">
-                          {d1},{d2}
-                        </span>
-                        <span className="text-[9px] font-normal text-slate-400">={sum}</span>
+                        <span className="grid-cell-3d__sum">{sum}</span>
                       </button>
                     </td>
                   )
@@ -157,6 +162,7 @@ export function TwoDiceGrid({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

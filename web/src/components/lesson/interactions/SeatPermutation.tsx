@@ -18,6 +18,7 @@ export function SeatPermutation({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: SeatPermutationProps) {
   const { guests } = config
   const n = guests.length
@@ -147,6 +148,7 @@ export function SeatPermutation({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

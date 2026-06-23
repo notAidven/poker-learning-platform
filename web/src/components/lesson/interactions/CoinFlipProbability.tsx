@@ -24,6 +24,7 @@ export function CoinFlipProbability({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: CoinFlipProbabilityProps) {
   const { coins, targetHeads } = config
   const minTrials = config.minTrials ?? 12
@@ -38,7 +39,7 @@ export function CoinFlipProbability({
   const locked = disabled || submitted
   const countLabel =
     config.countLabel ??
-    `After experimenting, enter $|A|$ — how many patterns have exactly ${targetHeads} head${targetHeads === 1 ? '' : 's'}?`
+    `After experimenting, enter |A| — how many patterns have exactly ${targetHeads} head${targetHeads === 1 ? '' : 's'}?`
 
   const hits = trials.filter((t) => t.heads === targetHeads).length
   const empirical =
@@ -93,7 +94,7 @@ export function CoinFlipProbability({
     <div className="scene-3d space-y-5">
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="text-sm font-semibold text-slate-800">
-          Reference: all {coins} coin patterns ({allPatterns.length} outcomes in $\\Omega$)
+          Reference: all {coins} coin patterns ({allPatterns.length} outcomes in Ω)
         </p>
         <div className="mt-2 flex flex-wrap gap-1">
           {allPatterns.map((p) => {
@@ -179,6 +180,7 @@ export function CoinFlipProbability({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

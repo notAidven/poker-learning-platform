@@ -1,59 +1,69 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getAnimalEmoji } from '../data/animals'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
+import { AnimalAvatar } from '../components/AnimalAvatar'
+import { Button, buttonVariants } from '../components/ui/Button'
+import { NightPanel } from '../components/ui/NightPanel'
+import { StatToken } from '../components/ui/StatToken'
+import { FlameIcon, StarIcon, TrendingUpIcon } from '../components/icons'
 
 export function ProfilePage() {
   const { user, profile, logOut } = useAuth()
-  const levelProgress = getLevelProgress(profile?.totalXp ?? 0)
+  const totalXp = profile?.totalXp ?? 0
+  const levelProgress = getLevelProgress(totalXp)
   const streak = getEffectiveStreak(profile?.streak ?? 0, profile?.lastActivityDate ?? null)
 
   return (
-    <div className="mx-auto max-w-lg">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <div className="mx-auto max-w-lg space-y-6">
+      <NightPanel className="p-6 sm:p-8">
         <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-3xl">
-            {getAnimalEmoji(profile?.profileAnimal)}
-          </span>
-          <div>
-            <h1 className="text-2xl font-bold">{profile?.username ?? 'Learner'}</h1>
-            <p className="text-sm text-slate-500">{user?.email}</p>
+          <AnimalAvatar id={profile?.profileAnimal} size="lg" />
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-2xl font-bold tracking-tight">
+              {profile?.username ?? 'Learner'}
+            </h1>
+            <p className="truncate text-sm text-white/60">{user?.email}</p>
           </div>
         </div>
 
-        <dl className="mt-8 grid grid-cols-3 gap-4">
-          <Stat label="Level" value={levelProgress.level} />
-          <Stat label="XP" value={profile?.totalXp ?? 0} />
-          <Stat label="Streak" value={streak} />
-        </dl>
-
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/course"
-            className="flex-1 rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-brand-700"
-          >
-            Continue course
-          </Link>
-          <button
-            type="button"
-            onClick={() => logOut()}
-            className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Sign out
-          </button>
+        <div className="mt-6 grid grid-cols-3 gap-2.5">
+          <StatToken icon={<TrendingUpIcon className="h-6 w-6" />} value={levelProgress.level} label="Level" accent="sky" orientation="col" />
+          <StatToken icon={<StarIcon className="h-6 w-6" />} value={totalXp} label="Total XP" accent="brand" orientation="col" />
+          <StatToken icon={<FlameIcon className="h-6 w-6" />} value={streak} label="Day streak" accent="gold" orientation="col" />
         </div>
-      </div>
-    </div>
-  )
-}
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-center">
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </dt>
-      <dd className="mt-1 text-xl font-bold text-slate-900">{value}</dd>
+        <div className="mt-3 rounded-2xl border border-white/10 bg-night-950/40 p-4">
+          <div className="flex items-baseline justify-between text-xs">
+            <span className="font-semibold text-white/85">Level {levelProgress.level}</span>
+            <span className="tnum text-white/55">
+              {levelProgress.xpInLevel} / {levelProgress.xpToNext} XP to level{' '}
+              {levelProgress.level + 1}
+            </span>
+          </div>
+          <div
+            className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-night-950/70 ring-1 ring-inset ring-white/10"
+            role="progressbar"
+            aria-valuenow={levelProgress.progressPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Level ${levelProgress.level} progress`}
+          >
+            <div
+              className="xp-meter-fill h-full rounded-full transition-[width] duration-700"
+              style={{ width: `${Math.max(levelProgress.progressPercent, 4)}%` }}
+            />
+          </div>
+        </div>
+      </NightPanel>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link to="/course" className={buttonVariants({ variant: 'primary', size: 'lg', className: 'w-full' })}>
+          Continue course
+        </Link>
+        <Button variant="secondary" size="lg" fullWidth onClick={() => logOut()}>
+          Sign out
+        </Button>
+      </div>
     </div>
   )
 }

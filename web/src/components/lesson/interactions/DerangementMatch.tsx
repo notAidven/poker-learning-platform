@@ -22,6 +22,7 @@ export function DerangementMatch({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: DerangementMatchProps) {
   const { labels } = config
   const n = labels.length
@@ -32,9 +33,10 @@ export function DerangementMatch({
   const [solved, setSolved] = useState(initialSolved)
 
   const locked = disabled || submitted
+  const subscriptN = String(n).replace(/[0-9]/g, (d) => '₀₁₂₃₄₅₆₇₈₉'[Number(d)])
   const countLabel =
     config.countLabel ??
-    `Enter $D_{${n}}$ — how many derangements (no letter in its matching envelope)?`
+    `Enter D${subscriptN} — how many derangements (no letter in its matching envelope)?`
 
   const remaining = useMemo(
     () => labels.filter((l) => !slots.includes(l)),
@@ -172,6 +174,7 @@ export function DerangementMatch({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

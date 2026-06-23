@@ -18,6 +18,8 @@ export type LessonStats = {
   skillCheckTotal: number | null
   /** Problem submit counts saved when the lesson body is finished (before skill check). */
   pendingProblemAttempts: Record<string, number> | null
+  /** Problem step ids captured at lesson finish (for XP without loading lesson content). */
+  pendingProblemStepIds: string[] | null
   /** XP breakdown from the most recent first-time completion. */
   lastLessonXpBreakdown: LessonXpBreakdownStored | null
 }
@@ -30,6 +32,7 @@ export const defaultLessonStats = (): LessonStats => ({
   skillCheckCorrect: null,
   skillCheckTotal: null,
   pendingProblemAttempts: null,
+  pendingProblemStepIds: null,
   lastLessonXpBreakdown: null,
 })
 
@@ -141,4 +144,28 @@ export function exportLocalProgress(): Record<string, LessonProgressPayload> {
 
 export function getStatsMapSnapshot(): Record<string, LessonStats> {
   return { ...ensureStatsCache() }
+}
+
+/**
+ * Wipe all locally-persisted lesson progress (H1 — shared-device safety).
+ *
+ * Clears `lesson-stats`, `completed-lesson-ids`, and every `lesson-session-*`
+ * key, and resets the in-memory stats cache so a different account signing in
+ * on the same device can never inherit (or upload) the previous user's data.
+ */
+export function clearLocalProgress() {
+  statsMapCache = null
+  try {
+    localStorage.removeItem(STATS_KEY)
+    localStorage.removeItem(COMPLETED_KEY)
+
+    const sessionKeys: string[] = []
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('lesson-session-')) sessionKeys.push(key)
+    }
+    for (const key of sessionKeys) localStorage.removeItem(key)
+  } catch {
+    // Ignore storage access errors (e.g. disabled/blocked storage).
+  }
 }

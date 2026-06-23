@@ -7,7 +7,9 @@ import {
 } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { FractionAnswerInput } from './FractionAnswerInput'
 import { NumericAnswerInput } from './NumericAnswerInput'
+import { fractionMatches, hasValidFractionInput } from './fractionAnswer'
 import { countMatches, hasValidCountInput } from './numericAnswer'
 
 type CoinEventGridProps = InteractionProps & {
@@ -23,16 +25,22 @@ export function CoinEventGrid({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: CoinEventGridProps) {
   const patterns = useMemo(() => coinPatterns(config.coins), [config.coins])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [countInput, setCountInput] = useState('')
+  const [fractionNum, setFractionNum] = useState('')
+  const [fractionDen, setFractionDen] = useState('')
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
 
   const locked = disabled || submitted
   const countLabel =
     config.countLabel ?? 'Now enter |A| — how many outcomes are in this event?'
+  const probabilityLabel =
+    config.probabilityLabel ?? 'What is P(ω) for one outcome? (fraction)'
+  const requiresProbability = answer.probability !== undefined
 
   function toggle(pattern: string) {
     if (locked) return
@@ -51,10 +59,15 @@ export function CoinEventGrid({
     return true
   }
 
+  function probabilityValid() {
+    if (!requiresProbability || !answer.probability) return true
+    return fractionMatches(fractionNum, fractionDen, answer.probability)
+  }
+
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (selectionValid() && countMatches(countInput, answer.count)) {
+    if (selectionValid() && countMatches(countInput, answer.count) && probabilityValid()) {
       setSolved(true)
       onCorrect()
     } else {
@@ -68,10 +81,14 @@ export function CoinEventGrid({
     setSolved(false)
     setSelected(new Set())
     setCountInput('')
+    setFractionNum('')
+    setFractionDen('')
   }
 
   const manipulableReady = selected.size > 0
-  const canSubmit = manipulableReady && hasValidCountInput(countInput) && !locked
+  const countReady = hasValidCountInput(countInput)
+  const fractionReady = !requiresProbability || hasValidFractionInput(fractionNum, fractionDen)
+  const canSubmit = manipulableReady && countReady && fractionReady && !locked
 
   return (
     <div className="scene-3d space-y-4">
@@ -107,13 +124,26 @@ export function CoinEventGrid({
       </div>
 
       {manipulableReady && (
-        <NumericAnswerInput
-          id={`coin-event-count-${config.coins}`}
-          label={countLabel}
-          value={countInput}
-          onChange={setCountInput}
-          disabled={locked}
-        />
+        <>
+          <NumericAnswerInput
+            id={`coin-event-count-${config.coins}`}
+            label={countLabel}
+            value={countInput}
+            onChange={setCountInput}
+            disabled={locked}
+          />
+          {requiresProbability && countReady && (
+            <FractionAnswerInput
+              id={`coin-event-probability-${config.coins}`}
+              label={probabilityLabel}
+              numerator={fractionNum}
+              denominator={fractionDen}
+              onNumeratorChange={setFractionNum}
+              onDenominatorChange={setFractionDen}
+              disabled={locked}
+            />
+          )}
+        </>
       )}
 
       <CheckPanel
@@ -122,6 +152,7 @@ export function CoinEventGrid({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

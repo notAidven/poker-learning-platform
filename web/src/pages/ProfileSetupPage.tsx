@@ -8,6 +8,9 @@ import {
   isUsernameAvailable,
   validateUsername,
 } from '../lib/userProfile'
+import { AuthLayout } from '../components/ui/AuthLayout'
+import { Button } from '../components/ui/Button'
+import { Field, FormError } from '../components/ui/form'
 
 export function ProfileSetupPage() {
   const navigate = useNavigate()
@@ -56,55 +59,40 @@ export function ProfileSetupPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 className="text-2xl font-bold">Set up your profile</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Pick a unique username and animal avatar. This step is required before
-          you can start learning.
-        </p>
+    <AuthLayout
+      title="Set up your profile"
+      subtitle="Pick a unique username and an avatar. One quick step before you start learning."
+    >
+      {error && (
+        <div className="mb-4">
+          <FormError>{error}</FormError>
+        </div>
+      )}
 
-        {error && (
-          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-            {error}
-          </p>
-        )}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Field
+          label="Username"
+          type="text"
+          autoComplete="username"
+          required
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="maya_chen"
+          hint="3–20 characters. Letters, numbers, and underscores only."
+        />
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Username</span>
-            <input
-              type="text"
-              autoComplete="username"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none ring-brand-600 focus:ring-2"
-              placeholder="maya_chen"
-            />
-            <span className="mt-1 block text-xs text-slate-500">
-              3–20 characters. Letters, numbers, and underscores only.
-            </span>
-          </label>
+        <fieldset>
+          <legend className="text-sm font-medium text-slate-700">Profile animal</legend>
+          <p className="mt-0.5 text-xs text-slate-500">This shows up next to your name.</p>
+          <div className="mt-3">
+            <AnimalPicker value={animal} onChange={setAnimal} />
+          </div>
+        </fieldset>
 
-          <fieldset>
-            <legend className="text-sm font-medium text-slate-700">
-              Profile animal
-            </legend>
-            <div className="mt-3">
-              <AnimalPicker value={animal} onChange={setAnimal} />
-            </div>
-          </fieldset>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-          >
-            {submitting ? 'Saving…' : 'Start learning'}
-          </button>
-        </form>
-      </div>
-    </div>
+        <Button type="submit" variant="primary" size="lg" fullWidth disabled={submitting}>
+          {submitting ? 'Saving…' : 'Start learning'}
+        </Button>
+      </form>
+    </AuthLayout>
   )
 }

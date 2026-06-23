@@ -18,6 +18,7 @@ export function SelectCombination({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: SelectCombinationProps) {
   const { items, selectCount } = config
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -28,7 +29,7 @@ export function SelectCombination({
   const locked = disabled || submitted
   const countLabel =
     config.countLabel ??
-    `Order does not matter — enter $\\binom{${items.length}}{${selectCount}}$ (how many ways to choose ${selectCount}):`
+    `Order does not matter — enter C(${items.length}, ${selectCount}) (how many ways to choose ${selectCount}):`
 
   const atCapacity = selected.size >= selectCount
 
@@ -118,6 +119,7 @@ export function SelectCombination({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

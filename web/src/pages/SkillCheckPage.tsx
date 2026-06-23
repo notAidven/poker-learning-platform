@@ -1,28 +1,49 @@
-import { useCallback, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { ExitLessonModal } from '../components/ExitLessonModal'
 import { SkillCheckPlayer } from '../components/lesson/SkillCheckPlayer'
-import { getSkillCheck, hasSkillCheck } from '../data/skillCheckContent'
+import { hasSkillCheck, loadSkillCheck } from '../data/skillCheckContent'
 import { lessons } from '../data/lessons'
+import type { SkillCheckDefinition } from '../types/skillCheck'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
-import { abandonLessonAttempt, getLessonStats } from '../lib/lessonProgress'
+import { useCompletedLessons } from '../hooks/useCompletedLessons'
+import { getLessonStats, isLessonUnlocked } from '../lib/lessonProgress'
 
 export function SkillCheckPage() {
   const { lessonId = '' } = useParams()
   const meta = lessons.find((l) => l.id === lessonId)
-  const skillCheck = getSkillCheck(lessonId)
   const stats = getLessonStats(lessonId)
-  const [finished, setFinished] = useState(false)
+  const { completedIds } = useCompletedLessons()
+  const [skillCheck, setSkillCheck] = useState<SkillCheckDefinition | undefined>()
+  const [skillCheckLoading, setSkillCheckLoading] = useState(() => hasSkillCheck(lessonId))
+  const [skillCheckActive, setSkillCheckActive] = useState(false)
 
-  const isSkillCheckInProgress = Boolean(skillCheck) && stats.lessonFinished && !stats.completed && !finished
+  useEffect(() => {
+    if (!hasSkillCheck(lessonId)) {
+      setSkillCheck(undefined)
+      setSkillCheckLoading(false)
+      return
+    }
 
-  const handleConfirmExit = useCallback(() => {
-    abandonLessonAttempt(lessonId, { resetLessonFinished: true })
+    let cancelled = false
+    setSkillCheckLoading(true)
+    void loadSkillCheck(lessonId).then((loaded) => {
+      if (!cancelled) {
+        setSkillCheck(loaded)
+        setSkillCheckLoading(false)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [lessonId])
 
+  // Warn only while actively answering. Leaving no longer resets the lesson —
+  // the body stays finished so the learner returns straight to the skill check
+  // and can retake it freely (P1 #3).
   const { modalOpen, stay, confirmExit } = useActivityExitGuard({
-    when: isSkillCheckInProgress,
-    onConfirmExit: handleConfirmExit,
+    when: Boolean(skillCheck) && skillCheckActive,
   })
 
   if (!meta) {
@@ -36,7 +57,13 @@ export function SkillCheckPage() {
     )
   }
 
-  if (!skillCheck || !hasSkillCheck(lessonId)) {
+  // Sequential unlock on direct URLs (P1 #5): can't open a skill check whose
+  // lesson is still locked.
+  if (!isLessonUnlocked(lessonId, completedIds)) {
+    return <Navigate to="/course" replace />
+  }
+
+  if (!hasSkillCheck(lessonId)) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-xl font-bold">{meta.title}</h1>
@@ -44,6 +71,14 @@ export function SkillCheckPage() {
         <Link to="/course" className="mt-4 inline-block text-brand-600">
           ← Back to course
         </Link>
+      </div>
+    )
+  }
+
+  if (skillCheckLoading || !skillCheck) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-500" aria-live="polite">
+        Loading skill check…
       </div>
     )
   }
@@ -58,7 +93,7 @@ export function SkillCheckPage() {
         </p>
         <Link
           to={`/lesson/${lessonId}`}
-          className="mt-4 inline-block rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700"
+          className="mt-4 inline-block min-h-11 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700"
         >
           Go to lesson
         </Link>
@@ -81,18 +116,24 @@ export function SkillCheckPage() {
           </p>
           <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{meta.title}</h1>
           <p className="mt-1 text-sm text-slate-600">
-            3 quick questions — no hints. Show what you remember.
+            3 interactive challenges — no hints. Pass with 2 of 3.
           </p>
         </div>
 
         <SkillCheckPlayer
           skillCheck={skillCheck}
           lessonTitle={meta.title}
-          onFinished={() => setFinished(true)}
+          onActiveChange={setSkillCheckActive}
         />
       </div>
 
-      <ExitLessonModal open={modalOpen} onStay={stay} onExit={confirmExit} />
+      <ExitLessonModal
+        open={modalOpen}
+        onStay={stay}
+        onExit={confirmExit}
+        title="Leave the skill check?"
+        description="Your lesson progress is saved. You can retake the skill check anytime — no need to redo the lesson."
+      />
     </>
   )
 }

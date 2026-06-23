@@ -35,6 +35,7 @@ export function BirthdaySimulation({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: BirthdaySimulationProps) {
   const { people } = config
   const minTrials = config.minTrials ?? 15
@@ -169,6 +170,7 @@ export function BirthdaySimulation({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

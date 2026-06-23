@@ -7,4 +7,6 @@ export type InteractionProps = {
   disabled?: boolean
   /** Step was already solved before (e.g. user navigated back) */
   initialSolved?: boolean
+  /** Show "Try again" after a wrong submit (skill checks disable this) */
+  allowRetry?: boolean
 }

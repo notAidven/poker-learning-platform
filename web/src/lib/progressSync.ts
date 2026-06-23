@@ -8,6 +8,7 @@ import {
 import type { LessonSession } from './lessonSession'
 import {
   applyRemoteProgress,
+  clearLocalProgress,
   defaultLessonStats,
   exportLocalProgress,
   getStatsMapSnapshot,
@@ -58,22 +59,43 @@ export function getProgressSyncUid() {
 
 export async function syncProgressOnAuth(uid: string | null): Promise<void> {
   syncReady = false
-  syncUid = uid
+  const previousUid = syncUid
 
+  // Sign-out (or no user): wipe local progress so the next person on this
+  // shared device starts clean and we never upload the prior user's data (H1).
   if (!uid) {
+    clearLocalProgress()
+    syncUid = null
     syncReady = true
     notifyProgressUpdated()
     return
   }
 
+  // Account switch without a sign-out in between: clear the previous user's
+  // local data before loading the new account's remote progress (H1).
+  if (previousUid && previousUid !== uid) {
+    clearLocalProgress()
+  }
+
+  syncUid = uid
+
   try {
     const remote = await fetchAllLessonProgress(uid)
 
     if (Object.keys(remote).length === 0) {
+      // Only merge local → remote for a genuine pre-auth/anonymous session,
+      // i.e. no real uid was synced earlier this session. For a freshly
+      // signed-in different account we must NOT donate the prior local data;
+      // clear it and treat remote (empty) as the source of truth (H1).
+      const isAnonymousHandoff = previousUid == null
       const local = exportLocalProgress()
-      if (Object.keys(local).length > 0) {
+      if (isAnonymousHandoff && Object.keys(local).length > 0) {
         await writeAllLessonProgress(uid, local)
         applyRemoteProgress(local)
+      } else {
+        // Different account with empty remote — make sure no prior local data
+        // lingers. (The `finally` block fires the progress-updated event.)
+        clearLocalProgress()
       }
     } else {
       applyRemoteProgress(remote)

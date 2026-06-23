@@ -9,12 +9,13 @@ function OutcomeChip({
   variant,
 }: {
   label: string
-  variant: 'default' | 'event' | 'outside'
+  variant: 'default' | 'event' | 'outside' | 'both'
 }) {
   const styles = {
     default: 'border-slate-200 bg-white text-slate-700',
     event: 'border-brand-300 bg-brand-50 text-brand-800 font-semibold',
     outside: 'border-slate-100 bg-slate-50 text-slate-500',
+    both: 'border-brand-400 bg-white text-brand-800 font-semibold shadow-sm',
   }
   return (
     <span
@@ -30,7 +31,7 @@ function OutcomeGrid({
   variant,
 }: {
   items: string[]
-  variant: 'default' | 'event' | 'outside'
+  variant: 'default' | 'event' | 'outside' | 'both'
 }) {
   return (
     <div className="flex flex-wrap justify-center gap-1.5">
@@ -130,6 +131,7 @@ function TwoEventsDiagram({ config }: { config: VennDiagramConfig }) {
   const labelB = config.labelB ?? 'B'
   const inA = config.eventOutcomes ?? []
   const inB = config.outcomes?.filter((o) => !inA.includes(o)) ?? []
+  const inBoth = config.intersectionOutcomes ?? []
 
   return (
     <figure className="mx-auto w-full max-w-sm">
@@ -167,6 +169,13 @@ function TwoEventsDiagram({ config }: { config: VennDiagramConfig }) {
           <foreignObject x="176" y="96" width="88" height="56">
             <div className="flex h-full items-center justify-center">
               <OutcomeGrid items={inB} variant="outside" />
+            </div>
+          </foreignObject>
+        )}
+        {inBoth.length > 0 && (
+          <foreignObject x="132" y="96" width="56" height="56">
+            <div className="flex h-full items-center justify-center">
+              <OutcomeGrid items={inBoth} variant="both" />
             </div>
           </foreignObject>
         )}

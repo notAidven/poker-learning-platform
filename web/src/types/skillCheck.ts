@@ -1,13 +1,7 @@
-export type SkillCheckChoice = {
-  id: string
-  label: string
-}
+import type { ProblemStep } from './lesson'
 
-export type SkillCheckQuestion = {
-  id: string
-  prompt: string
-  choices: SkillCheckChoice[]
-  correctChoiceId: string
+export type SkillCheckQuestion = Omit<ProblemStep, 'type' | 'feedback'> & {
+  incorrectFeedback?: string
 }
 
 export type SkillCheckDefinition = {

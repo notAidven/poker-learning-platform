@@ -17,12 +17,14 @@ import {
   type ReactNode,
 } from 'react'
 import { auth } from '../lib/firebase'
+import { E2E_BYPASS_AUTH, E2E_MOCK_PROFILE } from '../lib/e2eBypass'
 import {
   getEmailForUsername,
   getUserProfile,
   type UserProfile,
 } from '../lib/userProfile'
 import { syncProgressOnAuth } from '../lib/progressSync'
+import { clearLocalProgress } from '../lib/lessonProgressStore'
 
 type AuthContextValue = {
   user: User | null
@@ -45,6 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const refreshProfile = useCallback(async () => {
+    if (E2E_BYPASS_AUTH) {
+      setProfile(E2E_MOCK_PROFILE)
+      return
+    }
     const current = auth.currentUser
     if (!current) {
       setProfile(null)
@@ -55,6 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (E2E_BYPASS_AUTH) {
+      setUser({ uid: 'e2e-user' } as User)
+      setProfile(E2E_MOCK_PROFILE)
+      setLoading(false)
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser)
       if (nextUser) {
@@ -85,7 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithUsername = useCallback(async (username: string, password: string) => {
     const email = await getEmailForUsername(username)
     if (!email) {
-      throw new Error('No account found with that username.')
+      // Same generic message as a wrong password so we never reveal whether the
+      // username exists (L1 — login enumeration).
+      throw new Error('Incorrect username or password.')
     }
     await signInWithEmailAndPassword(auth, email, password)
   }, [])
@@ -96,6 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logOut = useCallback(async () => {
     await signOut(auth)
+    // Shared-device safety: drop this user's local progress immediately so the
+    // next account can't inherit or upload it (H1). The auth listener also
+    // clears via syncProgressOnAuth(null), but we do it here too so it happens
+    // synchronously on the explicit logout path.
+    clearLocalProgress()
     setProfile(null)
   }, [])
 

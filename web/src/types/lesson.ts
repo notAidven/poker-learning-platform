@@ -3,6 +3,8 @@ export type ConceptStep = {
   id: string
   title?: string
   content: string
+  /** Optional inline diagram shown beneath the concept text (reuses VennDiagram) */
+  visual?: VennDiagramConfig
 }
 
 export type VennDiagramConfig = {
@@ -14,6 +16,8 @@ export type VennDiagramConfig = {
   outcomes?: string[]
   /** For event-subset: which outcomes are in event A (highlighted) */
   eventOutcomes?: string[]
+  /** For two-events: labels/counts shown inside the A ∩ B overlap region */
+  intersectionOutcomes?: string[]
   /** Optional caption below the diagram (e.g. "|Ω| = 36") */
   caption?: string
 }
@@ -35,21 +39,67 @@ export type ProblemStepBase = {
   feedback: ProblemFeedback
 }
 
+/** Reduced fraction for P(ω) = num/den */
+export type FractionProbability = {
+  num: number
+  den: number
+}
+
 // --- coin flip lab ---
 export type CoinFlipLabConfig = {
+  /** Legacy flip-only mode: minimum flips before check */
   minFlips?: number
+  /** Legacy flip-only mode: require seeing H and T */
   requireBothFaces?: boolean
+  /** Combined mode: tap targets for building Ω (includes distractors) */
+  options?: string[]
+  /** Instruction above the option grid (combined mode) */
+  pickerHelperText?: string
+  /** Label for the learner-built list area (combined mode) */
+  listLabel?: string
+  /** Prompt for optional |Ω| numeric field (combined mode) */
+  countLabel?: string
 }
 
 export type CoinFlipLabAnswer = {
+  /** Legacy flip-only mode */
   minFlips?: number
   requireBothFaces?: boolean
+  /** Combined mode: exact set of outcomes in Ω */
+  selected?: string[]
+  /** Combined mode: expected |Ω| when countLabel is set */
+  count?: number
+  /** When set with count, learner must also enter P(ω) as a fraction */
+  probability?: FractionProbability
 }
 
 export type CoinFlipLabStep = ProblemStepBase & {
   interaction: 'coin-flip-lab'
   config: CoinFlipLabConfig
   answer: CoinFlipLabAnswer
+}
+
+// --- sample space picker ---
+export type SampleSpacePickerConfig = {
+  /** All tap targets — includes correct outcomes and distractors */
+  options: string[]
+  /** Short instruction above the option grid */
+  helperText?: string
+  /** Label for the learner-built list area */
+  listLabel?: string
+  /** Show interactive coin flip above the picker (exploration only) */
+  showCoinFlip?: boolean
+}
+
+export type SampleSpacePickerAnswer = {
+  /** Exact set of outcomes that belong in Ω */
+  selected: string[]
+}
+
+export type SampleSpacePickerStep = ProblemStepBase & {
+  interaction: 'sample-space-picker'
+  config: SampleSpacePickerConfig
+  answer: SampleSpacePickerAnswer
 }
 
 // --- die sample space ---
@@ -59,12 +109,16 @@ export type DieSampleSpaceConfig = {
   targetFace?: number
   /** Label for the numeric count field (defaults in widget) */
   countLabel?: string
+  /** Label for optional P(ω) fraction field */
+  probabilityLabel?: string
 }
 
 export type DieSampleSpaceAnswer = {
   selected: number[]
   /** |Ω| — learner must enter this count */
   count: number
+  /** When set, learner must also enter P(ω) as a reduced fraction */
+  probability?: FractionProbability
 }
 
 export type DieSampleSpaceStep = ProblemStepBase & {
@@ -76,11 +130,23 @@ export type DieSampleSpaceStep = ProblemStepBase & {
 // --- fairness scale ---
 export type FairnessScaleConfig = {
   outcomes: number
+  /** Display labels per outcome (defaults to 1…n) */
+  faceLabels?: string[]
+  /** Starting probability weights (0–1 each); sums to 1 for loaded-die narrative */
+  initialWeights?: number[]
+  /** Prompt for numeric percent answer after balancing */
+  countLabel?: string
+  /** Require a whole-number percent for one face after bars are fair */
+  requireCount?: boolean
+  /** UX mode: tap-to-equalize (default) — no slider */
+  mode?: 'equalize-button'
 }
 
 export type FairnessScaleAnswer = {
   /** Each outcome should equal this probability (0–1) */
   each: number
+  /** Expected whole-number percent for one face (e.g. 17 for 1/6) */
+  countAnswer?: number
 }
 
 export type FairnessScaleStep = ProblemStepBase & {
@@ -114,12 +180,15 @@ export type CoinEventGridConfig = {
   coins: number
   maxHeads: number
   countLabel?: string
+  probabilityLabel?: string
 }
 
 export type CoinEventGridAnswer = {
   patterns: string[]
-  /** |A| — learner must enter this count */
+  /** |A| or |Ω| — learner must enter this count */
   count: number
+  /** When set, learner must also enter P(ω) as a reduced fraction */
+  probability?: FractionProbability
 }
 
 export type CoinEventGridStep = ProblemStepBase & {
@@ -137,10 +206,13 @@ export type CountingStage = {
 export type CountingProductConfig = {
   stages: CountingStage[]
   countLabel?: string
+  probabilityLabel?: string
 }
 
 export type CountingProductAnswer = {
   product: number
+  /** When set, learner must also enter P(ω) as a reduced fraction */
+  probability?: FractionProbability
 }
 
 export type CountingProductStep = ProblemStepBase & {
@@ -271,6 +343,7 @@ export type VennDiagramStep = ProblemStepBase & {
 
 export type ProblemStep =
   | CoinFlipLabStep
+  | SampleSpacePickerStep
   | DieSampleSpaceStep
   | FairnessScaleStep
   | TwoDiceGridStep

@@ -1,14 +1,42 @@
 @import "tailwindcss";
 
 @theme {
+  /* Action blue — kept identical to the lesson widgets for cohesion, scale filled out */
   --color-brand-50: #eef6ff;
   --color-brand-100: #d9ebff;
+  --color-brand-200: #bcdcff;
+  --color-brand-300: #8cc0ff;
+  --color-brand-400: #5096f7;
   --color-brand-500: #2563eb;
   --color-brand-600: #1d4ed8;
   --color-brand-700: #1e40af;
-  --color-surface: #f8fafc;
-  --color-ink: #0f172a;
+  --color-brand-800: #1c3a96;
+  --color-brand-900: #1a3179;
+
+  /* Night — the deep-indigo "probability table" surfaces */
+  --color-night-950: #060a1e;
+  --color-night-900: #0b1233;
+  --color-night-800: #131c47;
+  --color-night-700: #1f2b63;
+  --color-night-600: #2b3b85;
+
+  /* Gold — rewards (XP, streaks, achievement), grounded in the lesson dice & coins */
+  --color-gold-200: #fde9ad;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+
+  --color-surface: #f4f6fc;
+  --color-ink: #0c1430;
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgba(12, 20, 48, 0.06), 0 12px 28px -16px rgba(12, 20, 48, 0.22);
+  --shadow-lift: 0 2px 6px rgba(12, 20, 48, 0.08), 0 26px 44px -22px rgba(29, 78, 216, 0.34);
+  --shadow-token: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 2px rgba(12, 20, 48, 0.12),
+    0 10px 22px -12px rgba(12, 20, 48, 0.3);
 }
 
 html,
@@ -17,11 +45,19 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
@@ -31,7 +67,106 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background: var(--color-surface);
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(55rem 55rem at 88% -12%, rgba(37, 99, 235, 0.07), transparent 60%),
+    radial-gradient(46rem 46rem at -6% -4%, rgba(245, 158, 11, 0.06), transparent 55%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Consistent, visible keyboard focus across links, buttons and inputs */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Signature: the sample-space dot field (a faint grid of equally-likely outcomes) --- */
+.dot-field {
+  background-image: radial-gradient(
+    circle,
+    var(--dot-color, rgba(255, 255, 255, 0.09)) 1px,
+    transparent 1.4px
+  );
+  background-size: var(--dot-size, 22px) var(--dot-size, 22px);
+  background-position: center;
+}
+
+/* --- Shell entrance + ambient motion --- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--float-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-9px) rotate(var(--float-rot, 0deg));
+  }
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.anim-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+}
+
+.anim-pop {
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-float {
+  animation: floaty 7s ease-in-out infinite;
+}
+
+/* Reward / level meter fill with a slow gold sheen */
+.xp-meter-fill {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-gold-500) 0%,
+    var(--color-gold-300) 35%,
+    var(--color-gold-400) 70%,
+    var(--color-gold-500) 100%
+  );
+  background-size: 200% 100%;
+  animation: goldShimmer 3.2s linear infinite;
 }
 
 .lesson-prose p {
@@ -79,6 +214,7 @@ body {
 
 .coin-3d--flip {
   animation: coin-flip-spin 0.55s cubic-bezier(0.35, 0.15, 0.25, 1) forwards;
+  will-change: transform;
 }
 
 .coin-face {
@@ -122,49 +258,210 @@ body {
   }
 }
 
+/* --- die faces (shared pip / numeral rendering) --- */
+.die-face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 0.55em;
+  border: 2px solid #cbd5e1;
+  background: linear-gradient(155deg, #ffffff 0%, #f8fafc 42%, #e2e8f0 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.95),
+    inset 0 -3px 6px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.die-face--muted {
+  opacity: 0.72;
+}
+
+.die-face--xs {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 0.2rem;
+  border-width: 1px;
+}
+
+.die-face--sm {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.35rem;
+  border-width: 1.5px;
+}
+
+.die-face--md {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.55rem;
+}
+
+.die-face--lg {
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 0.75rem;
+}
+
+.die-face__pips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 72%;
+  height: 72%;
+}
+
+.die-face__numeral {
+  font-weight: 800;
+  line-height: 1;
+  color: #1e293b;
+}
+
+.die-face--xs .die-face__numeral {
+  font-size: 0.5rem;
+}
+
+.die-face--sm .die-face__numeral {
+  font-size: 0.875rem;
+}
+
+.die-face--md .die-face__numeral {
+  font-size: 1.35rem;
+}
+
+.die-face--lg .die-face__numeral {
+  font-size: 2rem;
+}
+
+.die-pip {
+  width: 58%;
+  height: 58%;
+  justify-self: center;
+  align-self: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #475569 0%, #0f172a 72%);
+  box-shadow: inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.die-pip--empty {
+  visibility: hidden;
+}
+
+.die-face--xs .die-pip {
+  width: 70%;
+  height: 70%;
+}
+
+.die-face--sm .die-pip {
+  width: 62%;
+  height: 62%;
+}
+
 .die-3d-wrap {
   display: flex;
   justify-content: center;
+  padding: 0.5rem 0 1rem;
 }
 
 .die-3d {
   position: relative;
-  width: 5.5rem;
-  height: 5.5rem;
+  padding: 0.4rem;
   transform-style: preserve-3d;
-  border-radius: 1rem;
-  background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 55%, #1e3a8a 100%);
-  color: white;
-  font-size: 2rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: none;
+  border-radius: 1.1rem;
+  background: transparent;
+  cursor: pointer;
   box-shadow:
-    0 1px 0 #93c5fd inset,
-    0 14px 0 #1e3a8a,
-    0 18px 28px rgba(15, 23, 42, 0.35);
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 14px 0 #94a3b8,
+    0 18px 28px rgba(15, 23, 42, 0.28);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.die-3d:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    0 1px 0 #93c5fd inset,
-    0 16px 0 #1e3a8a,
-    0 22px 32px rgba(15, 23, 42, 0.4);
+.die-3d .die-face--lg {
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .die-3d:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 16px 0 #94a3b8,
+      0 22px 32px rgba(15, 23, 42, 0.34);
+  }
 }
 
 .die-3d:active:not(:disabled) {
   transform: translateY(6px);
   box-shadow:
-    0 1px 0 #93c5fd inset,
-    0 6px 0 #1e3a8a,
-    0 10px 16px rgba(15, 23, 42, 0.3);
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 6px 0 #94a3b8,
+    0 10px 16px rgba(15, 23, 42, 0.22);
+}
+
+.die-3d:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.die-face-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  border-radius: 0.85rem;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  box-shadow:
+    0 3px 0 #cbd5e1,
+    0 6px 14px rgba(15, 23, 42, 0.1);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .die-face-chip:hover:not(:disabled) {
+    border-color: #93c5fd;
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 0 #94a3b8,
+      0 10px 18px rgba(15, 23, 42, 0.14);
+  }
+}
+
+.die-face-chip--active {
+  border-color: #2563eb;
+  transform: translateY(-4px) scale(1.06);
+  box-shadow:
+    0 5px 0 #1d4ed8,
+    0 14px 24px rgba(29, 78, 216, 0.22);
+}
+
+.die-face-chip--ok {
+  border-color: #10b981;
+  box-shadow:
+    0 4px 0 #059669,
+    0 12px 20px rgba(16, 185, 129, 0.2);
+}
+
+.die-face-chip--bad {
+  border-color: #f87171;
+  box-shadow:
+    0 4px 0 #dc2626,
+    0 12px 20px rgba(248, 113, 113, 0.2);
 }
 
 .die-3d--rolling {
   animation: die-tumble 0.55s ease-out;
+  will-change: transform;
 }
 
 @keyframes die-tumble {
@@ -195,27 +492,89 @@ body {
 }
 
 .grid-cell-3d {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.2rem;
+  border-radius: 0.65rem;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  box-shadow:
+    0 2px 0 #cbd5e1,
+    0 4px 10px rgba(15, 23, 42, 0.08);
   transition:
     transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1),
     box-shadow 0.2s ease,
-    background-color 0.2s ease,
     border-color 0.2s ease;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .grid-cell-3d:hover:not(:disabled) {
+    border-color: #93c5fd;
+  }
+}
+
 .grid-cell-3d--selected {
-  transform: translateZ(10px) scale(1.06);
-  box-shadow: 0 8px 16px rgba(29, 78, 216, 0.3);
+  transform: translateZ(10px) scale(1.05);
+  border-color: #2563eb;
+  box-shadow:
+    0 4px 0 #1d4ed8,
+    0 10px 18px rgba(29, 78, 216, 0.22);
+}
+
+.grid-cell-3d--ok {
+  border-color: #10b981;
+  box-shadow:
+    0 3px 0 #059669,
+    0 8px 16px rgba(16, 185, 129, 0.18);
+}
+
+.grid-cell-3d--bad {
+  border-color: #f87171;
+  box-shadow:
+    0 3px 0 #dc2626,
+    0 8px 16px rgba(248, 113, 113, 0.18);
+}
+
+.grid-cell-3d__sum {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
+}
+
+.grid-cell-3d--selected .grid-cell-3d__sum {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.grid-cell-3d--ok .grid-cell-3d__sum {
+  color: #047857;
+  font-weight: 700;
+}
+
+.grid-cell-3d--bad .grid-cell-3d__sum {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.two-dice-header-face {
+  display: inline-flex;
+  vertical-align: middle;
 }
 
 .prob-bar-3d {
   position: relative;
+  width: 100%;
+  transform-origin: left center;
   border-radius: 9999px;
   background: linear-gradient(180deg, #60a5fa 0%, #2563eb 50%, #1d4ed8 100%);
   box-shadow:
     inset 0 2px 4px rgba(255, 255, 255, 0.35),
     0 4px 0 #1e40af,
     0 6px 12px rgba(29, 78, 216, 0.25);
-  transition: width 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
 .prob-slider {

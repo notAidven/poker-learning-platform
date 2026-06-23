@@ -1,24 +1,33 @@
 import type { SkillCheckDefinition } from '../types/skillCheck'
-import { skillCheck1 } from './skillChecks/skill-check-1'
-import { skillCheck2 } from './skillChecks/skill-check-2'
-import { skillCheck3 } from './skillChecks/skill-check-3'
-import { skillCheck4 } from './skillChecks/skill-check-4'
-import { skillCheck5 } from './skillChecks/skill-check-5'
-import { skillCheck6 } from './skillChecks/skill-check-6'
 
-const skillCheckCatalog: Record<string, SkillCheckDefinition> = {
-  '1': skillCheck1,
-  '2': skillCheck2,
-  '3': skillCheck3,
-  '4': skillCheck4,
-  '5': skillCheck5,
-  '6': skillCheck6,
+const skillCheckLoaders: Record<string, () => Promise<SkillCheckDefinition>> = {
+  '1': () => import('./skillChecks/skill-check-1').then((m) => m.skillCheck1),
+  '2': () => import('./skillChecks/skill-check-2').then((m) => m.skillCheck2),
+  '3': () => import('./skillChecks/skill-check-3').then((m) => m.skillCheck3),
+  '4': () => import('./skillChecks/skill-check-4').then((m) => m.skillCheck4),
+  '5': () => import('./skillChecks/skill-check-5').then((m) => m.skillCheck5),
+  '6': () => import('./skillChecks/skill-check-6').then((m) => m.skillCheck6),
+}
+
+const skillCheckCache = new Map<string, SkillCheckDefinition>()
+
+export function hasSkillCheck(lessonId: string): boolean {
+  return lessonId in skillCheckLoaders
 }
 
 export function getSkillCheck(lessonId: string): SkillCheckDefinition | undefined {
-  return skillCheckCatalog[lessonId]
+  return skillCheckCache.get(lessonId)
 }
 
-export function hasSkillCheck(lessonId: string): boolean {
-  return lessonId in skillCheckCatalog
+export async function loadSkillCheck(
+  lessonId: string,
+): Promise<SkillCheckDefinition | undefined> {
+  if (!hasSkillCheck(lessonId)) return undefined
+
+  const cached = skillCheckCache.get(lessonId)
+  if (cached) return cached
+
+  const skillCheck = await skillCheckLoaders[lessonId]()
+  skillCheckCache.set(lessonId, skillCheck)
+  return skillCheck
 }

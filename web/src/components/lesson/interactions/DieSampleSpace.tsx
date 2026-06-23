@@ -2,7 +2,10 @@ import { useState } from 'react'
 import type { DieSampleSpaceAnswer, DieSampleSpaceConfig } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { DieFace } from './DieFace'
+import { FractionAnswerInput } from './FractionAnswerInput'
 import { NumericAnswerInput } from './NumericAnswerInput'
+import { fractionMatches, hasValidFractionInput } from './fractionAnswer'
 import { countMatches, hasValidCountInput } from './numericAnswer'
 
 type DieSampleSpaceProps = InteractionProps & {
@@ -18,12 +21,15 @@ export function DieSampleSpace({
   onAttemptReset,
   disabled = false,
   initialSolved = false,
+  allowRetry = true,
 }: DieSampleSpaceProps) {
   const { sides } = config
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [rolled, setRolled] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
   const [countInput, setCountInput] = useState('')
+  const [fractionNum, setFractionNum] = useState('')
+  const [fractionDen, setFractionDen] = useState('')
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
 
@@ -31,6 +37,9 @@ export function DieSampleSpace({
   const faces = Array.from({ length: sides }, (_, i) => i + 1)
   const countLabel =
     config.countLabel ?? 'Now enter |Ω| — how many outcomes are in the sample space?'
+  const probabilityLabel =
+    config.probabilityLabel ?? 'What is P(ω) for one outcome? (fraction)'
+  const requiresProbability = answer.probability !== undefined
 
   function roll() {
     if (locked || rolling) return
@@ -64,10 +73,15 @@ export function DieSampleSpace({
     return true
   }
 
+  function probabilityValid() {
+    if (!requiresProbability || !answer.probability) return true
+    return fractionMatches(fractionNum, fractionDen, answer.probability)
+  }
+
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (selectionValid() && countMatches(countInput, answer.count)) {
+    if (selectionValid() && countMatches(countInput, answer.count) && probabilityValid()) {
       setSolved(true)
       onCorrect()
     } else {
@@ -82,10 +96,14 @@ export function DieSampleSpace({
     setSelected(new Set())
     setRolled(null)
     setCountInput('')
+    setFractionNum('')
+    setFractionDen('')
   }
 
   const manipulableReady = selected.size > 0
-  const canSubmit = manipulableReady && hasValidCountInput(countInput) && !locked
+  const countReady = hasValidCountInput(countInput)
+  const fractionReady = !requiresProbability || hasValidFractionInput(fractionNum, fractionDen)
+  const canSubmit = manipulableReady && countReady && fractionReady && !locked
 
   return (
     <div className="space-y-5">
@@ -95,8 +113,9 @@ export function DieSampleSpace({
           onClick={roll}
           disabled={locked || rolling}
           className={`die-3d ${rolling ? 'die-3d--rolling' : ''}`}
+          aria-label={rolled === null ? 'Roll the die' : `Die showing ${rolled}`}
         >
-          {rolled ?? '?'}
+          <DieFace value={rolled ?? '?'} size="lg" muted={rolled === null} />
         </button>
       </div>
       <p className="text-center text-xs text-slate-500">Roll the die, then tap faces below</p>
@@ -107,12 +126,10 @@ export function DieSampleSpace({
           const showOk = submitted && answer.selected.includes(face)
           const showBad = submitted && active && !answer.selected.includes(face)
 
-          let cls =
-            'chip-3d flex h-14 w-14 items-center justify-center rounded-2xl border-2 text-lg font-bold'
-          if (showOk) cls += ' border-emerald-500 bg-emerald-100 chip-3d--active'
-          else if (showBad) cls += ' border-red-400 bg-red-50'
-          else if (active) cls += ' border-brand-600 bg-brand-100 chip-3d--active'
-          else cls += ' border-slate-200 bg-white hover:border-brand-300 hover:bg-brand-50'
+          let cls = 'die-face-chip'
+          if (showOk) cls += ' die-face-chip--ok'
+          else if (showBad) cls += ' die-face-chip--bad'
+          else if (active) cls += ' die-face-chip--active'
 
           return (
             <button
@@ -121,21 +138,36 @@ export function DieSampleSpace({
               disabled={locked}
               onClick={() => toggle(face)}
               className={cls}
+              aria-label={`Face ${face}`}
+              aria-pressed={active}
             >
-              {face}
+              <DieFace value={face} size="md" />
             </button>
           )
         })}
       </div>
 
       {manipulableReady && (
-        <NumericAnswerInput
-          id={`die-count-${sides}`}
-          label={countLabel}
-          value={countInput}
-          onChange={setCountInput}
-          disabled={locked}
-        />
+        <>
+          <NumericAnswerInput
+            id={`die-count-${sides}`}
+            label={countLabel}
+            value={countInput}
+            onChange={setCountInput}
+            disabled={locked}
+          />
+          {requiresProbability && countReady && (
+            <FractionAnswerInput
+              id={`die-probability-${sides}`}
+              label={probabilityLabel}
+              numerator={fractionNum}
+              denominator={fractionDen}
+              onNumeratorChange={setFractionNum}
+              onDenominatorChange={setFractionDen}
+              disabled={locked}
+            />
+          )}
+        </>
       )}
 
       <CheckPanel
@@ -144,6 +176,7 @@ export function DieSampleSpace({
         solved={solved}
         onSubmit={handleSubmit}
         onRetry={handleRetry}
+        allowRetry={allowRetry}
       />
     </div>
   )

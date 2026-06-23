@@ -13,6 +13,12 @@ export const lesson5: LessonDefinition = {
 For one person, $|\\Omega| = 365$ possible birthdays (ignore leap years). For $n$ people, ordered assignments give $365^n$ outcomes — but we care whether **some pair matches**.
 
 Simulate random groups and watch the **match rate** climb surprisingly fast near $n \\approx 23$.`,
+      visual: {
+        type: 'sample-space',
+        labelOmega: 'Ω (one birthday)',
+        outcomes: ['Jan 1', 'Jan 2', 'Jan 3', '…', 'Dec 31'],
+        caption: 'One person has |Ω| = 365 equally likely day slots',
+      },
     },
     {
       type: 'problem',
@@ -139,6 +145,14 @@ The simulation should show matches in most trials. The surprise is not “30 is 
 A **derangement** is a placement where **every** letter is wrong. Count derangements $D_n$; total placements are $n!$.
 
 For $n=3$: only **2** derangements out of $3! = 6$ permutations — so $P = \\frac{2}{6} = \\frac{1}{3}$.`,
+      visual: {
+        type: 'event-subset',
+        labelOmega: 'Ω (3! = 6)',
+        labelA: 'D: all wrong',
+        outcomes: ['ABC', 'ACB', 'BAC', 'BCA', 'CAB', 'CBA'],
+        eventOutcomes: ['BCA', 'CAB'],
+        caption: 'Derangements (no letter in its own envelope): D₃ = 2 of 6',
+      },
     },
     {
       type: 'problem',
