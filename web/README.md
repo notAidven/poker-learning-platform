@@ -1,8 +1,12 @@
 # Suited — Texas Hold'em Poker (Web App)
 
 React + Vite + Tailwind + Firebase frontend for **Suited**, a learn-by-doing Texas
-Hold'em poker course (six interactive lessons: the deck, hand rankings, the streets,
-odds & pot odds, betting, and a full hand vs AI). Play-money only — no real wagering.
+Hold'em poker course (five interactive lessons: the deck, hand rankings, the streets,
+odds & pot odds, and betting). Play-money only — no real wagering.
+
+> **Note:** The shipped course is **5 lessons with no AI**. An earlier Lesson 6 capstone
+> ("play a full hand") and its rule-based opponent were removed and archived on the
+> local-only `poker-with-lesson6` branch; Lesson 5 uses a scripted, deterministic opponent.
 
 ## Setup
 
@@ -103,7 +107,7 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
 3. **Manually verify XP + streak against Firestore with a real account.** Automated tests run with the **E2E auth bypass** (`VITE_E2E_BYPASS_AUTH=true`), which performs **no Firestore writes**, so XP/streak are never exercised in CI. Sign in with a real account and confirm in the [Firestore console](https://console.firebase.google.com/project/brilliant-alpha-clone-54be9/firestore):
    - Completing a lesson + passing its skill check (≥ 2/3) bumps `users/{uid}.totalXp`/`level` once and sets `lessonProgress/{lessonId}.xpAwarded = true`.
    - Re-passing the same skill check (or finishing a review) does **not** add XP again, but **does** advance `streak`/`lastActivityDate` once per day (CAT).
-   - `streak` resets after a missed day and is maintainable after all 6 lessons are done.
+   - `streak` resets after a missed day and is maintainable after all 5 lessons are done.
 
 4. **Recommended:** enable **Firebase App Check** and consider the future server-side `resolveUsername` Cloud Function to fully hide emails (Blaze plan) — see `docs/security-fixes.md`.
 
@@ -111,7 +115,7 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
 
 ## Phase 1 build stages
 
-1. **Stage 1** — Project scaffold, responsive Brilliant-style shell, Firebase wiring, routing, 6-lesson course data
+1. **Stage 1** — Project scaffold, responsive Brilliant-style shell, Firebase wiring, routing, 5-lesson course data
 2. **Stage 2** — Auth + profile setup (email, Google, username, animal avatar)
 3. **Stage 3** — JSON lesson model + renderer + interactive Lessons 1–3
 4. **Stage 4** — Firestore progress persistence + lesson unlock logic ✅
@@ -160,8 +164,8 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
 
    **Levels:** `xpToNextLevel(level) = 100 + (level − 1) × 25` — e.g. 100 XP for 1→2, 125 for 2→3, 150 for 3→4.
 
-   **Streak:** +1 per CAT calendar day (`America/Guatemala`, UTC−6) with at least one qualifying activity; once per day; missing a day resets displayed streak to 0. Qualifying = a first completion, a **skill-check retake pass**, or a **completed-lesson review finish** — the latter two keep the streak alive after all 6 lessons are done **without** re-awarding XP.
+   **Streak:** +1 per CAT calendar day (`America/Guatemala`, UTC−6) with at least one qualifying activity; once per day; missing a day resets displayed streak to 0. Qualifying = a first completion, a **skill-check retake pass**, or a **completed-lesson review finish** — the latter two keep the streak alive after all 5 lessons are done **without** re-awarding XP.
 
    **Award hook:** `saveSkillCheckResult` → `awardLessonCompletion` (single Firestore transaction: marks `lessonProgress` completed + `xpAwarded`, adds XP only on first completion, advances the streak once/day). Review-only activity uses `touchStreakForActivity` (streak, no XP). Profile refreshes via `gamification-updated` event.
 
-6. **Stage 6** — Lessons 4–6 + Firebase deploy prep ✅
+6. **Stage 6** — Lessons 4–5 + Firebase deploy prep ✅

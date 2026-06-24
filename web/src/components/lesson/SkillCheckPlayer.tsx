@@ -167,11 +167,8 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
 
   return (
     <div className="mx-auto max-w-lg">
-      <div className="mb-4 flex items-center justify-between text-sm text-slate-500">
-        <span className="font-semibold text-brand-600">Skill check</span>
-        <span>
-          Question {questionIndex + 1} of {total}
-        </span>
+      <div className="mb-4 text-sm font-medium text-slate-500">
+        Question {questionIndex + 1} of {total}
       </div>
 
       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -200,10 +197,6 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
           </button>
         )}
       </div>
-
-      <p className="mt-4 text-center text-xs text-slate-400">
-        No hints — answer from memory. Pass with 2 of 3.
-      </p>
     </div>
   )
 }

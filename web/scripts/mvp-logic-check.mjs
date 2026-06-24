@@ -56,7 +56,7 @@ function testNextLessonPath() {
 
 // P1 #5: sequential unlock (mirrors isLessonUnlocked in lib/lessonProgress.ts)
 function testSequentialUnlock() {
-  const lessons = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }, { id: '5' }, { id: '6' }]
+  const lessons = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }, { id: '5' }]
 
   function isLessonUnlocked(lessonId, completedIds) {
     const index = lessons.findIndex((l) => l.id === lessonId)

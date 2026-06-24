@@ -4,7 +4,7 @@ import type { LessonDefinition } from '../../types/lesson'
  * Lesson 5 — "Betting" (design doc §6, Lesson 5). Teaches the five actions and when
  * each is legal, how a round opens and closes, sizing a bet as a fraction of the pot
  * (to board texture & purpose, not hand strength), and the EV of a call. Built on the
- * `betting-round` interaction vs. the Tier 1→2 heads-up opponent (`lib/poker/opponentAI`).
+ * `betting-round` interaction vs. a scripted, deterministic computer opponent.
  *
  * Ratio: 9 problems / 12 steps = 75% interactive. Concepts never run back-to-back.
  * Money is written as plain chip counts so prose can reserve `$…$` for KaTeX.
@@ -19,10 +19,10 @@ export const lesson5: LessonDefinition = {
       title: 'Your turn: the five actions',
       content: `On your turn, first ask: **is there a bet to me?**
 
-- **No bet yet?** You may **check** (stay in for free) or **bet** (put the first chips in).
-- **Facing a bet?** You may **call** (match it), **raise** (increase it), or **fold** (give up the hand).
+- **No bet yet?** You may **check** or **bet**.
+- **Facing a bet?** You may **call**, **raise**, or **fold**.
 
-A second raise in the same round is a **re-raise**. Betting or raising every chip you have is going **all-in**. A round **opens** on the first bet and **closes** once everyone still in has matched the top bet or folded — or everyone checks. One rule you will never regret: if you can check for free, **never fold**.`,
+Raising a raise is a **re-raise**; committing every chip is going **all-in**. A round **opens** on the first bet and **closes** once everyone still in has matched the top bet or folded — or everyone checks. One rule you will never regret: if you can check for free, **never fold**.`,
     },
     {
       type: 'problem',
@@ -37,9 +37,7 @@ A second raise in the same round is a **re-raise**. Betting or raising every chi
         pot: 60,
         heroStack: 480,
         villainStack: 480,
-        sizingOptions: [0.5, 0.75, 1],
-        aiTier: 1,
-        seed: 11,
+        sizingOptions: [0.5, 0.75, 1],        seed: 11,
         task: 'choose-action',
       },
       answer: { action: 'bet' },
@@ -69,9 +67,7 @@ A second raise in the same round is a **re-raise**. Betting or raising every chi
         heroStack: 480,
         villainStack: 480,
         facing: { action: 'bet', amount: 20 },
-        sizingOptions: [0.5, 0.75, 1],
-        aiTier: 1,
-        seed: 22,
+        sizingOptions: [0.5, 0.75, 1],        seed: 22,
         task: 'choose-action',
       },
       answer: { action: 'raise' },
@@ -101,9 +97,7 @@ A second raise in the same round is a **re-raise**. Betting or raising every chi
         heroStack: 300,
         villainStack: 300,
         facing: { action: 'bet', amount: 90 },
-        sizingOptions: [0.5, 0.75, 1],
-        aiTier: 2,
-        seed: 33,
+        sizingOptions: [0.5, 0.75, 1],        seed: 33,
         task: 'choose-action',
       },
       answer: { action: 'fold' },
@@ -131,9 +125,7 @@ A second raise in the same round is a **re-raise**. Betting or raising every chi
         pot: 50,
         heroStack: 400,
         villainStack: 400,
-        sizingOptions: [0.5, 0.75, 1],
-        aiTier: 1,
-        seed: 44,
+        sizingOptions: [0.5, 0.75, 1],        seed: 44,
         task: 'choose-action',
       },
       answer: { action: 'check' },
@@ -175,9 +167,7 @@ When you raise, the minimum is **the current bet plus the last raise increment**
         pot: 60,
         heroStack: 400,
         villainStack: 400,
-        sizingOptions: [0.33, 0.5, 0.75],
-        aiTier: 1,
-        seed: 55,
+        sizingOptions: [0.33, 0.5, 0.75],        seed: 55,
         task: 'choose-size',
       },
       answer: { sizeFraction: 0.5, sizeTolerance: 0.05 },
@@ -205,9 +195,7 @@ When you raise, the minimum is **the current bet plus the last raise increment**
         pot: 80,
         heroStack: 400,
         villainStack: 400,
-        sizingOptions: [0.33, 0.5, 0.75],
-        aiTier: 2,
-        seed: 66,
+        sizingOptions: [0.33, 0.5, 0.75],        seed: 66,
         task: 'choose-size',
       },
       answer: { sizeFraction: 0.75, sizeTolerance: 0.05 },
@@ -247,9 +235,7 @@ This is the same idea as **pot odds**: a call breaks even when your equity equal
         pot: 100,
         heroStack: 300,
         villainStack: 300,
-        facing: { action: 'bet', amount: 20 },
-        aiTier: 2,
-        seed: 77,
+        facing: { action: 'bet', amount: 20 },        seed: 77,
         task: 'ev-of-call',
       },
       answer: { evChips: 16, evTolerance: 1 },
@@ -278,9 +264,7 @@ This is the same idea as **pot odds**: a call breaks even when your equity equal
         pot: 100,
         heroStack: 300,
         villainStack: 300,
-        facing: { action: 'bet', amount: 20 },
-        aiTier: 2,
-        seed: 88,
+        facing: { action: 'bet', amount: 20 },        seed: 88,
         task: 'ev-of-call',
       },
       answer: { evChips: -2, evTolerance: 1 },
@@ -309,9 +293,7 @@ This is the same idea as **pot odds**: a call breaks even when your equity equal
         heroStack: 300,
         villainStack: 300,
         facing: { action: 'bet', amount: 20 },
-        sizingOptions: [0.5, 0.75, 1],
-        aiTier: 2,
-        seed: 99,
+        sizingOptions: [0.5, 0.75, 1],        seed: 99,
         task: 'choose-action',
       },
       answer: { action: 'call' },

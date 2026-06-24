@@ -6,7 +6,6 @@ const lessonLoaders: Record<string, () => Promise<LessonDefinition>> = {
   '3': () => import('./lessons/lesson-3').then((m) => m.lesson3),
   '4': () => import('./lessons/lesson-4').then((m) => m.lesson4),
   '5': () => import('./lessons/lesson-5').then((m) => m.lesson5),
-  '6': () => import('./lessons/lesson-6').then((m) => m.lesson6),
 }
 
 const lessonCache = new Map<string, LessonDefinition>()

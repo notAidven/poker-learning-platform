@@ -19,13 +19,13 @@ export const lesson4: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'Outs',
-      content: `An **out** is an unseen card that improves your hand into a likely winner.
+      content: `An **out** is an unseen card that improves your hand.
 
-Say you hold two hearts and two more hearts are on the board — a **flush draw** (four to a flush). A suit has 13 cards and you can already see 4 of them, so the rest are still out there:
+Say you hold two hearts and two more land on the board — a **flush draw**. A suit has 13 cards and you can already see 4, so the rest are still out there:
 
 $$\\text{flush outs} = 13 - 4 = 9$$
 
-Any one of those **9 outs** completes the flush. Counting outs is the first step to turning a draw into a probability.`,
+Any one of those **9 outs** completes the flush. Counting outs turns a draw into a probability.`,
     },
     {
       type: 'problem',

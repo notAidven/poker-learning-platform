@@ -99,7 +99,7 @@ export function FlameIcon({ className = 'h-5 w-5', ...props }: IconProps) {
   )
 }
 
-/** Solid four-point sparkle — "no AI / just practice", highlights. */
+/** Solid four-point sparkle — used for "just practice" accents and highlights. */
 export function SparkleIcon({ className = 'h-5 w-5', ...props }: IconProps) {
   return (
     <svg

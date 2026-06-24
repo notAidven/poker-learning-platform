@@ -1,4 +1,4 @@
-/** Canonical course path — 6 lessons for "Suited", a Texas Hold'em poker course. */
+/** Canonical course path — 5 lessons for "Suited", a Texas Hold'em poker course. */
 export type LessonMeta = {
   id: string
   title: string
@@ -36,11 +36,5 @@ export const lessons: LessonMeta[] = [
     title: 'Betting',
     unit: 'Unit 5 · Wagering',
     primaryInteraction: 'Bet, raise & size; EV of a call',
-  },
-  {
-    id: '6',
-    title: 'Play a Full Hand',
-    unit: 'Unit 6 · Capstone',
-    primaryInteraction: 'Full hand vs AI to showdown',
   },
 ]

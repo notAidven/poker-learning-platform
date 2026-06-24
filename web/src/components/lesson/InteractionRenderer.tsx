@@ -60,8 +60,8 @@ const OutsOdds = lazy(() =>
 const BettingRound = lazy(() =>
   import('./interactions/BettingRound').then((m) => ({ default: m.BettingRound })),
 )
-const FullHand = lazy(() =>
-  import('./interactions/FullHand').then((m) => ({ default: m.FullHand })),
+const HandRankingLadder = lazy(() =>
+  import('./interactions/HandRankingLadder').then((m) => ({ default: m.HandRankingLadder })),
 )
 
 type InteractionRendererProps = InteractionProps & {
@@ -168,8 +168,10 @@ export function InteractionRenderer({
         <BettingRound key={step.id} config={step.config} answer={step.answer} {...props} />
       )
       break
-    case 'full-hand':
-      interaction = <FullHand key={step.id} config={step.config} answer={step.answer} {...props} />
+    case 'hand-ranking-ladder':
+      interaction = (
+        <HandRankingLadder key={step.id} config={step.config} answer={step.answer} {...props} />
+      )
       break
     default:
       return null

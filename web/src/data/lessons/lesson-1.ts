@@ -6,9 +6,16 @@ import { cardsBySuit, cardsByRank } from '../../types/lesson'
  *
  * Objectives (true beginner, no prior poker knowledge): learn the 52-card deck
  * (ranks + suits), the goal of a hand, and the core Hold'em structure — 2 hole
- * cards + 5 community cards, from which you make the best 5-card hand. The big
- * idea to cement: your hand is the best *five of seven*, using both / one / none
- * of your hole cards ("playing the board").
+ * cards + 5 community cards, from which you build a 5-card hand. The big idea to
+ * cement: your hand is five of seven, using both / one / none of your hole cards
+ * ("playing the board").
+ *
+ * Pedagogical ordering rule: hand *rankings* (which five-card hand is "best") are
+ * not taught until Lesson 2, so NO Lesson 1 problem may require judging which hand
+ * is best. The build steps are therefore framed by a rank-agnostic *pattern* —
+ * "tap five cards that all share one suit" — which the learner can solve purely by
+ * matching suits. The goal ("make the best five-card hand to win the pot") is still
+ * stated in the concepts, with an explicit forward-reference to Lesson 2.
  *
  * Ratio: 6 problems / 8 steps = 75% interactive. Concepts never sit back-to-back.
  * Keep `id: '1'` / export `lesson1`.
@@ -23,7 +30,7 @@ export const lesson1: LessonDefinition = {
       title: 'Poker and the deck',
       content: `Poker is played with a standard **52-card deck**: 13 ranks (2, 3, …, 10, J, Q, K, A) in four suits — spades ♠, hearts ♥, diamonds ♦, clubs ♣.
 
-Suits don't outrank one another; only the **ranks** and the **patterns** you make matter. The goal of a hand is to win the **pot** (the chips at stake), usually by making the best five-card hand.
+Suits don't outrank one another; only the **ranks** and the **patterns** you make matter. The goal of a hand is to win the **pot**, usually by making the best five-card hand.
 
 This course teaches **Texas Hold'em**, the most popular form of poker.`,
     },
@@ -75,11 +82,11 @@ This course teaches **Texas Hold'em**, the most popular form of poker.`,
       type: 'concept',
       id: 'c2',
       title: 'Hole cards and the board',
-      content: `In Texas Hold'em you are dealt **2 private cards** — your **hole cards** — that only you can use. Then up to **5 shared cards**, the **community cards** (or "the board"), are dealt face-up for everyone.
+      content: `In Texas Hold'em you are dealt **2 private cards** — your **hole cards**. Then up to **5 shared cards**, the **community cards**, are dealt face-up for everyone.
 
-Your hand is the **best five-card combination** you can make from those **7 cards** (2 + 5).
+Your hand is a **five-card combination** built from those **7 cards** (2 + 5). A key beginner point: you may use **both, one, or none** of your hole cards. If the five community cards already make your whole hand, that is fine — it's called **playing the board**.
 
-A key beginner point: you may use **both, one, or none** of your hole cards. If the five community cards are already your best hand, that is fine — it's called **playing the board**.`,
+*Which* five-card hand actually wins — the ranking that decides what counts as "best" — is the **next lesson**. For now, just get comfortable building five cards from seven and spotting simple patterns, like five cards that share a suit.`,
     },
     {
       type: 'problem',
@@ -103,73 +110,85 @@ A key beginner point: you may use **both, one, or none** of your hole cards. If 
           'The board comes out as 3 cards (flop), then 1 (turn), then 1 (river).',
           'Reveal every street so all 7 cards are showing.',
         ],
-        why: 'Every Hold\'em hand gives you the same raw material: 2 private hole cards + 5 shared community cards. You build your best five-card hand from these 7. (The betting that happens between stages comes in a later lesson.)',
+        why: 'Every Hold\'em hand gives you the same raw material: 2 private hole cards + 5 shared community cards. You build your five-card hand from these 7. (The betting that happens between stages comes in a later lesson.)',
       },
     },
     {
       type: 'problem',
       id: 'p4',
-      prompt: 'Here are your 7 cards (2 hole + 5 community). Tap the **best 5-card hand** you can make.',
+      prompt:
+        'Your **hole cards** are the **A♥** and **J♥**. From all **7 cards**, build a five-card hand by tapping **five cards that all share one suit**.',
       interaction: 'hand-ranker',
       config: {
-        mode: 'pick-best-five',
-        cards: ['AH', 'KH', '9H', '5H', '2H', '8S', '3C'],
-        helperText: 'You may use any five of the seven cards.',
+        mode: 'build-hand',
+        targetCategory: 'flush',
+        pool: ['AH', 'JH', 'KS', '9H', '4C', '6H', '3H'],
+        helperText: 'Find the one suit you have five of, then tap exactly those five.',
       },
-      answer: { cards: ['AH', 'KH', '9H', '5H', '2H'] },
+      answer: { cards: ['AH', 'JH', '9H', '6H', '3H'], category: 'flush' },
       feedback: {
-        correct: 'Five hearts make a **flush** — the strongest five-card hand hiding in these seven.',
-        incorrect: 'Look for five cards of one suit. Five hearts beat any other combination here.',
+        correct:
+          'Five cards of one suit — that pattern is a **flush**. Both your hole hearts joined three hearts on the board, so you used **both** hole cards.',
+        incorrect:
+          'All five cards must match the same suit. Find the suit you can collect five of, and tap exactly those five.',
         hints: [
-          'Scan all 7 cards for a pattern.',
-          'Count the hearts.',
-          'Five of one suit is a flush — take the five hearts.',
+          'Count how many cards you hold of each suit.',
+          'Only one suit reaches five cards; the others fall short.',
+          'Tap all five cards of that one suit.',
         ],
-        why: 'Your hand is the **best 5 of 7**. Five of these cards are hearts, forming a flush. (Why a flush is strong comes next lesson — for now, the skill is choosing the best five.)',
+        why: 'From 7 cards you pick **5** to make your hand. Five of a single suit is a **flush** (one of the patterns you will rank next lesson). Here only the hearts reach five, and both of yours are hearts — so this hand uses **both** hole cards.',
       },
     },
     {
       type: 'problem',
       id: 'p5',
-      prompt: 'New hand — your hole cards look weak. Tap the **best 5** from all 7.',
+      prompt:
+        'New hand. Your **hole cards** are the **A♦** and **9♣**. Again, tap a **five-card hand whose five cards all share one suit**.',
       interaction: 'hand-ranker',
       config: {
-        mode: 'pick-best-five',
-        cards: ['7C', '2D', 'AS', 'KS', 'QS', 'JS', '10S'],
-        helperText: 'Your hole cards are the 7♣ and 2♦. Do they help?',
+        mode: 'build-hand',
+        targetCategory: 'flush',
+        pool: ['AD', '9C', 'KD', '8D', '7S', '5D', '2D'],
+        helperText: 'Find the suit with five cards — then notice which of your hole cards actually fit it.',
       },
-      answer: { cards: ['AS', 'KS', 'QS', 'JS', '10S'] },
+      answer: { cards: ['AD', 'KD', '8D', '5D', '2D'], category: 'flush' },
       feedback: {
-        correct: 'The five community spades (A-K-Q-J-10) are the best hand — your hole cards do not help. This is **playing the board**.',
-        incorrect: 'Your hole cards (7♣, 2♦) do not improve anything. The five community cards already make the best hand.',
+        correct:
+          'Five of one suit again — a **flush**. Only your A♦ fit; your 9♣ did not, so this hand uses just **one** of your two hole cards.',
+        incorrect:
+          'Look for the suit you can find five of. One of your hole cards belongs to it and one does not — take the five matching cards.',
         hints: [
-          'Your two hole cards are a 7 and a 2 — do they fit any pattern?',
-          'Look at the five community cards together.',
-          'The best five are all on the board — use none of your hole cards.',
+          'Which suit appears five times across the seven cards?',
+          'Check each hole card: does it share that suit?',
+          'Tap the five cards of that suit — only one hole card belongs.',
         ],
-        why: 'You can use **both, one, or none** of your hole cards. Here the board itself is the best five-card hand, so you "play the board." That busts the common myth that you must use your hole cards.',
+        why: 'You may use **both, one, or none** of your hole cards. Here the five-of-one-suit hand needs your A♦ but not your 9♣, so you build the five using **one** hole card. The 9♣ simply sits out.',
       },
     },
     {
       type: 'problem',
       id: 'p6',
-      prompt: 'One more — this time your hole cards matter. Tap the **best 5** from all 7.',
+      prompt:
+        'Last hand. Your **hole cards** are the **7♣** and **2♦**. Once more, tap a **five-card hand whose five cards all share one suit**.',
       interaction: 'hand-ranker',
       config: {
-        mode: 'pick-best-five',
-        cards: ['8H', '8D', '8S', 'KC', 'AH', '3D', '2C'],
-        helperText: 'Your hole cards are the 8♥ and 8♦.',
+        mode: 'build-hand',
+        targetCategory: 'flush',
+        pool: ['7C', '2D', 'AS', 'QS', '9S', '5S', '3S'],
+        helperText: 'Find the suit with five cards — then check whether your hole cards are part of it.',
       },
-      answer: { cards: ['8H', '8D', '8S', 'AH', 'KC'] },
+      answer: { cards: ['AS', 'QS', '9S', '5S', '3S'], category: 'flush' },
       feedback: {
-        correct: 'Both your 8s plus the 8 on the board make **three of a kind**, with Ace-King kickers — you used both hole cards.',
-        incorrect: 'You hold two 8s, and there is a third 8 on the board — that is three of a kind. Add the two highest other cards.',
+        correct:
+          'The five matching cards are all **community cards** — you used **neither** hole card. When the shared board already makes your whole hand, that is **playing the board**.',
+        incorrect:
+          'Find the suit with five cards. Your 7♣ and 2♦ are not that suit — all five matching cards are on the board.',
         hints: [
-          'What pair are you holding?',
-          'Is there another card on the board that matches your pair?',
-          'Three 8s, then the two highest remaining cards (Ace and King).',
+          'Which suit shows up five times?',
+          'Are your hole cards (7♣, 2♦) that suit?',
+          'All five matching cards are community cards — tap those five.',
         ],
-        why: 'Sometimes your hole cards are the key: both 8s combine with the board\'s 8 for three of a kind. Across these three hands you used **none**, then **both** hole cards — always just the best five of seven.',
+        why: 'Across these three hands you used **both**, then **one**, then **none** of your hole cards — always just **five of your seven**. Here the five community cards already share a suit, so your hole cards add nothing and you **play the board**. That busts the myth that you must use your own two cards. (Which five-card hand is strongest is the next lesson.)',
       },
     },
   ],

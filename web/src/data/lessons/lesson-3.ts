@@ -18,9 +18,9 @@ export const lesson3: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'Blinds, the button, and the deal',
-      content: `Every hand begins with forced bets called **blinds**. A marker, the **button**, shows who is "the dealer"; it moves one seat to the left after each hand.
+      content: `Every hand begins with forced bets called **blinds**. A marker, the **button**, shows who is "the dealer".
 
-The player just left of the button posts the **small blind (SB)**; the next player posts the **big blind (BB)** — usually twice the small blind ($\\text{SB} = \\tfrac{1}{2}\\,\\text{BB}$) and equal to the table's minimum bet. The blinds go in **before any cards**, seeding the **pot** (the chips everyone is playing for) and forcing the action. Then each player is dealt **2 private hole cards**.`,
+The player just left of the button posts the **small blind (SB)**; the next player posts the **big blind (BB)**, usually twice the small blind ($\\text{SB} = \\tfrac{1}{2}\\,\\text{BB}$). The blinds go in **before any cards**, seeding the **pot** and forcing the action. Then each player is dealt their two **hole cards**.`,
     },
     {
       type: 'problem',
@@ -185,9 +185,9 @@ The player just left of the button posts the **small blind (SB)**; the next play
       type: 'concept',
       id: 'c3',
       title: 'Showdown — and when there isn’t one',
-      content: `After the river's betting, if **two or more** players remain, it's **showdown**: hands are revealed and the **best 5-card hand wins the pot**. The last player to **bet or raise** on the river shows first; if the river was checked around, the first active player left of the button shows first. Identical hands **split** the pot.
+      content: `After the river's betting, if **two or more** players remain, it's **showdown**: the **best 5-card hand wins the pot**. The last player to **bet or raise** on the river shows first; if the river was checked around, the first active player left of the button shows first. Identical hands **split** the pot.
 
-If instead **all opponents fold, leaving one player**, the hand ends immediately — that player wins **without a showdown** and need not show. A player can also go **all-in**, committing every chip they have.`,
+If instead **all opponents fold, leaving one player**, the hand ends immediately — that player wins **without a showdown** and need not show. A player can also go **all-in**.`,
     },
     {
       type: 'problem',

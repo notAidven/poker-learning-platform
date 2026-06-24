@@ -192,6 +192,21 @@ export function CompareEvents({
   const bMoreLikely = answer.more === 'b'
   const equalLikely = answer.more === 'equal'
 
+  // "More likely" only fits probabilistic comparisons — those where a side carries
+  // favorable/total or an explicit probability (so a reveal bar can render), or where
+  // the learner must enter probabilities. Deterministic comparisons ("which hand
+  // wins?", "who acts last?", kicker tiebreaks) have no probabilities, so use neutral
+  // wording instead.
+  const isProbabilistic = requireProbabilities || dispA.value !== null || dispB.value !== null
+  const correctLabel = aMoreLikely ? config.eventA.label : config.eventB.label
+  const revealText = equalLikely
+    ? isProbabilistic
+      ? 'Both events have the same probability.'
+      : 'They are equal.'
+    : isProbabilistic
+      ? `${correctLabel} is more likely.`
+      : `${correctLabel} — correct.`
+
   return (
     <div className="space-y-5">
       <style>{`.cmp-bar { transition: width 0.45s cubic-bezier(0.34, 1.2, 0.64, 1); }`}</style>
@@ -262,11 +277,7 @@ export function CompareEvents({
           role="status"
           aria-live="polite"
         >
-          <p className="text-sm font-semibold text-slate-700">
-            {equalLikely
-              ? 'Both events have the same probability.'
-              : `${aMoreLikely ? config.eventA.label : config.eventB.label} is more likely.`}
-          </p>
+          <p className="text-sm font-semibold text-slate-700">{revealText}</p>
           {renderRevealBar(dispA, `P(${config.eventA.label})`, aMoreLikely || equalLikely)}
           {renderRevealBar(dispB, `P(${config.eventB.label})`, bMoreLikely || equalLikely)}
         </div>

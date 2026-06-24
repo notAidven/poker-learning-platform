@@ -8,7 +8,7 @@ import type { LessonDefinition } from '../../types/lesson'
  * is validated by the pure evaluator in `lib/poker/handEvaluator.ts`; "which wins"
  * reuses the generic `compare-events` widget.
  *
- * Ratio: 8 problems / 10 steps = 80% interactive. Concepts never sit back-to-back.
+ * Ratio: 9 problems / 11 steps ≈ 82% interactive. Concepts never sit back-to-back.
  * Keep `id: '2'` / export `lesson2`.
  */
 export const lesson2: LessonDefinition = {
@@ -19,20 +19,31 @@ export const lesson2: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'The ranking ladder',
-      content: `Every poker hand falls into one of **ten categories**. From strongest to weakest:
+      content: `Every poker hand falls into one of **ten categories**, and a hand in a higher category *always* beats one in a lower category — whatever cards are inside it.
 
-1. **Royal flush** — A-K-Q-J-10, one suit
-2. **Straight flush** — five in a row, one suit
-3. **Four of a kind** — four of one rank
-4. **Full house** — three of a kind + a pair
-5. **Flush** — five of one suit
-6. **Straight** — five in a row, any suits
-7. **Three of a kind**
-8. **Two pair**
-9. **One pair**
-10. **High card** — none of the above
-
-A hand in a higher category always beats one in a lower category. Anchor the ends first: a **royal flush is unbeatable**, and **high card is the floor** (the worst hand is 7-5-4-3-2).`,
+The ladder below runs from the strongest hand down to the weakest. Anchor the two ends first: a **royal flush is unbeatable**, and **high card is the floor** (the worst possible hand is 7-5-4-3-2). Tap any rung to flip up an example five-card hand.`,
+    },
+    {
+      type: 'problem',
+      id: 'l1',
+      prompt: 'The ten categories, strongest at the top. A higher category always beats a lower one.',
+      interaction: 'hand-ranking-ladder',
+      config: {
+        helperText:
+          'Tap a hand to flip up an example. The further up the ladder, the rarer — and stronger — the hand.',
+      },
+      answer: { minExamplesRevealed: 1 },
+      feedback: {
+        correct:
+          'A higher category always beats a lower one: a royal flush can’t lose, and high card is the floor.',
+        incorrect: 'Tap any hand on the ladder to reveal its example cards.',
+        hints: [
+          'Tap a row to flip up an example five-card hand.',
+          'The ladder runs strongest (top) to weakest (bottom).',
+          'A higher category always beats a lower category, whatever the kickers.',
+        ],
+        why: 'The ladder is ordered by **rarity**: rarer hands sit higher and always beat more common ones. A royal flush is the rarest (and unbeatable); high card is the most common, so it is the floor.',
+      },
     },
     {
       type: 'problem',
@@ -176,7 +187,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
       type: 'problem',
       id: 'p6',
       prompt:
-        'A **kicker** is a side card that breaks a tie when two hands share the same pair. Both players hold a pair of Aces. Which hand wins?',
+        'Both players hold a pair of Aces, so the **kicker** decides. Which hand wins?',
       interaction: 'compare-events',
       config: {
         helperText: 'Same pair? Compare the next-highest card.',

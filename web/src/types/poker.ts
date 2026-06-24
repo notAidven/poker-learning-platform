@@ -78,10 +78,3 @@ export type PokerStreet = 'preflop' | 'flop' | 'turn' | 'river'
 
 /** The five legal betting actions (see design doc §3.7). */
 export type BettingAction = 'check' | 'bet' | 'call' | 'raise' | 'fold'
-
-/** A single AI opponent decision (see `lib/poker/opponentAI.ts`). */
-export type AIDecision = {
-  action: BettingAction
-  /** Chip amount for a bet/raise/call; omitted for check/fold. */
-  amount?: number
-}

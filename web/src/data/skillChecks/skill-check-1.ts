@@ -3,8 +3,11 @@ import type { SkillCheckDefinition } from '../../types/skillCheck'
 
 /**
  * Skill Check 1 (design doc §6, Lesson 1): (q1) tap a full suit and count it;
- * (q2) deal a full hand so all 7 cards show; (q3) pick the best 5 of 7. All three
- * are interactive. Keep `lessonId: '1'` / export `skillCheck1`.
+ * (q2) deal a full hand so all 7 cards show; (q3) build a five-card hand by tapping
+ * five cards that share a suit. All three are interactive and rank-agnostic — hand
+ * rankings ("which hand is best") are not taught until Lesson 2, so q3 is framed by a
+ * suit *pattern* rather than judging the best hand. Keep `lessonId: '1'` / export
+ * `skillCheck1`.
  */
 export const skillCheck1: SkillCheckDefinition = {
   lessonId: '1',
@@ -39,15 +42,17 @@ export const skillCheck1: SkillCheckDefinition = {
     },
     {
       id: 'q3',
-      prompt: 'From these 7 cards, tap the best 5-card hand you can make.',
+      prompt: 'From these 7 cards, build a five-card hand by tapping five cards that all share one suit.',
       interaction: 'hand-ranker',
       config: {
-        mode: 'pick-best-five',
-        cards: ['AD', 'KD', 'QD', '8D', '3D', '7C', '2S'],
-        helperText: 'You may use any five of the seven cards.',
+        mode: 'build-hand',
+        targetCategory: 'flush',
+        pool: ['AS', 'KC', '7C', '2C', '9H', '10C', '4C'],
+        helperText: 'Find the one suit you can collect five of, then tap exactly those five.',
       },
-      answer: { cards: ['AD', 'KD', 'QD', '8D', '3D'] },
-      incorrectFeedback: 'Five diamonds make a flush — the best five of these seven.',
+      answer: { cards: ['KC', '10C', '7C', '2C', '4C'], category: 'flush' },
+      incorrectFeedback:
+        'All five cards must share a suit. Only one suit reaches five cards here — tap those five (that pattern is a flush).',
     },
   ],
 }

@@ -257,10 +257,23 @@ function SelectAllMode({
   initialSolved = false,
   allowRetry = true,
 }: CardDeckProps) {
-  const [selected, setSelected] = useState<Set<CardId>>(new Set())
-  const [countInput, setCountInput] = useState('')
-  const [fractionNum, setFractionNum] = useState('')
-  const [fractionDen, setFractionDen] = useState('')
+  // When a solved lesson is revisited (initialSolved), seed every input from the answer
+  // so the completed state shows consistently: the "Your selection" panel lists the
+  // correct cards (instead of "No cards selected yet"), and the count/fraction fields
+  // appear pre-filled rather than hidden. First play and skill checks (which never pass
+  // initialSolved) start empty as before.
+  const [selected, setSelected] = useState<Set<CardId>>(() =>
+    initialSolved ? new Set(answer.cards ?? []) : new Set(),
+  )
+  const [countInput, setCountInput] = useState(() =>
+    initialSolved && answer.count !== undefined ? String(answer.count) : '',
+  )
+  const [fractionNum, setFractionNum] = useState(() =>
+    initialSolved && answer.probability ? String(answer.probability.num) : '',
+  )
+  const [fractionDen, setFractionDen] = useState(() =>
+    initialSolved && answer.probability ? String(answer.probability.den) : '',
+  )
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
 

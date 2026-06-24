@@ -8,11 +8,8 @@ export function LessonProgressBar({ current, total }: LessonProgressBarProps) {
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-        <span>
-          Step {current + 1} of {total}
-        </span>
-        <span>{pct}%</span>
+      <div className="text-xs font-medium text-slate-500">
+        Step {current + 1} of {total}
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-200">
         <div

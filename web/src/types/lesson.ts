@@ -741,8 +741,14 @@ export type BettingRoundConfig = {
   sizingOptions?: number[]
   /** What the learner faces: nothing (check/bet) or an existing bet (call/raise/fold). */
   facing?: { action: 'bet' | 'raise'; amount: number }
-  /** AI tier controlling the villain's response (see §5.6). */
-  aiTier?: 1 | 2 | 3
+  /**
+   * Scripted, deterministic opponent response shown in the reveal: after the
+   * hero acts, the opponent plays this fixed action. Optional — when omitted the reveal
+   * falls back to a simple rule (call when faced with a bet; check behind when checked to).
+   */
+  villainAction?: BettingAction
+  /** Chip amount for a scripted villain bet/raise (defaults to a pot-fraction). */
+  villainAmount?: number
   seed?: number
   /** Sub-question to validate completion. */
   task: 'choose-action' | 'choose-size' | 'ev-of-call'
@@ -766,40 +772,32 @@ export type BettingRoundStep = ProblemStepBase & {
   answer: BettingRoundAnswer
 }
 
-// --- full-hand (§5.6) capstone ------------------------------------------------
-export type FullHandCheckpoint = {
-  street: PokerStreet
-  prompt: string
-  /** Any of these actions counts as correct at this checkpoint. */
-  acceptableActions: BettingAction[]
-  /** Feeds the "Why?" explanation. */
-  why?: string
+// --- hand-ranking ladder (concept-style reveal) -------------------------------
+// A non-graded "explore the ladder" display: the 10 hand categories listed
+// strongest → weakest, where tapping a row reveals an example 5-card hand drawn
+// as real card visuals. There is nothing to grade, so it auto-completes once the
+// learner has opened at least one example (mirrors `board-dealer`'s reveal-gate
+// `minStreetsRevealed`) — never a misleading "Check answer". The ten categories
+// and their verified example hands are owned by the widget; config only tweaks
+// copy, keeping authoring in `lesson-2.ts` trivial.
+export type HandRankingLadderConfig = {
+  /** Instruction shown above the ladder (defaults in widget). */
+  helperText?: string
 }
 
-export type FullHandConfig = {
-  opponents: number // 1 (heads-up) … 3 (multiway)
-  aiTier: 1 | 2 | 3
-  heroHole?: [CardId, CardId] | 'random'
-  seed?: number
-  blinds: { sb: number; bb: number }
-  startingStack: number
-  /** Authored decision checkpoints the learner must pass. */
-  checkpoints: FullHandCheckpoint[]
-  /** Minimum checkpoints passed to count the capstone solved (default = all but one). */
-  passThreshold?: number
-  /** Show the responsible-play note on completion (Lesson 6 only). */
-  showResponsiblePlayNote?: boolean
+export type HandRankingLadderAnswer = {
+  /**
+   * Distinct example hands the learner must open before the step auto-completes
+   * (default 1). This is the no-input completion gate — there is no answer to
+   * check, exactly like `board-dealer`'s observational reveal-gate.
+   */
+  minExamplesRevealed?: number
 }
 
-export type FullHandAnswer = {
-  /** Mirror of checkpoint expectations; the component enforces passThreshold. */
-  passThreshold: number
-}
-
-export type FullHandStep = ProblemStepBase & {
-  interaction: 'full-hand'
-  config: FullHandConfig
-  answer: FullHandAnswer
+export type HandRankingLadderStep = ProblemStepBase & {
+  interaction: 'hand-ranking-ladder'
+  config: HandRankingLadderConfig
+  answer: HandRankingLadderAnswer
 }
 
 export type ProblemStep =
@@ -823,7 +821,7 @@ export type ProblemStep =
   | BoardDealerStep
   | OutsOddsStep
   | BettingRoundStep
-  | FullHandStep
+  | HandRankingLadderStep
 
 export type LessonStep = ConceptStep | ProblemStep
 

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   cardLabel,
-  fullDeck,
   isRedSuit,
   parseCardId,
   type BettingRoundAnswer,
@@ -14,11 +13,10 @@ import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { MathContent } from '../MathContent'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
-import { decideAI, makeRng, type AITier } from '../../../lib/poker/opponentAI'
 
 /**
- * `betting-round` (design doc §5.5) — one street of betting against a single seeded
- * AI villain (`lib/poker/opponentAI.ts`). Three tasks:
+ * `betting-round` (design doc §5.5) — one street of betting against a scripted,
+ * deterministic opponent. Three tasks:
  *   - choose-action → the chosen action must equal `answer.action`
  *   - choose-size   → the chosen fraction-of-pot must be within `answer.sizeTolerance`
  *   - ev-of-call    → the entered EV (chips, signed) must be within `answer.evTolerance`
@@ -216,19 +214,6 @@ function closestSizeIndex(options: number[], target: number | undefined): number
   return best
 }
 
-/** Deal the villain two reproducible hole cards from the remaining deck. */
-function dealVillainHole(config: BettingRoundConfig, rng: () => number): [CardId, CardId] {
-  const used = new Set<CardId>([...config.hole, ...config.board])
-  const remaining = fullDeck().filter((card) => !used.has(card))
-  for (let i = remaining.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    const tmp = remaining[i]
-    remaining[i] = remaining[j]
-    remaining[j] = tmp
-  }
-  return [remaining[0], remaining[1]]
-}
-
 type TableReveal = {
   potAfter: number
   heroStackAfter: number
@@ -239,19 +224,19 @@ type TableReveal = {
 }
 
 /**
- * Apply the hero's action to the table and let the seeded AI respond once.
- * Deterministic given `config.seed`, so the reveal is reproducible.
+ * Apply the hero's action to the table and play the opponent's scripted response once.
+ * Fully deterministic: the opponent plays `config.villainAction` when the lesson
+ * scripts one, otherwise a simple fixed rule — check behind when checked to, and call the
+ * price when the hero puts chips in. The reveal is identical every time.
  */
 function buildTableReveal(
   config: BettingRoundConfig,
   heroAction: BettingAction,
   heroBetTotal: number,
 ): TableReveal {
-  const tier = (config.aiTier ?? 1) as AITier
   const startPot = config.pot
   const facing = config.facing?.amount ?? 0
-  const rng = makeRng(config.seed ?? 1)
-  const villainHole = dealVillainHole(config, rng)
+  const scripted = config.villainAction ?? null
 
   let pot = startPot
   let heroStack = config.heroStack
@@ -260,25 +245,14 @@ function buildTableReveal(
   let villainAction: BettingAction | null = null
   let priceLaidPercent: number | null = null
 
-  const ask = (toCall: number) =>
-    decideAI({
-      tier,
-      hole: villainHole,
-      board: config.board,
-      pot,
-      toCall,
-      position: toCall > 0 ? 'oop' : 'ip',
-      rng,
-    })
-
   if (heroAction === 'fold') {
     lines.push('You fold and give up the hand.')
     lines.push(`Villain takes the pot of ${pot}.`)
   } else if (heroAction === 'check') {
     lines.push('You check — no chips in, action passes.')
-    const d = ask(0)
-    if (d.action === 'bet' && d.amount && d.amount > 0) {
-      const amt = Math.min(d.amount, villainStack)
+    // Scripted: the opponent only bets back when the lesson explicitly scripts it.
+    if (scripted === 'bet') {
+      const amt = Math.min(config.villainAmount ?? Math.round(pot * 0.66), villainStack)
       villainStack -= amt
       pot += amt
       villainAction = 'bet'
@@ -294,7 +268,7 @@ function buildTableReveal(
     lines.push(`You call ${amt}.`)
     lines.push(`Both stacks have matched — the betting is settled and the pot is ${pot}.`)
   } else {
-    // bet or raise: hero puts chips in, then the villain answers the price.
+    // bet or raise: hero puts chips in, then the scripted opponent answers the price.
     const total = Math.max(0, Math.min(heroBetTotal, heroStack))
     heroStack -= total
     pot += total
@@ -305,17 +279,20 @@ function buildTableReveal(
       priceLaidPercent = total > 0 ? (total / (startPot + 2 * total)) * 100 : null
     }
     const villToCall = heroAction === 'raise' ? Math.max(0, total - facing) : total
-    const d = ask(villToCall)
-    if (d.action === 'fold') {
+    if (scripted === 'fold') {
       villainAction = 'fold'
       lines.push(`Villain folds — you win the pot of ${pot} with no showdown.`)
-    } else if (d.action === 'raise' && d.amount && d.amount > villToCall) {
-      const amt = Math.min(d.amount, villainStack)
+    } else if (scripted === 'raise') {
+      const amt = Math.min(
+        config.villainAmount ?? Math.round((startPot + 2 * total) * 0.6) + villToCall,
+        villainStack,
+      )
       villainStack -= amt
       pot += amt
       villainAction = 'raise'
       lines.push(`Villain re-raises to ${amt} — the decision comes back to you.`)
     } else {
+      // Default scripted response: the opponent calls the price laid.
       const amt = Math.min(villToCall, villainStack)
       villainStack -= amt
       pot += amt

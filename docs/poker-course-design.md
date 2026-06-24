@@ -4,6 +4,13 @@
 **Scope:** Replace the 6 probability lessons with 6 Texas Hold'em poker lessons, reusing the existing lesson engine, skill-check flow, gamification, and card widgets.
 **Audience for this doc:** implementation agents and content authors. The "Poker content reference" section is the **source of truth** for poker correctness.
 
+> **Shipped-scope update:** The shipped course is now **5 lessons with no AI**. The original
+> **Lesson 6** capstone ("play a full hand") and the rule-based opponent (`lib/poker/opponentAI.ts`
+> plus the `full-hand` interaction) described below were removed from the shipped build and archived
+> on a local-only `poker-with-lesson6` branch. Lesson 5's betting now uses a scripted, deterministic
+> opponent (no AI). Sections that mention Lesson 6 / `full-hand` / opponent AI / `aiTier` are kept
+> below as historical design context only.
+
 ---
 
 ## 1. Overview & goals
