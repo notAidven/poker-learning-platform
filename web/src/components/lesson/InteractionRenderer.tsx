@@ -17,6 +17,9 @@ const CoinFlipLab = lazy(() =>
 const CoinFlipProbability = lazy(() =>
   import('./interactions/CoinFlipProbability').then((m) => ({ default: m.CoinFlipProbability })),
 )
+const CompareEvents = lazy(() =>
+  import('./interactions/CompareEvents').then((m) => ({ default: m.CompareEvents })),
+)
 const CountingProduct = lazy(() =>
   import('./interactions/CountingProduct').then((m) => ({ default: m.CountingProduct })),
 )
@@ -129,6 +132,11 @@ export function InteractionRenderer({
       break
     case 'card-deck':
       interaction = <CardDeck key={step.id} config={step.config} answer={step.answer} {...props} />
+      break
+    case 'compare-events':
+      interaction = (
+        <CompareEvents key={step.id} config={step.config} answer={step.answer} {...props} />
+      )
       break
     default:
       return null

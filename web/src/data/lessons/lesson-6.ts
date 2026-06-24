@@ -1,5 +1,5 @@
 import type { LessonDefinition } from '../../types/lesson'
-import { cardsByRank, redCards } from '../../types/lesson'
+import { cardsByRank, cardsBySuit, complementOf, redCards } from '../../types/lesson'
 
 const kings = cardsByRank('K')
 const aces = cardsByRank('A')
@@ -135,7 +135,7 @@ $$|A \\cup B| = |A| + |B| - |A \\cap B|.$$
 
 **Complement:** $|A^c| = |\\Omega| - |A|$, since every outcome is either in $A$ or not.
 
-These formulas turn Venn regions into counts — then $P = \\frac{\\text{count}}{|\\Omega|}$ as before. On a deck, $|\\Omega| = 52$, so once you count the union or intersection you divide by 52 and reduce. The next three problems do exactly that.`,
+These formulas turn Venn regions into counts — then $P = \\frac{\\text{count}}{|\\Omega|}$ as before. On a deck, $|\\Omega| = 52$, so once you count the union or intersection you divide by 52 and reduce.`,
       visual: {
         type: 'two-events',
         labelOmega: 'Ω',
@@ -151,44 +151,44 @@ These formulas turn Venn regions into counts — then $P = \\frac{\\text{count}}
       type: 'problem',
       id: 'p3',
       prompt:
-        '$|\\Omega| = 30$, $|A| = 12$. **Enter $|A^c|$** — outcomes **not** in $A$ (the complement).',
-      interaction: 'venn-diagram',
+        'Take the complement on a real deck ($|\\Omega| = 52$). **Event $A$:** the card is a **heart**, so $A^c$ is **not a heart**. Tap every card that is **not** a heart, enter $|A^c|$, then enter $P(A^c)$ as a reduced fraction.',
+      interaction: 'card-deck',
       config: {
-        sizeA: 12,
-        sizeB: 10,
-        intersection: 4,
-        universeSize: 30,
-        task: 'enter-complement',
-        countLabel: 'Enter |Aᶜ| = |Ω| − |A|:',
+        helperText:
+          'Tap every card except the hearts. The complement is everything in Ω that is NOT in the event.',
+        selectionLabel: 'Your selection (Aᶜ: not a heart)',
+        countLabel: 'How many cards are not hearts? Enter |Aᶜ|.',
+        probabilityLabel: 'What is P(Aᶜ) = |Aᶜ| / 52 as a reduced fraction?',
       },
-      answer: { count: 18 },
+      answer: { cards: complementOf(cardsBySuit('H')), count: 39, probability: { num: 3, den: 4 } },
       feedback: {
         correct:
-          '$|A^c| = |\\Omega| - |A| = 30 - 12 = 18$. Complement fills everything outside $A$ but still inside $\\Omega$.',
+          'Hearts are 13 cards, so the complement is $|A^c| = 52 - 13 = 39$, and $P(A^c) = \\frac{39}{52} = \\frac{3}{4}$. Notice $P(A) + P(A^c) = \\frac{1}{4} + \\frac{3}{4} = 1$ — an event and its complement always fill all of $\\Omega$.',
         incorrect:
-          'Subtract: $30 - 12 = 18$. Enter $|A^c| = 18$.',
+          'The complement is every card that is **not** a heart: $|A^c| = 52 - 13 = 39$, so $P(A^c) = \\frac{39}{52} = \\frac{3}{4}$.',
         hints: [
-          'Complement = all outcomes not in A.',
-          '$|A^c| = |\\Omega| - |A|$.',
-          'Enter **18**.',
+          'Hearts are one suit of 13. Everything else — spades, diamonds, clubs — is the complement.',
+          '$|A^c| = |\\Omega| - |A| = 52 - 13 = 39$.',
+          '$P(A^c) = \\frac{39}{52} = \\frac{3}{4}$.',
         ],
-        why: `**Complement** $A^c$ = all outcomes in $\\Omega$ that are **not** in $A$.
+        why: `**Event $A$ = “a heart.”** One suit, so $|A| = 13$.
 
-Every outcome is either in $A$ or in $A^c$ (and not both), so:
+**Complement** $A^c$ = every card that is **not** a heart. Every card is either a heart or not, so:
 
-$$|A| + |A^c| = |\\Omega|.$$
+$$|A^c| = |\\Omega| - |A| = 52 - 13 = 39.$$
 
-Therefore:
+**Probability:**
 
-$$|A^c| = |\\Omega| - |A| = 30 - 12 = 18.$$
+$$P(A^c) = \\frac{39}{52} = \\frac{3}{4}.$$
 
-On the diagram: circle $A$ holds 12 outcomes; the rest of $\\Omega$ (outside $A$ but inside the rectangle) holds 18.`,
+This matches the complement rule $P(A^c) = 1 - P(A) = 1 - \\frac{1}{4} = \\frac{3}{4}$.`,
         venn: {
           type: 'event-subset',
-          labelA: 'A',
-          outcomes: ['18 in Aᶜ', '12 in A'],
-          eventOutcomes: ['12 in A'],
-          caption: '|Aᶜ| = |Ω| − |A| = 30 − 12 = 18',
+          labelOmega: 'Ω (52 cards)',
+          labelA: 'Aᶜ: not a heart',
+          outcomes: ['39 not hearts', '13 hearts'],
+          eventOutcomes: ['39 not hearts'],
+          caption: '|Aᶜ| = 52 − 13 = 39 → P(Aᶜ) = 3/4',
         },
       },
     },

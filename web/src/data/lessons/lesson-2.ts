@@ -1,5 +1,5 @@
 import type { LessonDefinition } from '../../types/lesson'
-import { cardsByRank, cellKey, faceCards } from '../../types/lesson'
+import { cardsByRank, cellKey } from '../../types/lesson'
 
 const sumSeven = [cellKey(1, 6), cellKey(2, 5), cellKey(3, 4), cellKey(4, 3), cellKey(5, 2), cellKey(6, 1)]
 const doubles = [1, 2, 3, 4, 5, 6].map((n) => cellKey(n, n))
@@ -18,7 +18,7 @@ Examples: “the die shows an even number” (event = $\\{2,4,6\\}$), “the coi
 
 **Important:** an event is not a single number unless only one outcome qualifies. First you list $\\Omega$; then you pick which outcomes belong to the event.
 
-To practice on a richer sample space, roll **Die 1** and **Die 2** (both fair, six-sided). Each result is an **ordered pair** $(d_1, d_2)$ because “3 then 5” differs from “5 then 3.” Die 1 has 6 outcomes; for **each** of those, Die 2 has 6 outcomes, so
+To practice on a larger sample space, roll **Die 1** and **Die 2** (both fair, six-sided). Each result is an **ordered pair** $(d_1, d_2)$ because “3 then 5” differs from “5 then 3.” Die 1 has 6 outcomes; for **each** of those, Die 2 has 6 outcomes, so
 $$|\\Omega| = 6 \\times 6 = 36.$$
 The grid lists all 36 ordered pairs — that **is** the sample space.`,
       visual: {
@@ -156,7 +156,7 @@ The denominator is always **all of $\\Omega$**, not just the event. Always **red
 **Worked example** (“sum is 7,” two fair dice): $|\\Omega| = 36$, $|A| = 6$, so
 $$P(\\text{sum is 7}) = \\frac{6}{36} = \\frac{1}{6}.$$
 
-The same recipe runs on a **deck of cards**, where $|\\Omega| = 52$. The next problems put it to work there.`,
+The same recipe runs on a **deck of cards**, where $|\\Omega| = 52$.`,
       visual: {
         type: 'event-subset',
         labelOmega: 'Ω (one die)',
@@ -212,41 +212,61 @@ There are 13 ranks, each appearing 4 times, so any single rank has probability $
       type: 'problem',
       id: 'p5',
       prompt:
-        '**Event $A$:** “the card is a **face card**” (Jack, Queen, or King). Tap every face card, enter $|A|$, then enter $P(A) = \\frac{|A|}{52}$ as a reduced fraction.',
-      interaction: 'card-deck',
+        '**Which is more likely** when you draw one card: a **face card** (Jack, Queen, or King) or a **red card**? Tap the more likely event, then enter each probability as a reduced fraction.',
+      interaction: 'compare-events',
       config: {
-        helperText: 'Tap every Jack, Queen, and King (all suits).',
-        selectionLabel: 'Your selection (event A: face cards)',
-        countLabel: 'How many face cards are there? Enter |A|.',
-        probabilityLabel: 'What is P(A) = |A| / 52 as a reduced fraction?',
+        helperText:
+          'Count the favorable cards for each event, reduce, then compare. Both events sit in the same |Ω| = 52.',
+        chooseLabel: 'Which event is more likely?',
+        requireProbabilities: true,
+        eventA: {
+          label: 'A face card',
+          detail: 'Jacks, Queens, Kings — 3 ranks × 4 suits',
+          favorable: 12,
+          total: 52,
+        },
+        eventB: {
+          label: 'A red card',
+          detail: 'Hearts and diamonds — 2 suits of 13',
+          favorable: 26,
+          total: 52,
+        },
+        probabilityALabel: 'Enter P(face card) = 12/52 as a reduced fraction.',
+        probabilityBLabel: 'Enter P(red card) = 26/52 as a reduced fraction.',
       },
-      answer: { cards: faceCards(), count: 12, probability: { num: 3, den: 13 } },
+      answer: {
+        more: 'b',
+        probabilityA: { num: 3, den: 13 },
+        probabilityB: { num: 1, den: 2 },
+      },
       feedback: {
         correct:
-          'Three face ranks (J, Q, K) × four suits = $|A| = 12$, so $P(A) = \\frac{12}{52} = \\frac{3}{13}$. Reducing matters: $\\frac{12}{52}$ and $\\frac{3}{13}$ are the same probability written two ways.',
+          'Red wins: $P(\\text{red}) = \\frac{26}{52} = \\frac{1}{2}$ versus $P(\\text{face}) = \\frac{12}{52} = \\frac{3}{13}$. Half the deck is red, while only 12 cards are face cards. Counting favorable outcomes and reducing lets you compare two events directly.',
         incorrect:
-          'Face cards are Jacks, Queens, and Kings — three ranks across four suits, so $3 \\times 4 = 12$. Then $P(A) = \\frac{12}{52} = \\frac{3}{13}$.',
+          'Count each event: 12 face cards give $\\frac{12}{52} = \\frac{3}{13}$; 26 red cards give $\\frac{26}{52} = \\frac{1}{2}$. Since $\\frac{1}{2} > \\frac{3}{13}$, the red card is more likely.',
         hints: [
-          'Face cards are the three picture ranks: J, Q, K.',
-          'Three ranks × four suits → $|A| = 3 \\times 4 = 12$.',
-          '$P(A) = \\frac{12}{52} = \\frac{3}{13}$ (divide top and bottom by 4).',
+          'Face cards: 3 ranks (J, Q, K) × 4 suits = 12. Red cards: 2 suits × 13 = 26.',
+          'Reduce both: $\\frac{12}{52} = \\frac{3}{13}$ and $\\frac{26}{52} = \\frac{1}{2}$.',
+          'Compare $\\frac{3}{13} \\approx 0.23$ with $\\frac{1}{2} = 0.5$ — red is more likely.',
         ],
-        why: `**Event $A$ = “face card” (J, Q, K).** Three ranks, each in four suits:
+        why: `Both events live in the same sample space, $|\\Omega| = 52$.
 
-$$|A| = 3 \\times 4 = 12.$$
+**Face card:** 3 ranks (J, Q, K) across 4 suits, so $|A| = 12$ and
 
-**Divide and reduce** (greatest common factor of 12 and 52 is 4):
+$$P(\\text{face}) = \\frac{12}{52} = \\frac{3}{13} \\approx 23\\%.$$
 
-$$P(A) = \\frac{12}{52} = \\frac{3}{13}.$$
+**Red card:** 2 red suits of 13, so $|B| = 26$ and
 
-Always reduce: $\\frac{3}{13}$ is the cleanest form. The recipe $P(A) = \\frac{|A|}{|\\Omega|}$ handled a King event (4 cards) and now a face-card event (12 cards) without changing.`,
+$$P(\\text{red}) = \\frac{26}{52} = \\frac{1}{2} = 50\\%.$$
+
+Since $\\frac{1}{2} > \\frac{3}{13}$, the **red** card is more likely. Comparing two events is just comparing their reduced fractions.`,
         venn: {
-          type: 'event-subset',
-          labelOmega: 'Ω (52 cards)',
-          labelA: 'A: face card',
-          outcomes: ['12 face cards', '40 others'],
+          type: 'two-events',
+          labelA: 'A: face (12)',
+          labelB: 'B: red (26)',
           eventOutcomes: ['12 face cards'],
-          caption: '|A| = 12 of |Ω| = 52 → P(A) = 3/13',
+          outcomes: ['26 red cards'],
+          caption: 'P(face) = 3/13 ≈ 23% < P(red) = 1/2 = 50%',
         },
       },
     },

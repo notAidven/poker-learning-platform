@@ -444,6 +444,16 @@ export function faceCards(): CardId[] {
   return FACE_RANKS.flatMap((rank) => cardsByRank(rank))
 }
 
+/**
+ * Every card NOT in the given event — the complement within the 52-card Ω.
+ * Handy for "select all cards NOT in X" / P(not X) problems:
+ *   answer.cards = complementOf(redCards())  // the 26 black cards
+ */
+export function complementOf(cards: CardId[]): CardId[] {
+  const exclude = new Set(cards)
+  return fullDeck().filter((card) => !exclude.has(card))
+}
+
 const CARD_RANK_NAMES: Record<CardRank, string> = {
   A: 'Ace',
   '2': 'Two',
@@ -473,10 +483,20 @@ export function cardLabel(id: CardId): string {
   return `${CARD_RANK_NAMES[rank]} of ${CARD_SUIT_NAMES[suit]}`
 }
 
+/**
+ * Card-deck mechanic:
+ *  - 'select-all' (default): tap every card in event A, optionally enter |A| and P(A).
+ *  - 'draw-tally': repeatedly draw a random card and tally how many land in a target
+ *    event vs not, watching the empirical frequency approach the theoretical P(event).
+ */
+export type CardDeckMode = 'select-all' | 'draw-tally'
+
 export type CardDeckConfig = {
+  /** Which mechanic to render (default 'select-all'). */
+  mode?: CardDeckMode
   /** Instruction shown above the deck (defaults in widget). */
   helperText?: string
-  /** Heading for the learner-built "your selection" area. */
+  /** Heading for the learner-built "your selection" area (select-all). */
   selectionLabel?: string
   /** Prompt for the |A| numeric count field. */
   countLabel?: string
@@ -484,14 +504,39 @@ export type CardDeckConfig = {
   probabilityLabel?: string
   /** Play a staggered deal-in animation on mount (default true; auto-disabled for reduced motion). */
   deal?: boolean
+
+  // --- draw-tally mode -------------------------------------------------------
+  /** Cards that count as a "hit" for the tallied event, e.g. redCards() (draw-tally). */
+  targetEvent?: CardId[]
+  /** Human name of the tallied event, e.g. "a heart" / "a red card" (draw-tally). */
+  targetLabel?: string
+  /** Draws required before the learner may check (default 12) (draw-tally). */
+  minDraws?: number
+  /** Draw with replacement so every draw is independent (default true) (draw-tally). */
+  withReplacement?: boolean
+  /** Show a "predict the probability first" step before drawing (draw-tally). */
+  predictFirst?: boolean
+  /** Prompt for the predict-first fraction field (draw-tally). */
+  predictLabel?: string
+  /** Label for the draw button (draw-tally). */
+  drawLabel?: string
 }
 
 export type CardDeckAnswer = {
-  /** Exact set of card ids that belong to the event A. Ω is always the 52-card deck. */
-  cards: CardId[]
+  /**
+   * Exact set of card ids that belong to event A (select-all). Ω is always the
+   * 52-card deck. Optional so draw-tally (whose target lives in config.targetEvent)
+   * can omit it.
+   */
+  cards?: CardId[]
   /** |A| — when set, the learner must also enter this count. */
   count?: number
-  /** When set, the learner must also enter P(A) = |A|/52 as a reduced fraction. */
+  /**
+   * Reduced theoretical probability the learner must confirm.
+   *  - select-all: P(A) = |A|/52 for the selected event.
+   *  - draw-tally: P(hit) = |targetEvent|/52, compared against the live empirical frequency.
+   * When omitted in draw-tally the check is experiential (just reach minDraws).
+   */
   probability?: FractionProbability
 }
 
@@ -499,6 +544,56 @@ export type CardDeckStep = ProblemStepBase & {
   interaction: 'card-deck'
   config: CardDeckConfig
   answer: CardDeckAnswer
+}
+
+// --- compare two events (generic; reusable for cards, dice, coins, …) ----------
+export type CompareEventsChoice = 'a' | 'b' | 'equal'
+
+export type CompareEventsSide = {
+  /** Short event name, e.g. "A face card". */
+  label: string
+  /** Optional supporting detail, e.g. "Jacks, Queens, Kings — 12 of 52 cards". */
+  detail?: string
+  /** Optional favorable / total counts; shown as "12 / 52" and drive the reveal bar. */
+  favorable?: number
+  total?: number
+  /**
+   * Theoretical probability of this event. Drives the reveal bar when favorable/total
+   * are absent, and is the expected value when config.requireProbabilities is set.
+   */
+  probability?: FractionProbability
+}
+
+export type CompareEventsConfig = {
+  /** Instruction above the two events (defaults in widget). */
+  helperText?: string
+  /** The two events being compared. */
+  eventA: CompareEventsSide
+  eventB: CompareEventsSide
+  /** Offer an explicit "equally likely" choice (default: true only when the answer is 'equal'). */
+  allowEqual?: boolean
+  /** Also require the learner to enter each event's probability as a reduced fraction. */
+  requireProbabilities?: boolean
+  /** Prompt above the choice buttons. */
+  chooseLabel?: string
+  /** Labels for the two probability fraction fields (when requireProbabilities). */
+  probabilityALabel?: string
+  probabilityBLabel?: string
+}
+
+export type CompareEventsAnswer = {
+  /** Which event is more likely, or 'equal' when the two probabilities tie. */
+  more: CompareEventsChoice
+  /** Expected P(event A) — required when config.requireProbabilities is set. */
+  probabilityA?: FractionProbability
+  /** Expected P(event B) — required when config.requireProbabilities is set. */
+  probabilityB?: FractionProbability
+}
+
+export type CompareEventsStep = ProblemStepBase & {
+  interaction: 'compare-events'
+  config: CompareEventsConfig
+  answer: CompareEventsAnswer
 }
 
 export type ProblemStep =
@@ -516,6 +611,7 @@ export type ProblemStep =
   | DerangementMatchStep
   | VennDiagramStep
   | CardDeckStep
+  | CompareEventsStep
 
 export type LessonStep = ConceptStep | ProblemStep
 

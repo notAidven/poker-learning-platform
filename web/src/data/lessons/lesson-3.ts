@@ -158,7 +158,7 @@ This is exactly the 52-card sample space you have been drawing from. Big sample 
       type: 'problem',
       id: 'p4',
       prompt:
-        'Flip **1 fair coin 3 times** in a row — each flip is its own stage. Pick a result for each flip, then **enter $|\\Omega|$** (multiply the stages), and enter $P(\\omega)$ for one specific pattern as a fraction.',
+        'Flip **1 fair coin 3 times** in a row — each flip is its own stage. Pick a result for each flip, then **enter $|\\Omega|$** by multiplying the stages.',
       interaction: 'counting-product',
       config: {
         stages: [
@@ -167,32 +167,29 @@ This is exactly the 52-card sample space you have been drawing from. Big sample 
           { label: 'Flip 3', options: ['H', 'T'] },
         ],
         countLabel: 'Enter |Ω| — how many length-3 H/T patterns (2 × 2 × 2)?',
-        probabilityLabel: 'What is P(ω) for one specific pattern? (fraction)',
       },
-      answer: { product: 8, probability: { num: 1, den: 8 } },
+      answer: { product: 8 },
       feedback: {
         correct:
-          '$2 \\times 2 \\times 2 = 2^3 = 8$ patterns, so each specific pattern has $P(\\omega) = \\frac{1}{8}$. Repeated stages with the same count give a **power**: $n$ flips → $2^n$ outcomes. You will reuse this in the next lesson on coins.',
+          '$2 \\times 2 \\times 2 = 2^3 = 8$ patterns, so $|\\Omega| = 8$. Repeated stages with the same count give a **power**: $n$ flips → $2^n$ outcomes.',
         incorrect:
-          'Each flip has 2 options and there are 3 flips: $2 \\times 2 \\times 2 = 8$. A fair experiment gives each outcome $P(\\omega) = \\frac{1}{8}$.',
+          'Each flip has 2 options and there are 3 flips: $2 \\times 2 \\times 2 = 8$, so $|\\Omega| = 8$.',
         hints: [
           'Each flip is a stage with 2 options (H or T).',
           'Three stages → $2 \\times 2 \\times 2 = 2^3 = 8$.',
-          'Fair outcomes → $P(\\omega) = \\frac{1}{8}$.',
+          'Multiply the stages: $|\\Omega| = 2^3 = 8$.',
         ],
         why: `Three flips, each an independent stage with **2** options:
 
 $$|\\Omega| = 2 \\times 2 \\times 2 = 2^3 = 8.$$
 
-The eight outcomes are HHH, HHT, HTH, HTT, THH, THT, TTH, TTT. All equally likely, so each specific pattern has
+The eight outcomes are HHH, HHT, HTH, HTT, THH, THT, TTH, TTT — all equally likely.
 
-$$P(\\omega) = \\frac{1}{|\\Omega|} = \\frac{1}{8}.$$
-
-When every stage has the same number of options $k$ over $n$ stages, the count is $k^n$ — here $2^3$.`,
+When every stage has the same number of options $k$ over $n$ stages, the count is $k^n$ — here $2^3 = 8$.`,
         venn: {
           type: 'sample-space',
           outcomes: ['HHH', 'HHT', 'HTH', 'HTT', 'THH', 'THT', 'TTH', 'TTT'],
-          caption: '|Ω| = 2³ = 8 → P(ω) = 1/8 each',
+          caption: '|Ω| = 2³ = 8 equally likely patterns',
         },
       },
     },

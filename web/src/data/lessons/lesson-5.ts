@@ -12,7 +12,7 @@ export const lesson5: LessonDefinition = {
 
 For one person, $|\\Omega| = 365$ possible birthdays (ignore leap years). For $n$ people, ordered assignments give $365^n$ outcomes — but we care whether **some pair matches**.
 
-Simulate random groups and watch the **match rate** climb surprisingly fast near $n \\approx 23$.`,
+Simulate random groups and watch the **match rate** rise surprisingly fast near $n \\approx 23$.`,
       visual: {
         type: 'sample-space',
         labelOmega: 'Ω (one birthday)',
