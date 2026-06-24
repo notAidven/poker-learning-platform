@@ -70,15 +70,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser)
-      if (nextUser) {
-        const data = await getUserProfile(nextUser.uid)
-        setProfile(data)
-        await syncProgressOnAuth(nextUser.uid)
-      } else {
+      // Guard the whole init sequence: if a Firestore read (profile fetch /
+      // progress sync) throws or rejects, we must STILL reach setLoading(false),
+      // otherwise every route is stuck on the full-screen PageLoader forever
+      // (a blank/hung app on load). Failing soft to "no profile" lets the
+      // protected routes redirect sanely instead of hanging.
+      try {
+        if (nextUser) {
+          const data = await getUserProfile(nextUser.uid)
+          setProfile(data)
+          await syncProgressOnAuth(nextUser.uid)
+        } else {
+          setProfile(null)
+          await syncProgressOnAuth(null)
+        }
+      } catch (err) {
+        console.error('Auth initialization failed; continuing without profile:', err)
         setProfile(null)
-        await syncProgressOnAuth(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsubscribe
   }, [])

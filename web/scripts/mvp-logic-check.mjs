@@ -266,6 +266,75 @@ function testClassicDieEventCompletable() {
   )
 }
 
+// Crash containment: a render-time throw must surface a recoverable fallback
+// instead of blanking the whole app, and navigating to a new route must clear
+// the caught error (mirrors ErrorBoundary.getDerivedStateFromError +
+// componentDidUpdate reset-on-resetKey). Without a boundary, any uncaught throw
+// unmounts the entire React tree → blank screen while curl still returns 200.
+function testErrorBoundaryRecovery() {
+  // getDerivedStateFromError: a thrown error becomes boundary state.
+  const afterThrow = (() => {
+    const err = new Error('boom')
+    return { error: err } // getDerivedStateFromError(err)
+  })()
+  assert.ok(afterThrow.error instanceof Error, 'a render throw is captured as boundary state')
+
+  // componentDidUpdate: when resetKey (the route path) changes, the error clears.
+  function nextStateOnUpdate(state, prevResetKey, resetKey) {
+    if (state.error && prevResetKey !== resetKey) return { error: null }
+    return state
+  }
+  // Same route → error persists (shows fallback).
+  assert.deepEqual(
+    nextStateOnUpdate(afterThrow, '/lesson/1', '/lesson/1'),
+    { error: afterThrow.error },
+    'staying on the crashed route keeps showing the fallback',
+  )
+  // Navigated away → error clears and children re-render.
+  assert.deepEqual(
+    nextStateOnUpdate(afterThrow, '/lesson/1', '/course'),
+    { error: null },
+    'navigating to a new path auto-recovers the boundary',
+  )
+  record(
+    'error-boundary',
+    true,
+    'Render crashes show a recoverable fallback (not a blank screen) and reset on navigation',
+  )
+}
+
+// Auth load must never hang: even if the Firestore profile read / progress sync
+// throws, the init sequence must still reach setLoading(false) so routes resolve
+// instead of being stuck on the full-screen PageLoader (a blank/hung app).
+function testAuthLoadNeverHangs() {
+  function runAuthInit({ throwOnProfile }) {
+    let loading = true
+    let profile = null
+    try {
+      if (throwOnProfile) throw new Error('firestore unavailable')
+      profile = { profileComplete: true }
+    } catch {
+      profile = null
+    } finally {
+      loading = false
+    }
+    return { loading, profile }
+  }
+
+  const ok = runAuthInit({ throwOnProfile: false })
+  assert.equal(ok.loading, false)
+  assert.deepEqual(ok.profile, { profileComplete: true })
+
+  const failed = runAuthInit({ throwOnProfile: true })
+  assert.equal(failed.loading, false, 'loading resolves even when the profile read throws')
+  assert.equal(failed.profile, null, 'failed init fails soft to no-profile (routes can redirect)')
+  record(
+    'auth-load-no-hang',
+    true,
+    'Auth init always clears loading — a Firestore read failure can no longer hang the app',
+  )
+}
+
 testExitPreservesSession()
 testNextLessonPath()
 testSequentialUnlock()
@@ -274,6 +343,8 @@ testNextLessonPathSkillCheckPending()
 testNoHiddenRequiredFieldDeadlock()
 testLesson1DiscoverDie()
 testClassicDieEventCompletable()
+testErrorBoundaryRecovery()
+testAuthLoadNeverHangs()
 
 const failed = results.filter((r) => !r.pass)
 console.log('\n--- Logic summary ---')

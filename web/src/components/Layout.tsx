@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveStreak } from '../lib/gamification'
+import { ErrorBoundary } from './ErrorBoundary'
 import { AnimalAvatar } from './AnimalAvatar'
 import { buttonVariants } from './ui/Button'
 import { Footer } from './ui/Footer'
@@ -120,7 +121,12 @@ export function Layout() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
-        <Outlet />
+        {/* Page-level guard: a crash in one route shows a recoverable fallback
+            (not a blank screen) while keeping the header/nav, and auto-resets
+            when the path changes. */}
+        <ErrorBoundary resetKey={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       <Footer signedIn={signedIn} />
