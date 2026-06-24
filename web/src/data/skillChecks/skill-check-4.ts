@@ -33,7 +33,7 @@ export const skillCheck4: SkillCheckDefinition = {
     {
       id: 'q2',
       prompt:
-        'You want to make a half-pot value bet into an 80-chip pot. Which sizing is half the pot?',
+        'You decide to bet half the pot. The pot is 80 chips. Which sizing is half the pot?',
       interaction: 'betting-round',
       config: {
         hole: ['KD', 'KS'],

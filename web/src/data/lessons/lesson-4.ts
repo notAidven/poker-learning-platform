@@ -3,14 +3,15 @@ import type { LessonDefinition } from '../../types/lesson'
 /**
  * Lesson 4: "Betting Basics" (Section 2 · Playing a Hand).
  *
- * The five actions and when each is legal, how a round opens and closes, and
- * sizing a bet as a fraction of the pot (to board texture & purpose, not hand
- * strength). Built on the `betting-round` interaction vs. a scripted, deterministic
- * computer opponent. The EV-of-a-call math that used to live here has moved to the
- * Math section (Lesson 7), so this lesson stays mechanics-only and never forward-
- * references pot odds.
+ * The five actions and when each is legal, how a round opens and closes, and the
+ * basic mechanic that a bet is sized as a fraction of the pot. Built on the
+ * `betting-round` interaction vs. a scripted, deterministic computer opponent.
+ * Mechanics only: the sizing TACTICS (which fraction to choose, and why) are
+ * deferred to Lesson 8, and the EV-of-a-call math lives in the Math section
+ * (Lesson 7), so this lesson never teaches sizing strategy or forward-references
+ * pot odds.
  *
- * Ratio: 7 problems / 9 steps ≈ 78% interactive. Concepts never run back-to-back.
+ * Ratio: 6 problems / 8 steps = 75% interactive. Concepts never run back-to-back.
  * Money is written as plain chip counts so prose can reserve `$…$` for KaTeX.
  * Keep `id: '4'` / export `lesson4`.
  */
@@ -186,24 +187,25 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
     {
       type: 'concept',
       id: 'c2',
-      title: 'Sizing a bet',
-      content: `You size a bet as a **fraction of the pot**, and you size it to the **board and your purpose, not how strong your hand is** (betting big only with big hands tells opponents exactly what you have).
+      title: 'Bets come in different sizes',
+      content: `A bet is not one fixed amount. You choose how much to put in, and we measure it as a **fraction of the pot**.
 
-- **Small (about ⅓ pot):** dry, unconnected boards.
-- **Medium (½–⅔ pot):** the everyday default, good for value and for charging draws.
-- **Large (¾–pot):** wet, draw-heavy boards, to make draws pay.`,
+- Into a 100 pot, a **half-pot** bet is 50, a quarter-pot bet is 25, and a pot-sized bet is 100.
+- A bet can be small or large, and the chips you risk scale with the fraction you pick.
+
+For now, just get comfortable that a bet has a size. **Which** fraction to choose, and why, is its own skill, and that is all of Lesson 8.`,
     },
     {
       type: 'problem',
       id: 'p6',
       prompt:
-        'You have top pair, top kicker on a dry K-7-2 board and want to make a half-pot value bet. Which sizing is half the pot?',
+        'A bet is entered as a fraction of the pot. The pot is 80 and you have decided to bet. Which option puts in half the pot?',
       interaction: 'betting-round',
       config: {
-        hole: ['AH', 'KD'],
-        board: ['KC', '7D', '2S'],
+        hole: ['QS', 'QD'],
+        board: ['8C', '5D', '2H'],
         street: 'flop',
-        pot: 60,
+        pot: 80,
         heroStack: 400,
         villainStack: 400,
         sizingOptions: [0.33, 0.5, 0.75],
@@ -212,43 +214,14 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { sizeFraction: 0.5, sizeTolerance: 0.05 },
       feedback: {
-        correct: 'Half of a 60-chip pot is 30, a solid default value bet.',
-        incorrect: 'Half-pot means betting half of what is already in the middle (30 into 60).',
+        correct: 'Half of an 80-chip pot is 40, the middle option.',
+        incorrect: 'Half-pot means half of the chips already in the middle: 40 into 80.',
         hints: [
-          'The pot is 60 chips.',
+          'The pot is 80 chips.',
           'Half of the pot is the middle option.',
-          'A half-pot bet is the everyday default size.',
+          'Half of 80 is 40.',
         ],
-        why: '**Half-pot is the safe default**: into a 60-chip pot you bet 30. It charges draws and gets called by worse hands. Size to the board and your purpose, and use the same size for value bets and bluffs so you never give your hand away.',
-      },
-    },
-    {
-      type: 'problem',
-      id: 'p7',
-      prompt:
-        'You hold an overpair (two Aces) on a wet 9-8-7 board full of straight and flush draws. To charge those draws you size up. Which of these is the large, draw-charging bet?',
-      interaction: 'betting-round',
-      config: {
-        hole: ['AH', 'AS'],
-        board: ['9H', '8H', '7C'],
-        street: 'flop',
-        pot: 80,
-        heroStack: 400,
-        villainStack: 400,
-        sizingOptions: [0.33, 0.5, 0.75],
-        seed: 66,
-        task: 'choose-size',
-      },
-      answer: { sizeFraction: 0.75, sizeTolerance: 0.05 },
-      feedback: {
-        correct: 'Right. A large ¾-pot bet makes draws pay the maximum to chase you.',
-        incorrect: 'On a wet, draw-heavy board a small bet lets draws continue cheaply. Size up.',
-        hints: [
-          'Wet boards have many draws; you want them to pay to continue.',
-          'Bigger bets charge draws more.',
-          'Pick the largest of the three sizings here (¾ pot).',
-        ],
-        why: 'On a soaked 9-8-7 board, opponents often hold straight and flush draws. A **large (¾-pot)** bet makes those draws pay a bad price to chase and builds the pot with your strong hand; a small bet lets them continue cheaply. The principle: small on dry boards, **big on wet boards**: size to the board, not announcing your exact hand.',
+        why: 'A bet is sized as a **fraction of the pot**, so into an 80 pot a half-pot bet is 40. This is just the mechanic of entering a size. **Which** fraction to pick, and why (for value, for bluffs, for board texture), is the whole of Lesson 8.',
       },
     },
   ],

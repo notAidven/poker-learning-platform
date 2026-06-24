@@ -5,9 +5,11 @@ import type { LessonDefinition } from '../../types/lesson'
  *
  * Why we bet: value (a strong hand wants worse hands to call) vs a bluff (a weak
  * hand wants better hands to fold), plus thin value, and how big to size to the
- * board and purpose (small on dry, default ½, big on wet). Built entirely on the
- * `betting-round` widget: `choose-action` for the value/check decisions, and
- * `choose-size` for picking the right fraction of the pot.
+ * board and purpose (small on dry, default ½, big on wet). This is the sole home of
+ * sizing TACTICS, building on Lesson 4's mechanic (a bet is a fraction of the pot),
+ * Lesson 6's pot odds (a bigger bet lays a worse price), and Lesson 7's bluffs /
+ * fold equity. Built entirely on the `betting-round` widget: `choose-action` for the
+ * value/check decisions, and `choose-size` for picking the right fraction of the pot.
  *
  * Ratio: 6 problems / 8 steps = 75% interactive. Concepts never run back-to-back.
  * Keep `id: '8'` / export `lesson8`.
@@ -20,10 +22,11 @@ export const lesson8: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'Value bets and bluffs',
-      content: `Every bet has a purpose:
+      content: `Every bet has a purpose. You already met one in Lesson 7: a **bluff** bets a weak hand hoping a **better** hand folds (it only works when you have fold equity).
+
+This lesson is about the other purpose:
 
 - A **value bet** is a bet with a strong hand, hoping a **worse** hand calls and pays you off.
-- A **bluff** is a bet with a weak hand, hoping a **better** hand folds.
 
 The key test for value: *will worse hands call?* If nothing worse can call (worse hands fold, better hands keep going), a value bet earns nothing, so you check instead.`,
     },
@@ -121,13 +124,13 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       type: 'concept',
       id: 'c2',
       title: 'Sizing to the board',
-      content: `Once you decide to bet, size it to the **board and purpose, not your hand's strength** (always betting big with big hands gives you away).
+      content: `In Lesson 4 you saw that a bet is a **fraction of the pot**. Now you choose **which** fraction. Size it to the **board and purpose, not your hand's strength** (always betting big with big hands gives you away).
 
 - **Small (about ⅓ pot):** dry, disconnected boards where little can call.
 - **Medium (½ pot):** the everyday default.
 - **Large (¾ pot):** wet, draw-heavy boards, to make draws pay.
 
-Use the **same** sizes for value bets and bluffs so opponents can never read your hand from your bet.`,
+A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up on a wet board makes draws pay too much to chase. Use the **same** sizes for value bets and bluffs so opponents can never read your hand from your bet.`,
     },
     {
       type: 'problem',
