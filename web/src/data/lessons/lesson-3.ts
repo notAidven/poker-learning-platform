@@ -6,9 +6,10 @@ import type { LessonDefinition } from '../../types/lesson'
  *
  * Teaches blinds + the button, the four streets, position & action order
  * (incl. the heads-up exception), and showdown (best hand wins, reveal order,
- * fold-to-one, all-in). The `board-dealer` widget carries the street walkthrough
- * and the "what's your best hand now?" beats; `compare-events` handles the
- * discrete who-acts-when / who-wins decisions. 10 problems / 13 steps (77%).
+ * fold-to-one, all-in). The `board-dealer` widget carries the street walkthrough,
+ * the "what's your best hand now?" beats, and the showdown "who won?" decision
+ * (hero vs a revealed villain, graded by the hand evaluator); `compare-events`
+ * handles the discrete who-acts-when decisions. 9 problems / 12 steps (75%).
  */
 export const lesson3: LessonDefinition = {
   id: '3',
@@ -192,54 +193,32 @@ If instead **all opponents fold, leaving one player**, the hand ends immediately
     {
       type: 'problem',
       id: 'p7',
-      prompt: `Deal this hand to showdown against one opponent. You hold **A♠ 9♦**; their cards stay hidden until the end.`,
+      prompt: `Deal this hand to showdown against one opponent — you hold **A♠ 9♦**, and their cards stay hidden until the river. Deal every street, then call **who won** the pot.`,
       interaction: 'board-dealer',
       config: {
         hole: ['AS', '9D'],
+        villain: ['AH', 'KC'],
         board: ['AC', '9S', '4D', 'JH', '2C'],
         opponents: 1,
         streets: ['preflop', 'flop', 'turn', 'river'],
         annotateStreets: true,
-        helperText: 'Deal all the way to the river — next you’ll decide who wins.',
+        helperText: 'Deal each street; at the river the opponent’s cards flip up and you call the winner.',
       },
-      answer: { minStreetsRevealed: 4 },
+      answer: { minStreetsRevealed: 4, winner: 'hero' },
       feedback: {
-        correct: `The board is out: **A♣ 9♠ 4♦ J♥ 2♣**. You've paired both your Ace and your Nine. Next, we'll compare hands at showdown.`,
-        incorrect: `Deal every street so all five community cards are showing, then the hand can reach showdown.`,
+        correct: `You win. Your A♠ 9♦ pairs **both** the Ace and the Nine on the board → **two pair**, Aces and Nines. The opponent’s A♥ K♣ makes only **one pair** of Aces (the King never pairs). Two pair beats one pair.`,
+        incorrect: `Build each player’s best 5-card hand: you make **two pair** (Aces and Nines); the opponent makes **one pair** of Aces. Two pair is the stronger category, so you take the pot.`,
         hints: [
-          'Deal the flop, the turn, and the river.',
-          'A showdown happens only after the river, when players remain.',
-          'Your two hole cards combine with the five community cards.',
+          'Make each player’s best 5-card hand from their two hole cards plus the shared board.',
+          'Your 9♦ pairs the 9♠ on the board — that’s a second pair on top of your Aces.',
+          'The opponent’s King never pairs, so they hold just one pair of Aces.',
         ],
-        why: `At showdown each remaining player makes their best 5-card hand from their 2 hole cards plus the 5 community cards. Here your A♠ 9♦ pairs both the Ace and the Nine on the board.`,
+        why: `At showdown the best 5-card hand wins. You: A♠ A♣ 9♦ 9♠ + J = **two pair**. Opponent: A♥ A♣ + K, J, 9 = **one pair** of Aces. Two pair outranks one pair, so you take the pot — and suits never break the tie.`,
       },
     },
     {
       type: 'problem',
       id: 'p8',
-      prompt: `Showdown on **A♣ 9♠ 4♦ J♥ 2♣**. You have **A♠ 9♦**; your opponent shows **A♥ K♣**. Whose hand wins?`,
-      interaction: 'compare-events',
-      config: {
-        chooseLabel: 'Who wins this showdown?',
-        helperText: 'Make the best 5-card hand for each player, then compare.',
-        eventA: { label: 'Your hand', detail: 'A♠ 9♦ → two pair, Aces and Nines' },
-        eventB: { label: 'Opponent’s hand', detail: 'A♥ K♣ → one pair, Aces (King kicker)' },
-      },
-      answer: { more: 'a' },
-      feedback: {
-        correct: `You win. Your A-9 pairs **both** the Ace and the Nine on the board → **two pair**. Their A-K makes only **one pair of Aces** (the King doesn't pair). Two pair beats one pair.`,
-        incorrect: `Compare categories: you make **two pair** (Aces and Nines); they make **one pair** of Aces. Two pair is the stronger category.`,
-        hints: [
-          'Use each player’s 2 hole cards together with the shared board.',
-          'Your 9♦ pairs the 9♠ on the board — that is a second pair.',
-          'Their King never pairs, so they hold only one pair.',
-        ],
-        why: `Best 5-card hand wins. You: A♠ A♣ 9♦ 9♠ + J = **two pair**. Opponent: A♥ A♣ + K, J, 9 = **one pair**. Two pair outranks one pair, so you take the pot. Suits never break the tie.`,
-      },
-    },
-    {
-      type: 'problem',
-      id: 'p9',
       prompt: `There was a bet on the river. At showdown, who turns their cards face-up first?`,
       interaction: 'compare-events',
       config: {
@@ -262,7 +241,7 @@ If instead **all opponents fold, leaving one player**, the hand ends immediately
     },
     {
       type: 'problem',
-      id: 'p10',
+      id: 'p9',
       prompt: `Everyone else folds, leaving just one player. Does the hand go to showdown?`,
       interaction: 'compare-events',
       config: {

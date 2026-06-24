@@ -661,6 +661,9 @@ export type HandRankerStep = ProblemStepBase & {
 }
 
 // --- board-dealer (§5.3) ------------------------------------------------------
+/** Who took down the pot at showdown: the learner ('hero'/You), the 'opponent', or a 'split'. */
+export type ShowdownWinner = 'hero' | 'opponent' | 'split'
+
 export type BoardDealerConfig = {
   /** Fixed hole cards, or 'random' to deal from a shuffled deck (seedable). */
   hole?: [CardId, CardId] | 'random'
@@ -669,6 +672,12 @@ export type BoardDealerConfig = {
   seed?: number
   /** Number of opponents to deal (face-down unless revealed at showdown). */
   opponents?: number
+  /**
+   * A specific opponent's hole cards. When paired with `answer.winner`, the board
+   * deals all the way to showdown, flips these cards face-up after the river, and
+   * asks the learner who won — graded with `evaluateHoldem` + `compareHands`.
+   */
+  villain?: [CardId, CardId]
   /** Which streets to step through. */
   streets?: PokerStreet[]
   /** Ask the learner to name their best hand at each listed street. */
@@ -683,6 +692,13 @@ export type BoardDealerAnswer = {
   bestHandByStreet?: Partial<Record<PokerStreet, HandCategory>>
   /** Minimum streets the learner must reveal before Check unlocks (experiential gate). */
   minStreetsRevealed?: number
+  /**
+   * Showdown-winner question (requires `config.villain`): the learner picks who won
+   * after the river. The widget grades against the live evaluator
+   * (`compareHands(evaluateHoldem(hero,…), evaluateHoldem(villain,…))`); this authored
+   * value is only a cross-check, never the source of truth.
+   */
+  winner?: ShowdownWinner
 }
 
 export type BoardDealerStep = ProblemStepBase & {

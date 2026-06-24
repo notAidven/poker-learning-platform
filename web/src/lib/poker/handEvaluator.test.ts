@@ -147,6 +147,30 @@ describe('compareHands', () => {
   })
 })
 
+describe('showdown winner (Lesson 3 board-dealer p7)', () => {
+  // The exact scenario the showdown-winner question deals out: hero A♠9♦ vs
+  // villain A♥K♣ on A♣9♠4♦J♥2♣. This is what BoardDealer grades the learner's
+  // "Who won?" pick against, so it must resolve to the hero.
+  const board: CardId[] = ['AC', '9S', '4D', 'JH', '2C']
+  const hero = evaluateHoldem(['AS', '9D'], board)
+  const villain = evaluateHoldem(['AH', 'KC'], board)
+
+  it('hero makes two pair (Aces and Nines)', () => {
+    expect(hero.category).toBe('two-pair')
+    expect(hero.label).toBe('Two pair, Aces and Nines')
+  })
+
+  it('villain makes only one pair of Aces', () => {
+    expect(villain.category).toBe('pair')
+    expect(villain.label).toBe('Pair of Aces')
+  })
+
+  it('the hero wins the pot (two pair beats one pair)', () => {
+    expect(compareHands(hero, villain)).toBeGreaterThan(0)
+    expect(compareHands(villain, hero)).toBeLessThan(0)
+  })
+})
+
 describe('countOuts (Lesson 4 draws)', () => {
   it('flush draw = 9 outs', () => {
     expect(countOuts(['AS', 'KS'], ['QS', '7S', '2D'], 'flush').count).toBe(9)

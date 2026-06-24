@@ -8,16 +8,17 @@ import {
   type BoardDealerConfig,
   type CardId,
   type CardSuit,
+  type ShowdownWinner,
 } from '../../../types/lesson'
 import type { HandCategory, PokerStreet } from '../../../types/poker'
-import { evaluateHoldem } from '../../../lib/poker/handEvaluator'
+import { compareHands, evaluateHoldem } from '../../../lib/poker/handEvaluator'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 
 /**
  * `board-dealer` (design doc §5.3). Deals the hole + community cards street by
- * street and covers two uses:
+ * street and covers three uses:
  *
  *  1. **Experiential reveal-gate** (Lessons 1 & 6): step through the streets.
  *     This is a no-input "watch it happen" gate, so there is no "Check answer"
@@ -26,6 +27,11 @@ import { usePrefersReducedMotion } from './usePrefersReducedMotion'
  *     Mirrors `CardDeck`'s `draw-tally` `minDraws`.
  *  2. **`askBestHandAt`** (Lesson 3): at each listed street the learner names their
  *     best made hand; the pick is validated against `evaluateHoldem(hole, boardSoFar)`.
+ *  3. **Showdown winner** (Lesson 3): with `config.villain` + `answer.winner`, the
+ *     board deals to the river, flips the opponent's hole cards face-up, and asks
+ *     "Who won?" (You / Opponent / Split). The pick is graded live with
+ *     `compareHands(evaluateHoldem(hero,…), evaluateHoldem(villain,…))` — the authored
+ *     `answer.winner` is only a cross-check, never the source of truth.
  *
  * Random/`'deal'` configs are reproducible via `config.seed`.
  */
@@ -73,6 +79,13 @@ const CATEGORY_LABEL: Record<HandCategory, string> = {
   'straight-flush': 'Straight flush',
   'royal-flush': 'Royal flush',
 }
+
+/** Showdown-winner choices, in the order they're shown. */
+const SHOWDOWN_CHOICES: { value: ShowdownWinner; label: string }[] = [
+  { value: 'hero', label: 'You' },
+  { value: 'opponent', label: 'Opponent' },
+  { value: 'split', label: 'Split' },
+]
 
 /** Seeded RNG (mulberry32) + Fisher–Yates so 'random'/'deal' deals are reproducible. */
 function makeRng(seed: number) {
@@ -143,30 +156,46 @@ function SuitIcon({ suit, className }: { suit: CardSuit; className?: string }) {
   }
 }
 
-function CardFace({ id, animate, delay }: { id: CardId; animate: boolean; delay: number }) {
+function CardFace({
+  id,
+  animate,
+  delay,
+  small = false,
+}: {
+  id: CardId
+  animate: boolean
+  delay: number
+  small?: boolean
+}) {
   const { rank, suit } = parseCardId(id)
   const color = isRedSuit(suit) ? 'text-rose-600' : 'text-slate-900'
+  const rankClass = small ? 'text-[0.55rem]' : 'text-[0.7rem]'
+  const cornerIcon = small ? 'h-1.5 w-1.5' : 'h-2 w-2'
+  const leftInset = small ? 'left-0.5' : 'left-1'
+  const rightInset = small ? 'right-0.5' : 'right-1'
   return (
     <span
-      className={`relative block h-16 w-11 rounded-md border-2 border-slate-200 bg-white shadow-sm ${
-        animate ? 'bd-deal' : ''
-      }`}
+      className={`relative block rounded-md border-2 border-slate-200 bg-white shadow-sm ${
+        small ? 'h-12 w-8' : 'h-16 w-11'
+      } ${animate ? 'bd-deal' : ''}`}
       style={animate ? { animationDelay: `${delay}ms` } : undefined}
       role="img"
       aria-label={cardLabel(id)}
     >
-      <span className={`absolute left-1 top-0.5 flex flex-col items-center leading-none ${color}`}>
-        <span className="text-[0.7rem] font-bold tabular-nums">{rank}</span>
-        <SuitIcon suit={suit} className="h-2 w-2" />
+      <span
+        className={`absolute top-0.5 ${leftInset} flex flex-col items-center leading-none ${color}`}
+      >
+        <span className={`${rankClass} font-bold tabular-nums`}>{rank}</span>
+        <SuitIcon suit={suit} className={cornerIcon} />
       </span>
       <span className={`absolute inset-0 flex items-center justify-center ${color}`}>
-        <SuitIcon suit={suit} className="h-5 w-5" />
+        <SuitIcon suit={suit} className={small ? 'h-4 w-4' : 'h-5 w-5'} />
       </span>
       <span
-        className={`absolute bottom-0.5 right-1 flex rotate-180 flex-col items-center leading-none ${color}`}
+        className={`absolute bottom-0.5 ${rightInset} flex rotate-180 flex-col items-center leading-none ${color}`}
       >
-        <span className="text-[0.7rem] font-bold tabular-nums">{rank}</span>
-        <SuitIcon suit={suit} className="h-2 w-2" />
+        <span className={`${rankClass} font-bold tabular-nums`}>{rank}</span>
+        <SuitIcon suit={suit} className={cornerIcon} />
       </span>
     </span>
   )
@@ -241,7 +270,12 @@ export function BoardDealer({
   const deal = useMemo(() => {
     const fixedHole = config.hole && config.hole !== 'random' ? config.hole : null
     const fixedBoard = Array.isArray(config.board) ? config.board : null
-    const used = new Set<CardId>([...(fixedHole ?? []), ...(fixedBoard ?? [])])
+    // Exclude the villain's known cards too so a random hole/board can never collide with them.
+    const used = new Set<CardId>([
+      ...(fixedHole ?? []),
+      ...(fixedBoard ?? []),
+      ...(config.villain ?? []),
+    ])
     const deck = shuffle(
       fullDeck().filter((c) => !used.has(c)),
       makeRng(effectiveSeed),
@@ -251,7 +285,7 @@ export function BoardDealer({
     const community: CardId[] = [...(fixedBoard ?? [])].slice(0, maxCommunity)
     while (community.length < maxCommunity) community.push(deck[di++])
     return { hole, community }
-  }, [config.hole, config.board, effectiveSeed, maxCommunity])
+  }, [config.hole, config.board, config.villain, effectiveSeed, maxCommunity])
 
   /** Community cards on the board once `revealedCount` streets are showing. */
   const communityCountUpTo = (revealedCount: number) => {
@@ -285,29 +319,65 @@ export function BoardDealer({
     return out
   }, [askedStreets, streets, answer.bestHandByStreet, deal])
 
+  // Showdown-winner mode: a known villain hand + an authored winner turns the
+  // observational deal into a graded "who won?" question that opens after the river.
+  const isShowdown = config.villain != null && answer.winner != null
+
+  /**
+   * Live showdown grading: build the best 5-card hand for hero and villain on the
+   * full board and let `compareHands` decide the winner. This — not the authored
+   * `answer.winner` — is the source of truth; the authored value is only a cross-check.
+   */
+  const showdown = useMemo(() => {
+    if (!isShowdown || !config.villain) return null
+    const hero = evaluateHoldem(deal.hole, deal.community)
+    const villain = evaluateHoldem(config.villain, deal.community)
+    const cmp = compareHands(hero, villain)
+    const winner: ShowdownWinner = cmp > 0 ? 'hero' : cmp < 0 ? 'opponent' : 'split'
+    return { hero, villain, winner }
+  }, [isShowdown, config.villain, deal])
+
   const preflopIndex = streets.indexOf('preflop')
   const maxAskedIdx = askedStreets.length
     ? Math.max(...askedStreets.map((s) => streets.indexOf(s)))
     : -1
   const requiredReveals =
-    answer.minStreetsRevealed ?? (askedStreets.length ? maxAskedIdx + 1 : streets.length)
+    answer.minStreetsRevealed ??
+    (askedStreets.length ? maxAskedIdx + 1 : streets.length)
 
-  // Pure reveal-gate: a no-input / observational step (no `askBestHandAt` picks),
-  // e.g. "deal a full hand and watch the cards appear." There is nothing to
-  // "check", so it auto-completes (below) instead of showing a "Check answer".
-  const isRevealGate = askedStreets.length === 0
+  // Pure reveal-gate: a no-input / observational step (no `askBestHandAt` picks and
+  // no showdown question), e.g. "deal a full hand and watch the cards appear." There
+  // is nothing to "check", so it auto-completes (below) instead of showing "Check answer".
+  const isRevealGate = askedStreets.length === 0 && !isShowdown
 
   const [revealed, setRevealed] = useState(initialSolved ? streets.length : 0)
   const [picks, setPicks] = useState<Partial<Record<PokerStreet, HandCategory>>>(
     initialSolved ? { ...expectedByStreet } : {},
   )
+  const [winnerPick, setWinnerPick] = useState<ShowdownWinner | null>(
+    initialSolved && isShowdown ? (showdown?.winner ?? null) : null,
+  )
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
+
+  // Dev-only cross-check: warn if the authored winner disagrees with the evaluator.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    if (showdown && answer.winner && showdown.winner !== answer.winner) {
+      console.warn(
+        `[board-dealer] authored winner "${answer.winner}" disagrees with the evaluator ("${showdown.winner}"); grading uses the evaluator.`,
+      )
+    }
+  }, [showdown, answer.winner])
 
   const locked = disabled || submitted
   const holeShown = preflopIndex === -1 ? true : revealed > preflopIndex
   const animate = !reduceMotion && !initialSolved
-  const opponents = config.opponents ?? 0
+  const villain = config.villain
+  // A known villain counts as one opponent even if `opponents` was left unset.
+  const opponents = villain ? Math.max(1, config.opponents ?? 1) : config.opponents ?? 0
+  // The villain's hole cards flip face-up only once the whole board (incl. river) is out.
+  const villainShown = isShowdown && revealed >= streets.length
 
   // Auto-complete the reveal-gate: once the required streets are showing, mark
   // the step solved exactly once so the learner just proceeds with the lesson's
@@ -341,13 +411,17 @@ export function BoardDealer({
 
   const askedRevealed = askedStreets.every((s) => revealed > streets.indexOf(s))
   const askedFilled = askedStreets.every((s) => picks[s] != null)
-  const canSubmit = !locked && revealed >= requiredReveals && askedRevealed && askedFilled
+  // Showdown needs the whole board out and a winner picked before Check unlocks.
+  const showdownReady = !isShowdown || (revealed >= streets.length && winnerPick != null)
+  const canSubmit =
+    !locked && revealed >= requiredReveals && askedRevealed && askedFilled && showdownReady
 
   function handleSubmit() {
     if (!canSubmit) return
     setSubmitted(true)
-    const allCorrect = askedStreets.every((s) => picks[s] === expectedByStreet[s])
-    if (allCorrect) {
+    const streetsCorrect = askedStreets.every((s) => picks[s] === expectedByStreet[s])
+    const showdownCorrect = !isShowdown || winnerPick === showdown?.winner
+    if (streetsCorrect && showdownCorrect) {
       setSolved(true)
       onCorrect()
     } else {
@@ -359,6 +433,7 @@ export function BoardDealer({
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
+    setWinnerPick(null)
   }
 
   // Announce the most recently revealed street for screen readers.
@@ -374,6 +449,15 @@ export function BoardDealer({
   const annotate = config.annotateStreets ?? true
   const nextStreet = revealed < streets.length ? streets[revealed] : null
 
+  const showdownVerdict =
+    showdown == null
+      ? ''
+      : showdown.winner === 'hero'
+        ? 'You win the pot.'
+        : showdown.winner === 'opponent'
+          ? 'Your opponent wins the pot.'
+          : "It's a split pot — the hands tie."
+
   return (
     <div className="space-y-4">
       <style>{STYLES}</style>
@@ -383,26 +467,38 @@ export function BoardDealer({
       <div className="bd-scene space-y-4 rounded-2xl border border-emerald-900/10 bg-gradient-to-b from-emerald-50 to-white p-4 shadow-inner">
         {opponents > 0 ? (
           <div className="flex flex-wrap items-end justify-center gap-4">
-            {Array.from({ length: opponents }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <div className="flex gap-1">
-                  {holeShown ? (
-                    <>
-                      <CardBack small animate={animate} />
-                      <CardBack small animate={animate} delay={70} />
-                    </>
-                  ) : (
-                    <>
-                      <EmptySlot small />
-                      <EmptySlot small />
-                    </>
-                  )}
+            {Array.from({ length: opponents }).map((_, i) => {
+              // Only the first opponent is the known villain, and only after the river.
+              const villainCards = villainShown && i === 0 ? villain : undefined
+              return (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div className="flex gap-1">
+                    {villainCards ? (
+                      villainCards.map((c, j) => (
+                        <CardFace key={c} id={c} small animate={animate} delay={j * 90} />
+                      ))
+                    ) : holeShown ? (
+                      <>
+                        <CardBack small animate={animate} />
+                        <CardBack small animate={animate} delay={70} />
+                      </>
+                    ) : (
+                      <>
+                        <EmptySlot small />
+                        <EmptySlot small />
+                      </>
+                    )}
+                  </div>
+                  <span
+                    className={`text-[0.65rem] font-semibold uppercase tracking-wide ${
+                      villainCards ? 'text-slate-600' : 'text-slate-400'
+                    }`}
+                  >
+                    {opponents > 1 ? `Opponent ${i + 1}` : 'Opponent'}
+                  </span>
                 </div>
-                <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">
-                  {opponents > 1 ? `Opponent ${i + 1}` : 'Opponent'}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : null}
 
@@ -510,6 +606,60 @@ export function BoardDealer({
               </div>
             )
           })}
+        </div>
+      )}
+
+      {isShowdown && villainShown && (
+        <div className="space-y-3">
+          <p className="text-center text-sm font-semibold text-slate-700">
+            The opponent turns over their cards. Who won the pot?
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {SHOWDOWN_CHOICES.map((choice) => {
+              const active = winnerPick === choice.value
+              const isWinningChoice = showdown?.winner === choice.value
+              let cls =
+                'min-h-11 rounded-xl border-2 px-3 py-3 text-sm font-bold transition disabled:cursor-not-allowed'
+              if (submitted) {
+                if (isWinningChoice) cls += ' border-emerald-500 bg-emerald-50 text-emerald-800'
+                else if (active) cls += ' border-rose-400 bg-rose-50 text-rose-700'
+                else cls += ' border-slate-200 bg-white text-slate-500 opacity-70'
+              } else if (active) {
+                cls += ' border-brand-500 bg-brand-50 text-brand-800 shadow-sm'
+              } else {
+                cls += ' border-slate-200 bg-white text-slate-700 hover:border-brand-300'
+              }
+              return (
+                <button
+                  key={choice.value}
+                  type="button"
+                  disabled={locked}
+                  aria-pressed={active}
+                  onClick={() => setWinnerPick(choice.value)}
+                  className={cls}
+                >
+                  {choice.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {submitted && showdown && (
+            <div
+              className="space-y-1 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <p className="font-semibold text-slate-800">{showdownVerdict}</p>
+              <p className="text-slate-600">
+                <span className="font-semibold text-brand-600">You:</span> {showdown.hero.label}
+              </p>
+              <p className="text-slate-600">
+                <span className="font-semibold text-slate-500">Opponent:</span>{' '}
+                {showdown.villain.label}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
