@@ -12,17 +12,20 @@ export const skillCheck3: SkillCheckDefinition = {
   questions: [
     {
       id: 'q1',
-      prompt: 'Deal the hand to showdown and confirm all five community cards appear.',
+      prompt: 'You hold A♠ J♣. Deal the hand to showdown against one opponent, then call who won the pot.',
       interaction: 'board-dealer',
       config: {
-        hole: ['JC', 'JD'],
-        board: ['JS', '4C', '4D', '9H', '2S'],
+        hole: ['AS', 'JC'],
+        villain: ['7H', '7D'],
+        board: ['7S', '2C', '9D', 'JH', '4S'],
+        opponents: 1,
         streets: ['preflop', 'flop', 'turn', 'river'],
         annotateStreets: true,
+        helperText: "Deal each street; at the river your opponent's cards flip up — then call the winner.",
       },
-      answer: { minStreetsRevealed: 4 },
+      answer: { minStreetsRevealed: 4, winner: 'opponent' },
       incorrectFeedback:
-        'Reveal every street: the flop (3 cards), the turn (1), and the river (1) make 5 community cards.',
+        "Your pair of Jacks loses to your opponent's three of a kind — the 7♥ 7♦ pair the 7♠ on the board for a set of sevens, which beats one pair.",
     },
     {
       id: 'q2',
