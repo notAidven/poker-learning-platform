@@ -41,6 +41,8 @@ const SECTION_THEME: Record<
   SectionId,
   {
     band: string
+    /** Ring around the banner "station" card the trail runs behind. */
+    headerRing: string
     eyebrow: string
     title: string
     connector: string
@@ -49,6 +51,7 @@ const SECTION_THEME: Record<
 > = {
   foundations: {
     band: 'bg-emerald-50/70 ring-1 ring-inset ring-emerald-100',
+    headerRing: 'ring-emerald-200',
     eyebrow: 'text-emerald-600',
     title: 'text-emerald-900',
     connector: '#10b981',
@@ -61,6 +64,7 @@ const SECTION_THEME: Record<
   },
   playing: {
     band: 'bg-brand-50/60 ring-1 ring-inset ring-brand-100',
+    headerRing: 'ring-brand-200',
     eyebrow: 'text-brand-600',
     title: 'text-brand-900',
     connector: '#9b2c44',
@@ -73,6 +77,7 @@ const SECTION_THEME: Record<
   },
   math: {
     band: 'bg-gold-200/30 ring-1 ring-inset ring-gold-200',
+    headerRing: 'ring-gold-200',
     eyebrow: 'text-gold-600',
     title: 'text-gold-600',
     connector: '#bb8f3c',
@@ -238,25 +243,59 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
             />
           ))}
 
-          {/* Connectors — drawn only between same-section nodes so section breaks read clearly */}
+          {/* Connectors — ONE continuous trail through all nodes. Same-section segments
+              use that section's color; cross-section segments blend the two section
+              colors (a "stepping up to the next section" cue) and run behind the
+              next banner so the path visibly leads into it. */}
           <svg
             className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
             viewBox={`0 0 ${Math.max(width, 1)} ${totalHeight}`}
             preserveAspectRatio="none"
             aria-hidden
           >
+            {width > 0 && (
+              <defs>
+                {lessonLayouts.slice(0, -1).map((from, i) => {
+                  const to = lessonLayouts[i + 1]
+                  if (from.section === to.section) return null
+                  // Gradient oriented along the actual (clamped) node centers, so it
+                  // stays aligned with the trail at every width — mobile included.
+                  const a = nodeCenter(from.globalIndex, from.y, width)
+                  const b = nodeCenter(to.globalIndex, to.y, width)
+                  return (
+                    <linearGradient
+                      key={`grad-${from.lesson.id}`}
+                      id={`xsection-${from.lesson.id}`}
+                      gradientUnits="userSpaceOnUse"
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                    >
+                      <stop offset="0%" stopColor={SECTION_THEME[from.section].connector} />
+                      <stop offset="100%" stopColor={SECTION_THEME[to.section].connector} />
+                    </linearGradient>
+                  )
+                })}
+              </defs>
+            )}
             {width > 0 &&
               lessonLayouts.slice(0, -1).map((from, i) => {
                 const to = lessonLayouts[i + 1]
-                if (from.section !== to.section) return null
+                const crossSection = from.section !== to.section
                 const fromStatus = statuses[from.globalIndex]
                 const active = fromStatus === 'completed' || fromStatus === 'current'
+                const stroke = !active
+                  ? '#cbd5e1'
+                  : crossSection
+                    ? `url(#xsection-${from.lesson.id})`
+                    : SECTION_THEME[from.section].connector
                 return (
                   <path
                     key={from.lesson.id}
                     d={connectorPath(from, to, width)}
                     fill="none"
-                    stroke={active ? SECTION_THEME[from.section].connector : '#cbd5e1'}
+                    stroke={stroke}
                     strokeWidth={10}
                     strokeLinecap="round"
                     opacity={active ? 1 : 0.85}
@@ -341,16 +380,25 @@ function SectionHeader({
   const theme = SECTION_THEME[section.id]
   const style: CSSProperties = { top }
   return (
-    <div className="pointer-events-none absolute inset-x-0 z-20 px-4 text-center" style={style}>
-      <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
-        Section {index + 1}
-      </p>
-      <h2 className={`mt-0.5 font-display text-lg font-bold leading-tight ${theme.title}`}>
-        {section.title}
-      </h2>
-      <p className="mx-auto mt-0.5 max-w-[16rem] text-xs leading-snug text-slate-500">
-        {section.subtitle}
-      </p>
+    <div
+      className="pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4"
+      style={style}
+    >
+      {/* A frosted "station" card: the trail runs behind it, so the path reads as
+          leading INTO each section rather than stopping at a break. */}
+      <div
+        className={`rounded-2xl bg-white/80 px-5 py-2 text-center shadow-sm ring-1 ring-inset backdrop-blur-sm ${theme.headerRing}`}
+      >
+        <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
+          Section {index + 1}
+        </p>
+        <h2 className={`mt-0.5 font-display text-lg font-bold leading-tight ${theme.title}`}>
+          {section.title}
+        </h2>
+        <p className="mx-auto mt-0.5 max-w-[15rem] text-xs leading-snug text-slate-500">
+          {section.subtitle}
+        </p>
+      </div>
     </div>
   )
 }
