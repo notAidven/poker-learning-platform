@@ -3,7 +3,7 @@ import { cx } from './cx'
 import { WarningIcon } from '../icons'
 
 export const fieldInputClass =
-  'w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-ink shadow-[inset_0_1px_2px_rgba(12,20,48,0.05)] outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/15'
+  'w-full rounded-xl border border-night-900/12 bg-night-900/[0.03] px-4 py-3 text-sm text-ink shadow-[inset_0_1px_2px_rgba(7,21,15,0.06)] outline-none transition placeholder:text-night-700/40 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/15'
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string
@@ -16,7 +16,7 @@ export function Field({ label, hint, id, className, ...props }: FieldProps) {
   const hintId = hint ? `${fieldId}-hint` : undefined
   return (
     <div>
-      <label htmlFor={fieldId} className="block text-sm font-medium text-slate-700">
+      <label htmlFor={fieldId} className="block text-sm font-medium text-night-800">
         {label}
       </label>
       <input
@@ -26,7 +26,7 @@ export function Field({ label, hint, id, className, ...props }: FieldProps) {
         {...props}
       />
       {hint && (
-        <span id={hintId} className="mt-1.5 block text-xs text-slate-500">
+        <span id={hintId} className="mt-1.5 block text-xs text-night-700/60">
           {hint}
         </span>
       )}
@@ -49,9 +49,9 @@ export function FormError({ children }: { children: ReactNode }) {
 export function OrDivider({ label = 'or' }: { label?: string }) {
   return (
     <div className="my-6 flex items-center gap-3" aria-hidden>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
-      <div className="h-px flex-1 bg-slate-200" />
+      <div className="h-px flex-1 bg-night-900/10" />
+      <span className="text-xs font-medium uppercase tracking-wide text-night-700/45">{label}</span>
+      <div className="h-px flex-1 bg-night-900/10" />
     </div>
   )
 }
@@ -70,7 +70,7 @@ export function GoogleButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-night-900/12 bg-white px-4 py-3 text-sm font-semibold text-night-800 shadow-sm transition hover:-translate-y-0.5 hover:border-night-900/20 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
     >
       <GoogleIcon />
       {label}

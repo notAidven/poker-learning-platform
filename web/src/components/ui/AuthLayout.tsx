@@ -45,7 +45,7 @@ function AuthAside() {
           {valueProps.map((item) => (
             <li key={item.text} className="flex items-center gap-3 text-sm text-white/85">
               <span
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10 text-base ring-1 ring-inset ring-white/15"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold-500/15 text-base text-gold-200 ring-1 ring-inset ring-gold-400/25"
                 aria-hidden
               >
                 {item.icon}
@@ -77,9 +77,9 @@ export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProp
         <div className="mb-6 flex justify-center lg:hidden">
           <Logo />
         </div>
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-card sm:p-8">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-ink">{title}</h1>
-          {subtitle && <p className="mt-2 text-sm leading-relaxed text-slate-600">{subtitle}</p>}
+        <div className="rounded-3xl border border-night-900/10 bg-white p-6 shadow-card sm:p-8">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+          {subtitle && <p className="mt-2 text-sm leading-relaxed text-night-700/80">{subtitle}</p>}
           <div className="mt-6">{children}</div>
           {footer && <div className="mt-6">{footer}</div>}
         </div>

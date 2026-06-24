@@ -2,11 +2,11 @@
 export const course = {
   title: 'Suited',
   shortTitle: 'Suited',
-  eyebrow: 'Interactive course',
-  heroLine: "Learn Texas Hold'em by playing",
+  eyebrow: "Texas Hold'em, hands-on",
+  heroLine: "Learn Texas Hold'em, one hand at a time",
   heroDescription:
-    'Six interactive lessons — from the deck and hand rankings through odds, betting, and a full hand against AI opponents. Play-money only: no real wagering.',
+    'Six hands-on lessons — from the deck and hand rankings through pot odds, betting, and a full hand against AI opponents. Play money only: no real wagering, just sharper instincts.',
   pathDescription:
-    'Work through each circle in order. Complete a lesson to unlock the next one on the path.',
-  courseSummary: '6 lessons · sequential unlock · hands-on practice',
+    'Play each hand in order. Clear a lesson to turn the next card on the table.',
+  courseSummary: '6 lessons · deal, draw, bet · play money',
 } as const

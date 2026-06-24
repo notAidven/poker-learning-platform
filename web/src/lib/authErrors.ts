@@ -22,7 +22,12 @@ export function getAuthErrorMessage(error: unknown): string {
     case 'auth/popup-blocked':
       return 'Pop-up was blocked. Allow pop-ups and try again.'
     default:
-      if (error instanceof Error && error.message) return error.message
+      // A coded error we don't explicitly map (an unexpected Firebase Auth or
+      // Firestore code) must NOT surface its raw "Firebase: Error (...)" string:
+      // it's noisy and can leak internals. Only pass through messages from our
+      // OWN plain Errors (which carry no `code`) — e.g. the deliberately generic
+      // "Incorrect username or password." thrown by signInWithUsername.
+      if (!code && error instanceof Error && error.message) return error.message
       return 'Something went wrong. Please try again.'
   }
 }

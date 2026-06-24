@@ -1,42 +1,48 @@
 @import "tailwindcss";
 
 @theme {
-  /* Action blue — kept identical to the lesson widgets for cohesion, scale filled out */
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9ebff;
-  --color-brand-200: #bcdcff;
-  --color-brand-300: #8cc0ff;
-  --color-brand-400: #5096f7;
-  --color-brand-500: #2563eb;
-  --color-brand-600: #1d4ed8;
-  --color-brand-700: #1e40af;
-  --color-brand-800: #1c3a96;
-  --color-brand-900: #1a3179;
+  /* Brand — oxblood/burgundy: the "your move" colour for primary actions, links,
+     active nav and selected states. Deliberately kept distinct from felt-green
+     (identity/success) and chip-gold (reward) so the lesson widgets' semantic
+     states — selected vs. correct vs. reward — never collapse into one hue. */
+  --color-brand-50: #fbf0f2;
+  --color-brand-100: #f7dde2;
+  --color-brand-200: #efbcc7;
+  --color-brand-300: #e191a3;
+  --color-brand-400: #cd5f79;
+  --color-brand-500: #b53a56;
+  --color-brand-600: #9b2c44;
+  --color-brand-700: #80273a;
+  --color-brand-800: #691f30;
+  --color-brand-900: #571b29;
 
-  /* Night — the deep-indigo "probability table" surfaces */
-  --color-night-950: #060a1e;
-  --color-night-900: #0b1233;
-  --color-night-800: #131c47;
-  --color-night-700: #1f2b63;
-  --color-night-600: #2b3b85;
+  /* Night — "the felt": deep, blackened-emerald baize. The dark table surfaces
+     every feature panel (hero, profile, auth aside) is dealt onto. */
+  --color-night-950: #07150f;
+  --color-night-900: #0c2a1e;
+  --color-night-800: #103725;
+  --color-night-700: #17492f;
+  --color-night-600: #205c3e;
 
-  /* Gold — rewards (XP, streaks, achievement), grounded in the lesson dice & coins */
-  --color-gold-200: #fde9ad;
-  --color-gold-300: #fcd34d;
-  --color-gold-400: #fbbf24;
-  --color-gold-500: #f59e0b;
-  --color-gold-600: #d97706;
+  /* Gold — antique brass: rewards (XP, streaks, levels), the poker-chip accent
+     and the hairline that edges the felt. Warm, not neon. */
+  --color-gold-200: #f4e6bd;
+  --color-gold-300: #e7cd86;
+  --color-gold-400: #d4ad57;
+  --color-gold-500: #bb8f3c;
+  --color-gold-600: #97712b;
 
-  --color-surface: #f4f6fc;
-  --color-ink: #0c1430;
+  /* Light "card table": a warm, faintly-green ivory the white cards sit on. */
+  --color-surface: #f1f3ed;
+  --color-ink: #15231b;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, ui-serif, serif;
 
-  --shadow-card: 0 1px 2px rgba(12, 20, 48, 0.06), 0 12px 28px -16px rgba(12, 20, 48, 0.22);
-  --shadow-lift: 0 2px 6px rgba(12, 20, 48, 0.08), 0 26px 44px -22px rgba(29, 78, 216, 0.34);
-  --shadow-token: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 2px rgba(12, 20, 48, 0.12),
-    0 10px 22px -12px rgba(12, 20, 48, 0.3);
+  --shadow-card: 0 1px 2px rgba(7, 21, 15, 0.07), 0 12px 28px -16px rgba(7, 21, 15, 0.26);
+  --shadow-lift: 0 2px 6px rgba(7, 21, 15, 0.09), 0 26px 44px -22px rgba(12, 42, 30, 0.42);
+  --shadow-token: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(7, 21, 15, 0.14),
+    0 10px 22px -12px rgba(7, 21, 15, 0.34);
 }
 
 html,
@@ -68,9 +74,10 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background-color: var(--color-surface);
+  /* A faint wash of felt-green and brass light over the ivory tablecloth. */
   background-image:
-    radial-gradient(55rem 55rem at 88% -12%, rgba(37, 99, 235, 0.07), transparent 60%),
-    radial-gradient(46rem 46rem at -6% -4%, rgba(245, 158, 11, 0.06), transparent 55%);
+    radial-gradient(58rem 58rem at 86% -14%, rgba(12, 42, 30, 0.07), transparent 60%),
+    radial-gradient(46rem 46rem at -6% -2%, rgba(212, 173, 87, 0.08), transparent 55%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -167,6 +174,90 @@ body {
   );
   background-size: 200% 100%;
   animation: goldShimmer 3.2s linear infinite;
+}
+
+/* =====================================================================
+   SUITED — poker shell utilities (shell-owned, additive)
+   Theme/branding classes for the app shell. Lesson interactions do not
+   depend on these; safe to extend. Re-read before editing.
+   ===================================================================== */
+
+/* "The felt": a subtle baize weave + table-light dome layered over a
+   night-* background colour. Apply alongside e.g. `bg-night-900`. */
+.felt {
+  background-image:
+    radial-gradient(120% 86% at 50% -12%, rgba(255, 255, 255, 0.07), transparent 58%),
+    radial-gradient(95% 95% at 50% 118%, rgba(7, 21, 15, 0.55), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 5px);
+}
+
+/* Signature: the gamification chip. XP / streak / level render as stacked
+   poker chips — domed face, brass rim, edge spots. Denomination via modifier. */
+.poker-chip {
+  --chip-face: var(--color-gold-400);
+  --chip-rim: var(--color-gold-600);
+  --chip-spot: #fff6dd;
+  position: relative;
+  border-radius: 9999px;
+  background-color: var(--chip-rim);
+  background-image:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.5), transparent 46%),
+    radial-gradient(circle at 50% 50%, transparent 0 60%, rgba(0, 0, 0, 0.22) 61% 62.5%, transparent 63%),
+    radial-gradient(circle at 50% 50%, var(--chip-face) 0 62%, transparent 63%),
+    repeating-conic-gradient(from 7.5deg, var(--chip-spot) 0 11deg, transparent 11deg 30deg);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.22),
+    inset 0 3px 5px rgba(255, 255, 255, 0.3),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.28),
+    0 4px 10px rgba(7, 21, 15, 0.34);
+}
+
+.poker-chip--wine {
+  --chip-face: var(--color-brand-500);
+  --chip-rim: var(--color-brand-700);
+  --chip-spot: #ffe6ec;
+}
+
+.poker-chip--green {
+  --chip-face: var(--color-night-600);
+  --chip-rim: var(--color-night-800);
+  --chip-spot: #d7f0e0;
+}
+
+.poker-chip--slate {
+  --chip-face: #5d6b62;
+  --chip-rim: #3a453f;
+  --chip-spot: #eef3f0;
+}
+
+/* Brass hairline — the gilt edge of the table; a structural divider. */
+.gold-rule {
+  height: 1px;
+  width: 100%;
+  border: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-gold-500),
+    transparent
+  );
+}
+
+/* A card being dealt: slide + settle with a slight pivot. */
+@keyframes cardDeal {
+  from {
+    opacity: 0;
+    transform: translateY(18px) rotate(-3.5deg) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+.anim-deal {
+  animation: cardDeal 0.55s cubic-bezier(0.2, 0.82, 0.3, 1) both;
 }
 
 .lesson-prose p {

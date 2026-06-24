@@ -27,8 +27,8 @@ export function ProfilePage() {
         </div>
 
         <div className="mt-6 grid grid-cols-3 gap-2.5">
-          <StatToken icon={<TrendingUpIcon className="h-6 w-6" />} value={levelProgress.level} label="Level" accent="sky" orientation="col" />
-          <StatToken icon={<StarIcon className="h-6 w-6" />} value={totalXp} label="Total XP" accent="brand" orientation="col" />
+          <StatToken icon={<TrendingUpIcon className="h-6 w-6" />} value={levelProgress.level} label="Level" accent="green" orientation="col" />
+          <StatToken icon={<StarIcon className="h-6 w-6" />} value={totalXp} label="Total XP" accent="wine" orientation="col" />
           <StatToken icon={<FlameIcon className="h-6 w-6" />} value={streak} label="Day streak" accent="gold" orientation="col" />
         </div>
 

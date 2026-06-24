@@ -46,8 +46,9 @@ export function HomePage() {
       <NightPanel className="p-6 sm:p-9 lg:p-10">
         <div className="grid items-center gap-8 lg:grid-cols-[1.35fr_1fr]">
           <div className="anim-fade-up">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gold-300 ring-1 ring-inset ring-white/15">
-              {course.title}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-gold-300 ring-1 ring-inset ring-gold-400/25">
+              <span aria-hidden>&spades;</span>
+              {course.eyebrow}
             </span>
             <h1 className="mt-4 font-display text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
               {course.heroLine}
@@ -68,11 +69,11 @@ export function HomePage() {
           </div>
 
           <div
-            className="anim-fade-up rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5"
+            className="anim-deal rounded-2xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-5"
             style={{ animationDelay: '120ms' }}
           >
             <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-              Your progress
+              Your stack
             </p>
             <div className="mt-3 grid grid-cols-3 gap-2.5">
               <StatToken
@@ -87,7 +88,7 @@ export function HomePage() {
                 icon={<TrendingUpIcon className="h-6 w-6" />}
                 value={levelProgress.level}
                 label="Level"
-                accent="sky"
+                accent="green"
                 orientation="col"
                 delayMs={260}
               />
@@ -95,7 +96,7 @@ export function HomePage() {
                 icon={<StarIcon className="h-6 w-6" />}
                 value={totalXp}
                 label="Total XP"
-                accent="brand"
+                accent="wine"
                 orientation="col"
                 delayMs={340}
               />
@@ -130,10 +131,10 @@ export function HomePage() {
       <section>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
               Your course
             </h2>
-            <p className="mt-1 text-sm text-slate-500">{course.courseSummary}</p>
+            <p className="mt-1 text-sm text-night-700/70">{course.courseSummary}</p>
           </div>
           <Link
             to="/course"
@@ -175,9 +176,9 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
     <span
       className={cx(
         'grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-lg font-bold',
-        done && 'bg-emerald-500 text-white shadow-[0_2px_0_#059669]',
+        done && 'bg-emerald-500 text-white shadow-[0_2px_0_#047353]',
         !done && unlocked && 'bg-brand-600 text-white shadow-[0_2px_0_var(--color-brand-800)]',
-        !done && !unlocked && 'bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200',
+        !done && !unlocked && 'bg-night-900/5 text-night-700/40 ring-1 ring-inset ring-night-900/10',
       )}
       aria-hidden
     >
@@ -203,12 +204,12 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
         {chip}
         {badge}
       </div>
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-night-700/50">
         {lesson.unit}
       </p>
       <h3 className="mt-1 text-base font-semibold leading-snug text-ink">{lesson.title}</h3>
-      <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
-        <SpadeIcon className="h-3.5 w-3.5 shrink-0" />
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-night-700/55">
+        <SpadeIcon className="h-3.5 w-3.5 shrink-0 text-gold-600" />
         {lesson.primaryInteraction}
       </p>
     </>
@@ -222,7 +223,7 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
         to={`/lesson/${lesson.id}`}
         className={cx(
           baseCard,
-          'group border-slate-200 bg-white transition hover:-translate-y-1 hover:border-brand-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2',
+          'group border-night-900/10 bg-white transition hover:-translate-y-1 hover:border-brand-300 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2',
         )}
         style={{ animationDelay: `${index * 60}ms` }}
       >
@@ -233,7 +234,7 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
 
   return (
     <article
-      className={cx(baseCard, 'border-slate-200/80 bg-white/60')}
+      className={cx(baseCard, 'border-night-900/10 bg-white/55')}
       style={{ animationDelay: `${index * 60}ms` }}
     >
       {inner}

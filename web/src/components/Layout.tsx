@@ -26,7 +26,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-ink">
-      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-surface/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-night-900/10 bg-surface/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <Link
             to="/"
@@ -47,8 +47,8 @@ export function Layout() {
                     className={cx(
                       'rounded-lg px-3.5 py-2 text-sm font-semibold transition',
                       active
-                        ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                        ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/70'
+                        : 'text-night-700/70 hover:bg-night-900/5 hover:text-night-900',
                     )}
                   >
                     {item.label}
@@ -71,7 +71,7 @@ export function Layout() {
                 )}
                 <Link
                   to="/profile"
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
+                  className="flex items-center gap-2 rounded-full border border-night-900/12 bg-white py-1 pl-1 pr-3 text-sm font-semibold text-night-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
                 >
                   <AnimalAvatar id={profile?.profileAnimal} size="sm" />
                   <span className="hidden max-w-[10rem] truncate sm:inline">
@@ -98,7 +98,7 @@ export function Layout() {
 
         {signedIn && (
           <nav className="px-4 pb-3 sm:hidden">
-            <div className="flex gap-1 rounded-xl border border-slate-200 bg-white/70 p-1 shadow-sm">
+            <div className="flex gap-1 rounded-xl border border-night-900/10 bg-white/70 p-1 shadow-sm">
               {navItems.map((item) => {
                 const active = item.match(location.pathname)
                 return (
@@ -108,7 +108,7 @@ export function Layout() {
                     aria-current={active ? 'page' : undefined}
                     className={cx(
                       'flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition',
-                      active ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600',
+                      active ? 'bg-brand-600 text-white shadow-sm' : 'text-night-700/70',
                     )}
                   >
                     {item.label}
