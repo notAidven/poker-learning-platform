@@ -1,6 +1,8 @@
-# Brilliant Alpha Clone — Web App
+# Suited — Texas Hold'em Poker (Web App)
 
-React + Vite + Tailwind + Firebase frontend for the Phase 1 MVP.
+React + Vite + Tailwind + Firebase frontend for **Suited**, a learn-by-doing Texas
+Hold'em poker course (six interactive lessons: the deck, hand rankings, the streets,
+odds & pot odds, betting, and a full hand vs AI). Play-money only — no real wagering.
 
 ## Setup
 

@@ -1,57 +1,29 @@
-import { cardsByRank } from '../../types/lesson'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 
-const aceOrKing = [...cardsByRank('A'), ...cardsByRank('K')]
-
+/**
+ * SKELETON STUB — Skill Check 6 (design doc §6, Lesson 6). Per the design, SC6 reuses
+ * light interactions (`hand-ranker` / `compare-events`), NOT the full simulator, to
+ * stay within the 3-quick-question format. The Lesson 6 agent expands to: stronger
+ * starting hand; correct action at a street; award the pot. Keep `lessonId: '6'` /
+ * export `skillCheck6`.
+ */
 export const skillCheck6: SkillCheckDefinition = {
   lessonId: '6',
-  title: 'Set Operations Skill Check',
+  title: 'Play a Full Hand Skill Check',
   questions: [
     {
       id: 'q1',
-      prompt:
-        '$|A| = 12$, $|B| = 10$, $|A \\cap B| = 4$. **Enter $|A \\cup B|$** using inclusion–exclusion.',
-      interaction: 'venn-diagram',
+      prompt: 'At showdown, which hand wins? Pick the stronger one.',
+      interaction: 'hand-ranker',
       config: {
-        sizeA: 12,
-        sizeB: 10,
-        intersection: 4,
-        task: 'enter-union',
+        mode: 'order-hands',
+        hands: [
+          { id: 'flush', cards: ['AH', 'KH', '9H', '5H', '2H'] },
+          { id: 'straight', cards: ['9C', '8D', '7H', '6S', '5C'] },
+        ],
       },
-      answer: { count: 18 },
-      incorrectFeedback:
-        '$|A \\cup B| = |A| + |B| - |A \\cap B| = 12 + 10 - 4 = 18$.',
-    },
-    {
-      id: 'q2',
-      prompt:
-        '$|\\Omega| = 30$ and $|A| = 12$. **Enter $|A^c|$** — outcomes in $\\Omega$ but **not** in $A$.',
-      interaction: 'venn-diagram',
-      config: {
-        sizeA: 12,
-        sizeB: 10,
-        intersection: 4,
-        universeSize: 30,
-        task: 'enter-complement',
-        countLabel: 'Enter |Aᶜ| = |Ω| − |A|:',
-      },
-      answer: { count: 18 },
-      incorrectFeedback: '$|A^c| = |\\Omega| - |A| = 30 - 12 = 18$.',
-    },
-    {
-      id: 'q3',
-      prompt:
-        'Draw one card ($|\\Omega| = 52$). **Event:** the card is an **Ace or a King**. Tap every card in $A \\cup B$, enter $|A \\cup B|$, then enter $P(A \\cup B)$ as a reduced fraction.',
-      interaction: 'card-deck',
-      config: {
-        helperText: 'Tap every Ace and every King. No card is both, so the sets do not overlap.',
-        selectionLabel: 'Your selection (Aces ∪ Kings)',
-        countLabel: 'How many cards are Aces or Kings? Enter |A ∪ B|.',
-        probabilityLabel: 'What is P(A ∪ B) = |A ∪ B| / 52 as a reduced fraction?',
-      },
-      answer: { cards: aceOrKing, count: 8, probability: { num: 2, den: 13 } },
-      incorrectFeedback:
-        'Aces and Kings are disjoint, so $|A \\cup B| = 4 + 4 = 8$ and $P = \\frac{8}{52} = \\frac{2}{13}$.',
+      answer: { handOrder: ['flush', 'straight'] },
+      incorrectFeedback: 'A flush beats a straight, so the flush wins the pot.',
     },
   ],
 }

@@ -1,3 +1,5 @@
+import type { BettingAction, HandCategory, PokerStreet } from './poker'
+
 export type ConceptStep = {
   type: 'concept'
   id: string
@@ -609,6 +611,197 @@ export type CompareEventsStep = ProblemStepBase & {
   answer: CompareEventsAnswer
 }
 
+// ===========================================================================
+// Poker interaction step variants (Texas Hold'em revamp). Domain types live in
+// `types/poker.ts`; card primitives (`CardId`, `fullDeck`, …) are above. Each
+// variant pairs a `config` + `answer` on top of `ProblemStepBase`, keyed by its
+// `interaction` id, exactly like the probability variants. See design doc §5 & §7.
+// ===========================================================================
+
+// --- hand-ranker (§5.2) -------------------------------------------------------
+export type HandRankerMode =
+  | 'identify-category' // show 5–7 cards → pick the category
+  | 'order-categories' // arrange category chips strongest→weakest
+  | 'order-hands' // arrange N concrete hands strongest→weakest
+  | 'build-hand' // pick 5 cards from a deck to make a target category
+  | 'pick-best-five' // from 7 cards, tap the 5 that form the best hand
+
+export type HandRankerHand = { id: string; cards: CardId[] }
+
+export type HandRankerConfig = {
+  mode: HandRankerMode
+  /** identify-category / pick-best-five: the cards shown. */
+  cards?: CardId[]
+  /** order-categories: the category chips to arrange (subset of the 10). */
+  categories?: HandCategory[]
+  /** order-hands: each "hand" is a labeled set of 5 cards. */
+  hands?: HandRankerHand[]
+  /** build-hand: which category to build. */
+  targetCategory?: HandCategory
+  /** build-hand: optional fixed pool to pick from (defaults to fullDeck()). */
+  pool?: CardId[]
+  helperText?: string
+}
+
+export type HandRankerAnswer = {
+  /** identify-category / build-hand target. */
+  category?: HandCategory
+  /** order-categories: correct order strongest→weakest. */
+  categoryOrder?: HandCategory[]
+  /** order-hands: correct order of hand ids strongest→weakest. */
+  handOrder?: string[]
+  /** build-hand / pick-best-five: the exact 5 cards (build-hand validates by category). */
+  cards?: CardId[]
+}
+
+export type HandRankerStep = ProblemStepBase & {
+  interaction: 'hand-ranker'
+  config: HandRankerConfig
+  answer: HandRankerAnswer
+}
+
+// --- board-dealer (§5.3) ------------------------------------------------------
+export type BoardDealerConfig = {
+  /** Fixed hole cards, or 'random' to deal from a shuffled deck (seedable). */
+  hole?: [CardId, CardId] | 'random'
+  /** Fixed full board (up to 5), or 'deal' to deal street-by-street. */
+  board?: CardId[] | 'deal'
+  seed?: number
+  /** Number of opponents to deal (face-down unless revealed at showdown). */
+  opponents?: number
+  /** Which streets to step through. */
+  streets?: PokerStreet[]
+  /** Ask the learner to name their best hand at each listed street. */
+  askBestHandAt?: PokerStreet[]
+  /** Label each street with its name as it's revealed (default true). */
+  annotateStreets?: boolean
+  helperText?: string
+}
+
+export type BoardDealerAnswer = {
+  /** Expected best-hand category at each asked street (validated via evaluateHoldem). */
+  bestHandByStreet?: Partial<Record<PokerStreet, HandCategory>>
+  /** Minimum streets the learner must reveal before Check unlocks (experiential gate). */
+  minStreetsRevealed?: number
+}
+
+export type BoardDealerStep = ProblemStepBase & {
+  interaction: 'board-dealer'
+  config: BoardDealerConfig
+  answer: BoardDealerAnswer
+}
+
+// --- outs-odds (§5.4) ---------------------------------------------------------
+export type OutsOddsAsk = 'outs' | 'equity' | 'potOdds' | 'decision'
+
+export type OutsOddsConfig = {
+  hole: [CardId, CardId]
+  board: CardId[] // 3 (flop) or 4 (turn) cards
+  /** The draw the learner is chasing, for hinting + out highlighting (e.g. "a flush"). */
+  drawLabel: string
+  /** Selects ×4 (flop) vs ×2 (turn) for the Rule of 2 & 4. */
+  street: 'flop' | 'turn'
+  /** Which sub-questions to ask, in order. */
+  ask: OutsOddsAsk[]
+  /** Pot situation for potOdds / decision. */
+  pot?: number
+  betToCall?: number
+  /** Render a CardDeck draw-tally below to build empirical feel for the equity. */
+  empiricalTieIn?: boolean
+  helperText?: string
+}
+
+export type OutsOddsAnswer = {
+  /** Exact integer (validated via countMatches; cross-check with countOuts). */
+  outs?: number
+  /** Rule-of-2/4 estimate; validated with percentMatches tolerance. */
+  equityPercent?: number
+  equityTolerance?: number
+  /** required equity = betToCall/(pot+betToCall), as a percent. */
+  potOddsPercent?: number
+  /** correct = (equity ≥ requiredEquity). */
+  decision?: 'call' | 'fold'
+}
+
+export type OutsOddsStep = ProblemStepBase & {
+  interaction: 'outs-odds'
+  config: OutsOddsConfig
+  answer: OutsOddsAnswer
+}
+
+// --- betting-round (§5.5) -----------------------------------------------------
+export type BettingRoundConfig = {
+  hole: [CardId, CardId]
+  board: CardId[]
+  street: PokerStreet
+  pot: number
+  heroStack: number
+  villainStack: number
+  /** Bet/raise sizes offered as fractions of the pot (e.g. [0.5, 0.75, 1]). */
+  sizingOptions?: number[]
+  /** What the learner faces: nothing (check/bet) or an existing bet (call/raise/fold). */
+  facing?: { action: 'bet' | 'raise'; amount: number }
+  /** AI tier controlling the villain's response (see §5.6). */
+  aiTier?: 1 | 2 | 3
+  seed?: number
+  /** Sub-question to validate completion. */
+  task: 'choose-action' | 'choose-size' | 'ev-of-call'
+  helperText?: string
+}
+
+export type BettingRoundAnswer = {
+  /** choose-action: the +EV / correct action. */
+  action?: BettingAction
+  /** choose-size: target fraction of pot (tolerance on resulting $). */
+  sizeFraction?: number
+  sizeTolerance?: number
+  /** ev-of-call: expected EV in chips (with tolerance); its sign decides call/fold. */
+  evChips?: number
+  evTolerance?: number
+}
+
+export type BettingRoundStep = ProblemStepBase & {
+  interaction: 'betting-round'
+  config: BettingRoundConfig
+  answer: BettingRoundAnswer
+}
+
+// --- full-hand (§5.6) capstone ------------------------------------------------
+export type FullHandCheckpoint = {
+  street: PokerStreet
+  prompt: string
+  /** Any of these actions counts as correct at this checkpoint. */
+  acceptableActions: BettingAction[]
+  /** Feeds the "Why?" explanation. */
+  why?: string
+}
+
+export type FullHandConfig = {
+  opponents: number // 1 (heads-up) … 3 (multiway)
+  aiTier: 1 | 2 | 3
+  heroHole?: [CardId, CardId] | 'random'
+  seed?: number
+  blinds: { sb: number; bb: number }
+  startingStack: number
+  /** Authored decision checkpoints the learner must pass. */
+  checkpoints: FullHandCheckpoint[]
+  /** Minimum checkpoints passed to count the capstone solved (default = all but one). */
+  passThreshold?: number
+  /** Show the responsible-play note on completion (Lesson 6 only). */
+  showResponsiblePlayNote?: boolean
+}
+
+export type FullHandAnswer = {
+  /** Mirror of checkpoint expectations; the component enforces passThreshold. */
+  passThreshold: number
+}
+
+export type FullHandStep = ProblemStepBase & {
+  interaction: 'full-hand'
+  config: FullHandConfig
+  answer: FullHandAnswer
+}
+
 export type ProblemStep =
   | CoinFlipLabStep
   | SampleSpacePickerStep
@@ -625,6 +818,12 @@ export type ProblemStep =
   | VennDiagramStep
   | CardDeckStep
   | CompareEventsStep
+  // Poker (Texas Hold'em revamp):
+  | HandRankerStep
+  | BoardDealerStep
+  | OutsOddsStep
+  | BettingRoundStep
+  | FullHandStep
 
 export type LessonStep = ConceptStep | ProblemStep
 

@@ -47,6 +47,22 @@ const TwoDiceGrid = lazy(() =>
 const VennDiagram = lazy(() =>
   import('./interactions/VennDiagram').then((m) => ({ default: m.VennDiagram })),
 )
+// Poker (Texas Hold'em revamp)
+const HandRanker = lazy(() =>
+  import('./interactions/HandRanker').then((m) => ({ default: m.HandRanker })),
+)
+const BoardDealer = lazy(() =>
+  import('./interactions/BoardDealer').then((m) => ({ default: m.BoardDealer })),
+)
+const OutsOdds = lazy(() =>
+  import('./interactions/OutsOdds').then((m) => ({ default: m.OutsOdds })),
+)
+const BettingRound = lazy(() =>
+  import('./interactions/BettingRound').then((m) => ({ default: m.BettingRound })),
+)
+const FullHand = lazy(() =>
+  import('./interactions/FullHand').then((m) => ({ default: m.FullHand })),
+)
 
 type InteractionRendererProps = InteractionProps & {
   step: ProblemStep
@@ -137,6 +153,23 @@ export function InteractionRenderer({
       interaction = (
         <CompareEvents key={step.id} config={step.config} answer={step.answer} {...props} />
       )
+      break
+    case 'hand-ranker':
+      interaction = <HandRanker key={step.id} config={step.config} answer={step.answer} {...props} />
+      break
+    case 'board-dealer':
+      interaction = <BoardDealer key={step.id} config={step.config} answer={step.answer} {...props} />
+      break
+    case 'outs-odds':
+      interaction = <OutsOdds key={step.id} config={step.config} answer={step.answer} {...props} />
+      break
+    case 'betting-round':
+      interaction = (
+        <BettingRound key={step.id} config={step.config} answer={step.answer} {...props} />
+      )
+      break
+    case 'full-hand':
+      interaction = <FullHand key={step.id} config={step.config} answer={step.answer} {...props} />
       break
     default:
       return null

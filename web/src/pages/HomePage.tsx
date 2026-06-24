@@ -13,9 +13,9 @@ import { StatToken } from '../components/ui/StatToken'
 import { cx } from '../components/ui/cx'
 import {
   CheckIcon,
-  DiceIcon,
   FlameIcon,
   LockIcon,
+  SpadeIcon,
   StarIcon,
   TrendingUpIcon,
 } from '../components/icons'
@@ -208,7 +208,7 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
       </p>
       <h3 className="mt-1 text-base font-semibold leading-snug text-ink">{lesson.title}</h3>
       <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
-        <DiceIcon className="h-3.5 w-3.5 shrink-0" />
+        <SpadeIcon className="h-3.5 w-3.5 shrink-0" />
         {lesson.primaryInteraction}
       </p>
     </>

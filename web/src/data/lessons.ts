@@ -1,4 +1,4 @@
-/** Canonical course path — 6 lessons for intro Probability & Random Variables */
+/** Canonical course path — 6 lessons for "Suited", a Texas Hold'em poker course. */
 export type LessonMeta = {
   id: string
   title: string
@@ -9,38 +9,38 @@ export type LessonMeta = {
 export const lessons: LessonMeta[] = [
   {
     id: '1',
-    title: 'Experiments, Outcomes & Sample Spaces',
+    title: 'Poker & the Deck',
     unit: 'Unit 1 · Foundations',
-    primaryInteraction: 'Die/coin simulation; probability weights',
+    primaryInteraction: 'Card deck; deal the board',
   },
   {
     id: '2',
-    title: 'Events & Basic Probability',
-    unit: 'Unit 2 · Events',
-    primaryInteraction: 'Two-dice grid; coin flip events',
+    title: 'Hand Rankings',
+    unit: 'Unit 2 · Hand strength',
+    primaryInteraction: 'Rank hands; compare showdowns',
   },
   {
     id: '3',
-    title: 'Counting & Factorials',
-    unit: 'Unit 3 · Counting',
-    primaryInteraction: 'Counting widget; seating guests',
+    title: 'Flow of a Hand',
+    unit: 'Unit 3 · The streets',
+    primaryInteraction: 'Deal streets; best hand by street',
   },
   {
     id: '4',
-    title: 'Combinations & the Binomial Theorem',
-    unit: 'Unit 4 · Combinations',
-    primaryInteraction: 'Select k from n; coin-flip probability',
+    title: 'Outs, Odds & Pot Odds',
+    unit: 'Unit 4 · Poker math',
+    primaryInteraction: 'Count outs; pot-odds decisions',
   },
   {
     id: '5',
-    title: 'Classic Probability Problems',
-    unit: 'Unit 5 · Classic problems',
-    primaryInteraction: 'Birthday simulation; secretary problem',
+    title: 'Betting',
+    unit: 'Unit 5 · Wagering',
+    primaryInteraction: 'Bet, raise & size; EV of a call',
   },
   {
     id: '6',
-    title: 'Operations on Events',
-    unit: 'Unit 6 · Set operations',
-    primaryInteraction: 'Venn diagrams; inclusion–exclusion',
+    title: 'Play a Full Hand',
+    unit: 'Unit 6 · Capstone',
+    primaryInteraction: 'Full hand vs AI to showdown',
   },
 ]

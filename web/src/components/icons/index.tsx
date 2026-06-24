@@ -196,3 +196,23 @@ export function CoinIcon({ className = 'h-5 w-5', ...props }: IconProps) {
     </svg>
   )
 }
+
+/** Solid spade — poker suits / card play. */
+export function SpadeIcon({ className = 'h-5 w-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden {...props}>
+      <path d="M12 2 C12 2 5 8.5 5 13.5 c0 2.5 2 4.5 4.5 4.5 1 0 1.9 -.3 2.6 -.9 -.2 2.2 -1.3 3.9 -3.1 4.9 h6 c-1.8 -1 -2.9 -2.7 -3.1 -4.9 .7 .6 1.6 .9 2.6 .9 2.5 0 4.5 -2 4.5 -4.5 C19 8.5 12 2 12 2 Z" />
+    </svg>
+  )
+}
+
+/** Poker chip — wagering / betting. */
+export function ChipIcon({ className = 'h-5 w-5', ...props }: IconProps) {
+  return (
+    <svg {...OUTLINE} className={className} aria-hidden {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+    </svg>
+  )
+}

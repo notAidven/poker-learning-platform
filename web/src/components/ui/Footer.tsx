@@ -9,8 +9,8 @@ export function Footer({ signedIn }: { signedIn: boolean }) {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
-            Probability you learn by rolling, flipping, and counting — six interactive
-            lessons with instant feedback.
+            Texas Hold&apos;em you learn by dealing, drawing, and betting — six interactive
+            lessons with instant feedback. Play-money only.
           </p>
         </div>
 

@@ -177,13 +177,18 @@ function testNoHiddenRequiredFieldDeadlock() {
   )
 }
 
-// Lesson 1 p2: the roll-to-discover die (die-sample-space, discoverMode). Rolling
-// auto-populates Ω with distinct faces; lock-in stays disabled until all six faces have
-// appeared, and entering |Ω| = 6 then validates. (Count-only — no probability field.)
-function testLesson1DiscoverDie() {
-  const sides = 6
-  const answer = { selected: [1, 2, 3, 4, 5, 6], count: 6 } // discover die is count-only
-  const confirmCount = true
+// Poker Lesson 1 p1: card-deck select-all "tap all 13 hearts". Selecting exactly the
+// 13 hearts and entering the count = 13 validates. The count field is visible as soon as
+// a card is selected (same hardened gating as the probability widgets — no hidden-field
+// deadlock). Count-only — poker Lesson 1 carries no probability fraction.
+function testLesson1CardSelectAll() {
+  const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+  const hearts = ranks.map((r) => `${r}H`)
+  const answer = { cards: hearts, count: 13 } // no probability field in poker L1
+  const requiresProbability = answer.probability !== undefined
+
+  const selected = new Set(hearts)
+  const countInput = '13'
 
   const sameSet = (a, b) => {
     const s = new Set(a)
@@ -192,77 +197,86 @@ function testLesson1DiscoverDie() {
   const validCountInput = (raw) => raw.trim() !== '' && Number.isInteger(Number(raw))
   const countMatches = (raw, n) => validCountInput(raw) && Number(raw) === n
 
-  // canLockIn mirrors the widget: every face seen AND (if confirmCount) a valid count entry.
-  const canLockIn = (discovered, countInput) =>
-    discovered.length === sides && (!confirmCount || validCountInput(countInput))
-  const discoverValid = (discovered, countInput) =>
-    sameSet(discovered, answer.selected) && (!confirmCount || countMatches(countInput, answer.count))
+  const selectionValid =
+    selected.size === answer.cards.length && sameSet([...selected], answer.cards)
+  const countOk = countMatches(countInput, answer.count)
 
-  // Lock-in is blocked until every face has appeared (no premature/incorrect lock-in).
-  assert.equal(canLockIn([1, 2, 3], '6'), false, 'cannot lock in before all six faces appear')
+  // Hardened gating: the count field shows once any card is selected, so Check can never
+  // enable while a validated field is still hidden.
+  const manipulableReady = selected.size > 0
+  const countVisible = manipulableReady // requiresCount is true for this step
 
-  // Rolling (with repeats) eventually reveals all six distinct faces.
-  const rolls = [3, 1, 1, 5, 2, 6, 4, 2, 6]
-  const discovered = [...new Set(rolls)]
-  assert.equal(discovered.length, 6, 'distinct faces accumulate to the full Ω')
-  assert.equal(canLockIn(discovered, '6'), true)
-  assert.equal(discoverValid(discovered, '6'), true, 'all six discovered + |Ω| = 6 validates')
-  assert.equal(answer.probability, undefined, 'discover die is count-only (no fraction field)')
+  assert.equal(hearts.length, 13, 'a suit holds 13 cards (A–K)')
+  assert.equal(requiresProbability, false, 'poker Lesson 1 select-all is count-only (no fraction)')
+  assert.equal(countVisible, true, 'count field shows once a card is selected')
+  assert.equal(selectionValid && countOk, true, 'all 13 hearts + count = 13 validates')
   record(
-    'lesson1-discover-die',
+    'lesson1-card-select',
     true,
-    'Roll-to-discover die: reveal all 6 faces + enter |Ω| = 6 locks in Ω and unlocks Continue',
+    'Poker Lesson 1 card-deck: selecting all 13 hearts + count = 13 validates the step',
   )
 }
 
-// Backward-compat: the classic select-all die (Lesson 1 p3/p4 and skill-check 1 q2) must
-// still be completable — selecting the event's faces, entering |A|, and entering a P(A)
-// that reduces to the expected fraction all validate (unreduced entries are accepted).
-function testClassicDieEventCompletable() {
-  const answer = { selected: [2, 4, 6], count: 3, probability: { num: 1, den: 2 } } // die "even"
-  const requiresProbability = answer.probability !== undefined
-  const selected = new Set([2, 4, 6])
-  const countInput = '3'
-  const fractionNum = '3'
-  const fractionDen = '6' // unreduced 3/6 must still match expected 1/2
-
-  const sameSet = (a, b) => {
-    const s = new Set(a)
-    return s.size === b.length && b.every((x) => s.has(x))
+// Poker hand-ranking core (lib/poker): the 10 categories are strictly ordered by
+// strength, and an evaluated hand's score vector [categoryRank, ...tiebreak] compares
+// lexicographically (first differing element decides; equal vectors chop). This mirrors
+// HAND_CATEGORY_RANK + compareHands and is kept here as a pure cross-check (no TS import).
+function testHandRankingOrder() {
+  const HAND_CATEGORY_RANK = {
+    'high-card': 1,
+    pair: 2,
+    'two-pair': 3,
+    trips: 4,
+    straight: 5,
+    flush: 6,
+    'full-house': 7,
+    quads: 8,
+    'straight-flush': 9,
+    'royal-flush': 10,
   }
-  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b))
-  const reduce = (n, d) => {
-    const g = gcd(Math.abs(n), Math.abs(d)) || 1
-    return { num: n / g, den: d / g }
+  const strongestFirst = [
+    'royal-flush',
+    'straight-flush',
+    'quads',
+    'full-house',
+    'flush',
+    'straight',
+    'trips',
+    'two-pair',
+    'pair',
+    'high-card',
+  ]
+
+  // The ladder is strictly decreasing in rank from strongest to weakest.
+  for (let i = 0; i < strongestFirst.length - 1; i++) {
+    assert.ok(
+      HAND_CATEGORY_RANK[strongestFirst[i]] > HAND_CATEGORY_RANK[strongestFirst[i + 1]],
+      `${strongestFirst[i]} must outrank ${strongestFirst[i + 1]}`,
+    )
   }
-  const fractionMatches = (n, d, exp) => {
-    if (Number(d) <= 0) return false
-    const r = reduce(Number(n), Number(d))
-    const e = reduce(exp.num, exp.den)
-    return r.num === e.num && r.den === e.den
+
+  // compareHands semantics: lexicographic compare of the score vectors.
+  const compareScore = (a, b) => {
+    const n = Math.max(a.length, b.length)
+    for (let i = 0; i < n; i++) {
+      const av = a[i] ?? 0
+      const bv = b[i] ?? 0
+      if (av !== bv) return av - bv
+    }
+    return 0
   }
-  const countMatches = (raw, n) => raw.trim() !== '' && Number(raw) === n
 
-  const selectionValid = sameSet([...selected], answer.selected)
-  const countOk = countMatches(countInput, answer.count)
-  const probOk = !requiresProbability || fractionMatches(fractionNum, fractionDen, answer.probability)
+  // Flush (cat 6) beats straight (cat 5) regardless of tiebreak.
+  assert.ok(compareScore([6, 14, 13, 9, 5, 2], [5, 9]) > 0, 'flush beats straight')
+  // Pair of Kings with a Queen kicker beats pair of Kings with a Jack kicker.
+  assert.ok(compareScore([2, 13, 12, 5, 2], [2, 13, 11, 5, 2]) > 0, 'higher kicker wins')
+  // Identical score vectors tie — suits never break ties (split pot).
+  assert.equal(compareScore([1, 14, 13, 9, 5, 2], [1, 14, 13, 9, 5, 2]), 0, 'identical hands chop')
 
-  // Hardened gating: the fraction field is visible as soon as a face is selected — never
-  // gated behind a valid count — so Check can't enable while a validated field is hidden.
-  const manipulableReady = selected.size > 0
-  const fractionVisible = manipulableReady && requiresProbability
-
-  assert.equal(requiresProbability, true, 'classic die event requires a reduced P(A)')
-  assert.equal(fractionVisible, true, 'fraction field shows once faces are selected')
-  assert.equal(
-    selectionValid && countOk && probOk,
-    true,
-    'select {2,4,6} + |A| = 3 + (3/6 → 1/2) validates',
-  )
   record(
-    'classic-die-event',
+    'hand-ranking-order',
     true,
-    'Classic select-all die (Lesson 1 + skill checks): event + |A| + reduced P(A) validates',
+    'Hand-ranking ladder strictly ordered; scores compare lexicographically (flush > straight, kicker breaks ties, identical hands chop)',
   )
 }
 
@@ -341,8 +355,8 @@ testSequentialUnlock()
 testSkillCheckThreshold()
 testNextLessonPathSkillCheckPending()
 testNoHiddenRequiredFieldDeadlock()
-testLesson1DiscoverDie()
-testClassicDieEventCompletable()
+testLesson1CardSelectAll()
+testHandRankingOrder()
 testErrorBoundaryRecovery()
 testAuthLoadNeverHangs()
 

@@ -1,52 +1,26 @@
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 
+/**
+ * SKELETON STUB — Skill Check 3 (design doc §6, Lesson 3). The Lesson 3 agent expands
+ * to the full 3-question check (order the streets; best hand at a street; who acts
+ * last postflop). Keep `lessonId: '3'` / export `skillCheck3`.
+ */
 export const skillCheck3: SkillCheckDefinition = {
   lessonId: '3',
-  title: 'Counting Skill Check',
+  title: 'Flow of a Hand Skill Check',
   questions: [
     {
       id: 'q1',
-      prompt:
-        'A meal has **2 appetizers**, **3 entrées**, and **2 desserts** (pick one of each). Build a meal, then **enter $|\\Omega|$** using the multiplication principle.',
-      interaction: 'counting-product',
+      prompt: 'Deal the hand to showdown and confirm all five community cards appear.',
+      interaction: 'board-dealer',
       config: {
-        stages: [
-          { label: 'Appetizer', options: ['Soup', 'Salad'] },
-          { label: 'Entrée', options: ['Pasta', 'Fish', 'Tofu'] },
-          { label: 'Dessert', options: ['Cake', 'Fruit'] },
-        ],
-        countLabel: 'Enter |Ω| — total meals (2 × 3 × 2)?',
+        hole: ['JC', 'JD'],
+        board: ['JS', '4C', '4D', '9H', '2S'],
+        streets: ['preflop', 'flop', 'turn', 'river'],
+        annotateStreets: true,
       },
-      answer: { product: 12 },
-      incorrectFeedback: 'Multiply the stages: $2 \\times 3 \\times 2 = 12$ meals in $\\Omega$.',
-    },
-    {
-      id: 'q2',
-      prompt:
-        'Every card is one **suit** (4 options) and one **rank** (13 options). Pick one of each, then **enter $|\\Omega|$** — the size of a standard deck.',
-      interaction: 'counting-product',
-      config: {
-        stages: [
-          { label: 'Suit', options: ['Spades', 'Hearts', 'Diamonds', 'Clubs'] },
-          {
-            label: 'Rank',
-            options: ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'],
-          },
-        ],
-        countLabel: 'Enter |Ω| — total cards (4 × 13)?',
-      },
-      answer: { product: 52 },
-      incorrectFeedback: 'Each card is one (suit, rank) pair: $4 \\times 13 = 52$.',
-    },
-    {
-      id: 'q3',
-      prompt:
-        'Seat **4 distinct guests** in **4 chairs** where order matters. Seat everyone, then **enter $4!$** — total arrangements.',
-      interaction: 'seat-permutation',
-      config: { guests: ['1', '2', '3', '4'] },
-      answer: { totalArrangements: 24 },
-      incorrectFeedback:
-        'Count seatings: $4 \\times 3 \\times 2 \\times 1 = 4! = 24$ arrangements in $\\Omega$.',
+      answer: { minStreetsRevealed: 4 },
+      incorrectFeedback: 'Reveal every street: flop (3), turn (1), river (1) = 5 community cards.',
     },
   ],
 }

@@ -1,11 +1,11 @@
-/** Shared course branding — general Probability & Random Variables (not institution-specific) */
+/** Shared course branding — "Suited", a learn-by-doing Texas Hold'em poker course. */
 export const course = {
-  title: 'Probability & Random Variables',
-  shortTitle: 'Probability',
+  title: 'Suited',
+  shortTitle: 'Suited',
   eyebrow: 'Interactive course',
-  heroLine: 'Learn probability by doing',
+  heroLine: "Learn Texas Hold'em by playing",
   heroDescription:
-    'Six interactive lessons from sample spaces through counting, classic problems, and set operations. Problems, simulations, and instant feedback. No AI.',
+    'Six interactive lessons — from the deck and hand rankings through odds, betting, and a full hand against AI opponents. Play-money only: no real wagering.',
   pathDescription:
     'Work through each circle in order. Complete a lesson to unlock the next one on the path.',
   courseSummary: '6 lessons · sequential unlock · hands-on practice',

@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import { Logo } from './Logo'
 import { NightPanel } from './NightPanel'
-import { BarChartIcon, CoinIcon, DiceIcon, FlameIcon } from '../icons'
+import { BarChartIcon, ChipIcon, FlameIcon, SpadeIcon } from '../icons'
 
 const valueProps = [
-  { icon: <DiceIcon className="h-5 w-5" />, text: 'Hands-on dice & coin labs' },
+  { icon: <SpadeIcon className="h-5 w-5" />, text: 'Hands-on card & betting practice' },
   { icon: <BarChartIcon className="h-5 w-5" />, text: 'Instant feedback, never a lecture' },
   { icon: <FlameIcon className="h-5 w-5" />, text: 'Streaks, XP and levels to keep you going' },
 ]
@@ -17,14 +17,14 @@ function AuthAside() {
         style={{ ['--float-rot' as string]: '12deg' }}
         aria-hidden
       >
-        <DiceIcon className="h-16 w-16" strokeWidth={1.5} />
+        <SpadeIcon className="h-16 w-16" />
       </span>
       <span
         className="pointer-events-none absolute -bottom-2 right-16 select-none text-white opacity-20 anim-float"
         style={{ animationDelay: '1.4s', ['--float-rot' as string]: '-8deg' }}
         aria-hidden
       >
-        <CoinIcon className="h-14 w-14" strokeWidth={1.5} />
+        <ChipIcon className="h-14 w-14" strokeWidth={1.5} />
       </span>
 
       <Logo tone="light" />
@@ -34,11 +34,11 @@ function AuthAside() {
           Interactive course
         </p>
         <h2 className="mt-3 font-display text-3xl font-bold leading-tight tracking-tight">
-          Learn probability by doing.
+          Learn Texas Hold&apos;em by playing.
         </h2>
         <p className="mt-3 max-w-xs text-sm leading-relaxed text-white/65">
-          From sample spaces to the binomial theorem — six lessons you play through,
-          not read.
+          From the deck and hand rankings to a full hand vs AI — six lessons you play
+          through, not read.
         </p>
 
         <ul className="mt-7 space-y-3">
