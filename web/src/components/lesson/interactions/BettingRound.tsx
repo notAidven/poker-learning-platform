@@ -563,15 +563,21 @@ export function BettingRound({
           </div>
         </div>
 
-        {/* Pot */}
-        <div className="my-4 flex flex-col items-center justify-center gap-1">
-          <PotPile key={potTarget} pop={!reduceMotion && submitted} />
-          <p className="flex items-baseline gap-1.5 text-emerald-50" role="status" aria-live="polite">
-            <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/80">
-              Pot
+        {/* Pot: chips and amount sit side by side in a felt badge so the chip pile never covers the readout */}
+        <div className="my-4 flex justify-center">
+          <div className="relative inline-flex items-center gap-3 rounded-full bg-emerald-950/30 px-4 py-1.5 shadow-inner">
+            <PotPile key={potTarget} pop={!reduceMotion && submitted} />
+            <span
+              className="flex items-baseline gap-1.5 text-emerald-50"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/80">
+                Pot
+              </span>
+              <span className="text-2xl font-bold tabular-nums">{displayPot.toLocaleString()}</span>
             </span>
-            <span className="text-2xl font-bold tabular-nums">{displayPot.toLocaleString()}</span>
-          </p>
+          </div>
         </div>
 
         {/* Board */}
