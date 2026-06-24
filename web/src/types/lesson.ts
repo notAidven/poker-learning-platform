@@ -125,6 +125,19 @@ export type DieSampleSpaceConfig = {
   countLabel?: string
   /** Label for optional P(ω) fraction field */
   probabilityLabel?: string
+  /**
+   * Discovery mode: no manual face selection. The learner rolls the die and each
+   * distinct face auto-populates Ω (repeats only grow the per-face tally). Lock-in
+   * unlocks once all `sides` faces have appeared. `targetFace` / select-all chips are
+   * not shown; Ω is validated against `answer.selected`. Mirrors the coin's discoverMode.
+   */
+  discoverMode?: boolean
+  /** Instruction shown above the discovery sample-space area */
+  discoverHelperText?: string
+  /** Also require entering |Ω|; validated against answer.count (discovery mode) */
+  confirmCount?: boolean
+  /** Submit button label used in discovery mode */
+  lockInLabel?: string
 }
 
 export type DieSampleSpaceAnswer = {

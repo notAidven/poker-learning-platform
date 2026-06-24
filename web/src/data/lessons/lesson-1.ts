@@ -1,5 +1,5 @@
 import type { LessonDefinition } from '../../types/lesson'
-import { cardsBySuit, redCards } from '../../types/lesson'
+import { cardsByRank, cardsBySuit } from '../../types/lesson'
 
 export const lesson1: LessonDefinition = {
   id: '1',
@@ -8,16 +8,18 @@ export const lesson1: LessonDefinition = {
     {
       type: 'concept',
       id: 'c1',
-      title: 'Start with the experiment',
-      content: `Probability always begins with a **random experiment** — something you can repeat whose result you cannot predict ahead of time (flip a coin, roll a die, draw a card).
+      title: 'What can happen',
+      content: `A **random experiment** is anything you can repeat whose result you cannot predict in advance — flip a coin, roll a die, draw a card.
 
-Each possible result is an **outcome**, written $\\omega$. The set of **all** outcomes that could happen is the **sample space** $\\Omega$.
+Each separate result the experiment can produce is an **outcome**. One coin flip can come up heads; one die roll can show a 3. A single outcome is written $\\omega$.
 
-Before you talk about “how likely” anything is, you must know what could happen. That list is $\\Omega$ — and it can be tiny or huge. Its size depends on the experiment:
+The **sample space** is the complete list of every outcome that could happen. We write it $\\Omega$. Before asking how *likely* anything is, you first list what *can* happen — and that list is $\\Omega$.
+
+How big $\\Omega$ is depends on the experiment:
 
 - Flip one **coin** → $|\\Omega| = 2$.
 - Roll one **die** → $|\\Omega| = 6$.
-- Draw one **card** from a deck → $|\\Omega| = 52$.`,
+- Draw one **card** → $|\\Omega| = 52$.`,
       visual: {
         type: 'sample-space',
         labelOmega: 'Ω (one coin flip)',
@@ -71,29 +73,37 @@ The sample space is the complete menu of possibilities. If a result is not in $\
       type: 'problem',
       id: 'p2',
       prompt:
-        '**Experiment:** roll a standard six-sided die once. **Roll it several times first** and watch the outcomes pile up in the roll history below. Then **tap every face** that belongs to $\\Omega$ and enter $|\\Omega|$.',
+        'Same idea, a bigger menu. **Experiment:** roll one fair six-sided die. You do not yet know everything in $\\Omega$ — so **discover it**. **Roll the die over and over** and watch each *new* face join $\\Omega$ (rolling a face you have already seen only adds to its tally). Once every face has appeared, **lock in $\\Omega$** and enter $|\\Omega|$.',
       interaction: 'die-sample-space',
-      config: { sides: 6, selectAll: true },
+      config: {
+        sides: 6,
+        discoverMode: true,
+        confirmCount: true,
+        discoverHelperText:
+          'Roll again and again. The first time a face lands it joins Ω; seeing it again does not grow the set, only its tally. When new rolls stop revealing new faces, you have found all of Ω.',
+        countLabel: 'How many distinct outcomes are in Ω? Enter |Ω|.',
+        lockInLabel: "I've rolled every face — lock in Ω",
+      },
       answer: { selected: [1, 2, 3, 4, 5, 6], count: 6 },
       feedback: {
         correct:
-          'Rolling builds the picture: every roll lands on one of six faces, so $\\Omega = \\{1,2,3,4,5,6\\}$ and $|\\Omega| = 6$. That is a bigger sample space than the coin ($|\\Omega| = 2$). Pinning down $\\Omega$ first is what lets you measure probabilities of **events** next.',
+          'You discovered $\\Omega = \\{1, 2, 3, 4, 5, 6\\}$ — **six** outcomes, so $|\\Omega| = 6$. No matter how many times you roll, only these six faces ever appear. That is a bigger sample space than the coin ($|\\Omega| = 2$): different experiments have different-sized $\\Omega$.',
         incorrect:
-          'Roll a few times to see which faces appear, then list **every** face 1–6. There are $|\\Omega| = 6$ outcomes in the sample space.',
+          'Keep rolling until **no new face** appears, then lock in. A standard die can land on six faces, so $\\Omega = \\{1,2,3,4,5,6\\}$ and $|\\Omega| = 6$.',
         hints: [
-          'Roll several times — the history fills with values, and they are always between 1 and 6.',
-          'A standard die has six faces; each is one separate outcome $\\omega$. Select all six.',
-          'Count them: $|\\Omega| = 6$ — six possible outcomes.',
+          'Roll many times. After a while every roll just repeats a face already in Ω.',
+          'A standard die has six faces; each one is a separate outcome. All six belong in Ω.',
+          'Once you have seen all six faces, enter $|\\Omega| = 6$ and lock in.',
         ],
-        why: `**Experiment:** roll a standard six-sided die once.
+        why: `**Step 1 — Name the experiment:** roll one fair six-sided die.
 
-**Step 1 — Watch outcomes accumulate.** Each roll lands on one face. Over many rolls the only values you ever see are 1–6, so the sample space is
+**Step 2 — Discover every outcome.** Each roll reveals one face. The *distinct* faces you can ever see form the sample space. Rolling repeatedly, you only uncover the numbers 1 through 6 — repeats add nothing new:
 
 $$\\Omega = \\{1, 2, 3, 4, 5, 6\\}.$$
 
-**Step 2 — Count:** $|\\Omega| = 6$.
+**Step 3 — Count:** $|\\Omega| = 6$.
 
-Compare to the coin ($|\\Omega| = 2$): the die has a larger sample space. Listing and counting $\\Omega$ is the groundwork — the next section turns these counts into probabilities for **events** that contain several outcomes.`,
+Compare to the coin ($|\\Omega| = 2$): the die's sample space is larger. Pinning down $\\Omega$ is the groundwork for measuring probabilities next.`,
         venn: {
           type: 'sample-space',
           outcomes: ['1', '2', '3', '4', '5', '6'],
@@ -102,79 +112,109 @@ Compare to the coin ($|\\Omega| = 2$): the die has a larger sample space. Listin
       },
     },
     {
-      type: 'problem',
-      id: 'p3',
-      prompt:
-        '**Experiment:** draw one card from a standard deck. The deck on screen **is** the sample space: $|\\Omega| = 52$ equally likely cards. For now, just pin down a single outcome — **tap the Ace of Spades** and enter $|A|$, the number of cards in that one-card event.',
-      interaction: 'card-deck',
-      config: {
-        helperText:
-          'The whole 52-card deck is the sample space Ω. Tap the single card named in the prompt — that one card is the event A.',
-        selectionLabel: 'Your card (event A)',
-        countLabel: 'How many cards are in this one-card event? Enter |A|.',
-      },
-      answer: { cards: ['AS'], count: 1 },
-      feedback: {
-        correct:
-          'One card, so $|A| = 1$ — while the sample space around it holds $|\\Omega| = 52$ equally likely cards. The deck is by far the biggest $\\Omega$ in this lesson: coin (2) → die (6) → **deck (52)**.',
-        incorrect:
-          'The event is the **single** Ace of Spades, so $|A| = 1$. The 52-card deck around it is the sample space $\\Omega$, not the event.',
-        hints: [
-          'Find the Ace (rank A) in the spades row (the top, black suit), and tap only that card.',
-          'A one-card event contains exactly one outcome, so $|A| = 1$.',
-          'The deck shows $|\\Omega| = 52$; your event is just 1 of those 52 cards.',
-        ],
-        why: `**Experiment:** draw one card from a well-shuffled 52-card deck.
-
-**Sample space.** Every card is one possible outcome, and all are equally likely:
-
-$$|\\Omega| = 52.$$
-
-**Event $A$ = “the Ace of spades.”** Only one card matches, so
-
-$$|A| = 1.$$
-
-The size progression continues: coin $(2)$, die $(6)$, deck $(52)$. A more involved experiment simply has a larger $\\Omega$.`,
-        venn: {
-          type: 'event-subset',
-          labelOmega: 'Ω (52 cards)',
-          labelA: 'A: one card',
-          outcomes: ['Ace of spades', '51 other cards'],
-          eventOutcomes: ['Ace of spades'],
-          caption: '|A| = 1 inside |Ω| = 52',
-        },
-      },
-    },
-    {
       type: 'concept',
       id: 'c2',
-      title: 'Equally likely outcomes: the uniform rule',
-      content: `Each outcome $\\omega$ gets a number $P(\\omega)$ between **0** and **1** (0% to 100%). Two rules always hold:
+      title: 'Equally likely, and the chance of one outcome',
+      content: `When nothing about the experiment favors one result over another, the outcomes are **equally likely**. A fair coin has no reason to prefer heads over tails; a fair die has no reason to prefer any face.
 
-1. **No outcome is negative** — $P(\\omega) \\ge 0$.
-2. **Everything that could happen accounts for 100%** — adding $P(\\omega)$ over **all** $\\omega$ in $\\Omega$ gives **1**.
+The **probability** of an outcome is a number from $0$ to $1$ that says how often it happens — $0$ means it never happens, $1$ means it always happens. The probability of a single outcome $\\omega$ is written $P(\\omega)$.
 
-**The uniform (fair) rule.** When every outcome is **equally likely**, the total splits evenly across $\\Omega$, so each outcome gets
+When all $|\\Omega|$ outcomes are equally likely, they split the chance evenly, so each one gets
 
 $$P(\\omega) = \\frac{1}{|\\Omega|}.$$
 
-A fair coin gives $\\frac{1}{2}$, a fair die $\\frac{1}{6}$, and one card $\\frac{1}{52}$. And because each outcome carries the same share, the probability of an **event** $A$ (any collection of outcomes) is just its share of the whole:
-
-$$P(A) = \\frac{|A|}{|\\Omega|}.$$
-
-Count $\\Omega$ first — everything else follows.`,
+A fair coin has two equally likely sides, so each side is $\\frac{1}{2}$. Next, work out the die.`,
       visual: {
         type: 'sample-space',
-        labelOmega: 'Ω with weights',
-        outcomes: ['H · 50%', 'T · 50%'],
-        caption: 'Equally likely: weights are equal and sum to 100% (here 50% + 50%)',
+        labelOmega: 'Ω with equal weights',
+        outcomes: ['H · 1/2', 'T · 1/2'],
+        caption: 'Equally likely: each side gets the same share, 1/2',
+      },
+    },
+    {
+      type: 'problem',
+      id: 'p3',
+      prompt:
+        'Your die is fair, so all six faces are **equally likely**. **Tap the face showing 4** to single out one outcome. The sample space still has six faces in all, so confirm $|\\Omega|$ and then give the chance of landing on that one face, $P(\\omega) = \\frac{1}{|\\Omega|}$, as a fraction.',
+      interaction: 'die-sample-space',
+      config: {
+        sides: 6,
+        targetFace: 4,
+        countLabel: 'How many equally likely faces does the die have in all? Enter |Ω|.',
+        probabilityLabel: 'What is P of that one face = 1 / |Ω| as a fraction?',
+      },
+      answer: { selected: [4], count: 6, probability: { num: 1, den: 6 } },
+      feedback: {
+        correct:
+          'Each face is equally likely and there are six of them, so a single face has probability $P(\\omega) = \\frac{1}{6}$. This is the uniform rule $P(\\omega) = \\frac{1}{|\\Omega|}$ in action — and it is smaller than the coin’s $\\frac{1}{2}$ because the die spreads the same total chance over more outcomes.',
+        incorrect:
+          'There are $|\\Omega| = 6$ equally likely faces, so one specific face has probability $\\frac{1}{|\\Omega|} = \\frac{1}{6}$.',
+        hints: [
+          'All six faces share the chance equally — none is favored.',
+          'The rule for equally likely outcomes is $P(\\omega) = \\frac{1}{|\\Omega|}$.',
+          'Here $|\\Omega| = 6$, so $P(\\omega) = \\frac{1}{6}$.',
+        ],
+        why: `The die is fair, so its six outcomes are **equally likely**. The uniform rule says each equally likely outcome gets the same share of the total probability:
+
+$$P(\\omega) = \\frac{1}{|\\Omega|} = \\frac{1}{6}.$$
+
+The coin gave $\\frac{1}{2}$ because it had only two outcomes; the die gives $\\frac{1}{6}$ because it has six. The larger the sample space, the smaller each single outcome’s probability.`,
+        venn: {
+          type: 'event-subset',
+          labelOmega: 'Ω (6 faces)',
+          labelA: 'one face',
+          outcomes: ['face 4', '5 other faces'],
+          eventOutcomes: ['face 4'],
+          caption: 'one outcome of |Ω| = 6 → P(ω) = 1/6',
+        },
       },
     },
     {
       type: 'problem',
       id: 'p4',
       prompt:
-        'A probability is also the **long-run frequency** of an event. **Event $A$:** the drawn card is a **heart**. First predict $P(\\text{heart})$, then **draw many cards** (returned each time) and watch the running fraction of hearts settle toward your prediction. Finally, confirm $|A|$ (hearts in the deck) and $P(\\text{heart}) = \\frac{|A|}{52}$ as a reduced fraction.',
+        'Usually you care about a **group** of outcomes, not just one. A group of outcomes is called an **event**. **Event $A$:** the die shows an **even number**. Tap every even face, enter how many there are ($|A|$), then enter $P(A) = \\frac{|A|}{|\\Omega|}$ as a reduced fraction.',
+      interaction: 'die-sample-space',
+      config: {
+        sides: 6,
+        countLabel: 'How many faces are even? Enter |A|.',
+        probabilityLabel: 'What is P(A) = |A| / 6 as a reduced fraction?',
+      },
+      answer: { selected: [2, 4, 6], count: 3, probability: { num: 1, den: 2 } },
+      feedback: {
+        correct:
+          'The even faces are $2, 4, 6$, so $|A| = 3$. Since all six faces are equally likely, $P(A) = \\frac{|A|}{|\\Omega|} = \\frac{3}{6} = \\frac{1}{2}$. An event simply collects several equally likely outcomes, and its probability is their share of $\\Omega$.',
+        incorrect:
+          'Even faces are $2, 4, 6$ — three of the six — so $|A| = 3$ and $P(A) = \\frac{3}{6} = \\frac{1}{2}$. Remember to reduce the fraction.',
+        hints: [
+          'The even faces on a die are 2, 4 and 6.',
+          'Count them: $|A| = 3$ out of $|\\Omega| = 6$.',
+          '$P(A) = \\frac{3}{6}$, which reduces to $\\frac{1}{2}$.',
+        ],
+        why: `**Event $A$ = “the roll is even.”** The even faces are $2, 4, 6$, so
+
+$$|A| = 3.$$
+
+All six faces are equally likely, so the probability of an event is its share of the sample space:
+
+$$P(A) = \\frac{|A|}{|\\Omega|} = \\frac{3}{6} = \\frac{1}{2}.$$
+
+Always reduce: $\\frac{3}{6}$ and $\\frac{1}{2}$ are the same number. An event holding three of the six faces has the same one-half chance as a single coin flip.`,
+        venn: {
+          type: 'event-subset',
+          labelOmega: 'Ω (6 faces)',
+          labelA: 'A: even',
+          outcomes: ['2, 4, 6', '1, 3, 5'],
+          eventOutcomes: ['2, 4, 6'],
+          caption: '|A| = 3 of |Ω| = 6 → P(A) = 1/2',
+        },
+      },
+    },
+    {
+      type: 'problem',
+      id: 'p5',
+      prompt:
+        'Now a bigger sample space: draw one card from a standard deck, so $|\\Omega| = 52$ equally likely cards. There is a second way to picture probability — as the **long-run frequency** of an event, the fraction of times it happens over many repeats. **Event $A$:** the card is a **heart**. First predict $P(\\text{heart})$, then **draw many cards** (each one returned) and watch the running fraction of hearts settle toward your prediction. Finally confirm $|A|$ and $P(\\text{heart}) = \\frac{|A|}{52}$ as a reduced fraction.',
       interaction: 'card-deck',
       config: {
         mode: 'draw-tally',
@@ -192,7 +232,7 @@ Count $\\Omega$ first — everything else follows.`,
       answer: { count: 13, probability: { num: 1, den: 4 } },
       feedback: {
         correct:
-          'One suit holds 13 cards, so $|A| = 13$ and $P(\\text{heart}) = \\frac{13}{52} = \\frac{1}{4}$. Your draw-by-draw frequency wobbles early on but homes in on $\\frac{1}{4}$ as the draws pile up — that is probability as **long-run frequency**, and it agrees with the uniform count exactly.',
+          'One suit holds 13 cards, so $|A| = 13$ and $P(\\text{heart}) = \\frac{13}{52} = \\frac{1}{4}$. Your draw-by-draw frequency wobbles early on but homes in on $\\frac{1}{4}$ as the draws pile up — that is probability as **long-run frequency**, and it agrees with the equally-likely count exactly.',
         incorrect:
           'Hearts are one of the four suits, so $|A| = 13$ and $P(\\text{heart}) = \\frac{13}{52} = \\frac{1}{4}$. Keep drawing — the empirical fraction should hover near $\\frac{1}{4}$.',
         hints: [
@@ -206,7 +246,7 @@ Count $\\Omega$ first — everything else follows.`,
 
 $$|A| = 13.$$
 
-**Uniform rule:**
+**Equally-likely count:**
 
 $$P(A) = \\frac{|A|}{|\\Omega|} = \\frac{13}{52} = \\frac{1}{4}.$$
 
@@ -223,93 +263,46 @@ $$P(A) = \\frac{|A|}{|\\Omega|} = \\frac{13}{52} = \\frac{1}{4}.$$
     },
     {
       type: 'problem',
-      id: 'p5',
+      id: 'p6',
       prompt:
-        'An event can hold **many** equally likely outcomes. **Event $A$:** the card is **red** (hearts or diamonds). Tap every red card, enter $|A|$, then enter $P(A) = \\frac{|A|}{52}$ as a reduced fraction.',
+        'The deck is a rich sample space, but counting an event works exactly as it did for the die. **Event $A$:** the card is an **Ace**. Tap all four Aces (one per suit), enter $|A|$, then enter $P(A) = \\frac{|A|}{52}$ as a reduced fraction.',
       interaction: 'card-deck',
       config: {
         helperText:
-          'Tap every red card — all hearts and all diamonds. The whole deck (|Ω| = 52) is equally likely.',
-        selectionLabel: 'Your selection (event A: red)',
-        countLabel: 'How many red cards are there? Enter |A|.',
+          'Tap all four Aces — one in each suit (spades, hearts, diamonds, clubs). The whole deck (|Ω| = 52) is equally likely.',
+        selectionLabel: 'Your selection (event A: the Aces)',
+        countLabel: 'How many Aces are in the deck? Enter |A|.',
         probabilityLabel: 'What is P(A) = |A| / 52 as a reduced fraction?',
       },
-      answer: { cards: redCards(), count: 26, probability: { num: 1, den: 2 } },
+      answer: { cards: cardsByRank('A'), count: 4, probability: { num: 1, den: 13 } },
       feedback: {
         correct:
-          'Half the deck is red: $|A| = 26$, so $P(A) = \\frac{26}{52} = \\frac{1}{2}$. Because all 52 cards are equally likely, an event’s probability is just its share of the deck. Red-vs-black mirrors a coin’s heads-vs-tails — both $\\frac{1}{2}$ — but here the sample space holds 52 outcomes, not 2.',
+          'There is one Ace in each of the four suits, so $|A| = 4$ and $P(A) = \\frac{4}{52} = \\frac{1}{13}$. Counting an event in a 52-card deck is the same move as on the die: count the favorable outcomes, divide by $|\\Omega|$, and reduce.',
         incorrect:
-          'Red means **hearts and diamonds** — two of the four suits, so $26$ cards. With all cards equally likely, $P(A) = \\frac{26}{52} = \\frac{1}{2}$.',
+          'There are four Aces — one per suit — so $|A| = 4$ and $P(A) = \\frac{4}{52} = \\frac{1}{13}$. Be sure to reduce the fraction.',
         hints: [
-          'Red suits are hearts and diamonds; black suits are spades and clubs.',
-          'Two suits of 13 cards each → $|A| = 13 + 13 = 26$.',
-          '$P(A) = \\frac{26}{52} = \\frac{1}{2}$.',
+          'Every suit (spades, hearts, diamonds, clubs) has exactly one Ace.',
+          'Four suits → four Aces, so $|A| = 4$ out of $|\\Omega| = 52$.',
+          '$P(A) = \\frac{4}{52}$; divide top and bottom by 4 to get $\\frac{1}{13}$.',
         ],
         why: `**Sample space:** one card from 52 equally likely cards, $|\\Omega| = 52$.
 
-**Event $A$ = “red.”** Two of the four suits are red (hearts, diamonds), each with 13 cards:
+**Event $A$ = “an Ace.”** Each of the four suits holds exactly one Ace, so
 
-$$|A| = 13 + 13 = 26.$$
+$$|A| = 4.$$
 
-**Uniform rule for an event** — each card is $\\frac{1}{52}$, and the event collects 26 of them:
+**Uniform rule for an event:**
 
-$$P(A) = \\frac{|A|}{|\\Omega|} = \\frac{26}{52} = \\frac{1}{2}.$$
+$$P(A) = \\frac{|A|}{|\\Omega|} = \\frac{4}{52} = \\frac{1}{13}.$$
 
-This is the same equally-likely idea as a single card, scaled up to a 26-outcome event. Always reduce the fraction.`,
+The counting is identical to the die’s “even” event — only the sample space is larger. Always reduce: $\\frac{4}{52} = \\frac{1}{13}$.`,
         venn: {
           type: 'event-subset',
           labelOmega: 'Ω (52 cards)',
-          labelA: 'A: red',
-          outcomes: ['26 red', '26 black'],
-          eventOutcomes: ['26 red'],
-          caption: '|A| = 26 of |Ω| = 52 → P(A) = 1/2',
-        },
-      },
-    },
-    {
-      type: 'problem',
-      id: 'p6',
-      prompt:
-        'A single outcome is **less** likely when the sample space is larger. **Which is more likely:** rolling one specific face on a fair die, or drawing one specific card from a 52-card deck? Tap the more likely event.',
-      interaction: 'compare-events',
-      config: {
-        helperText:
-          'Both events name a single outcome — but they live in sample spaces of different sizes (die: 6, deck: 52).',
-        chooseLabel: 'Which single outcome is more likely?',
-        eventA: {
-          label: 'Roll a 4 on a die',
-          detail: 'One face out of 6 equally likely faces',
-          favorable: 1,
-          total: 6,
-        },
-        eventB: {
-          label: 'Draw the Ace of spades',
-          detail: 'One card out of 52 equally likely cards',
-          favorable: 1,
-          total: 52,
-        },
-      },
-      answer: { more: 'a' },
-      feedback: {
-        correct:
-          'Rolling a given face is more likely: $\\frac{1}{6} \\approx 16.7\\%$ beats $\\frac{1}{52} \\approx 1.9\\%$. Same kind of event (a single outcome), but the die’s smaller sample space hands each outcome a bigger share. Larger $\\Omega$ → rarer individual outcomes.',
-        incorrect:
-          'Compare the shares: a die face is $\\frac{1}{6}$, one card is $\\frac{1}{52}$. Since $\\frac{1}{6} > \\frac{1}{52}$, the die face is more likely.',
-        hints: [
-          'Each die face has probability $\\frac{1}{|\\Omega|} = \\frac{1}{6}$; each card has $\\frac{1}{52}$.',
-          'A smaller sample space spreads the same total probability over fewer outcomes.',
-          'Since $\\frac{1}{6} > \\frac{1}{52}$, choose the die face.',
-        ],
-        why: `Both events contain exactly **one** outcome, so the uniform rule gives each a probability of $\\frac{1}{|\\Omega|}$:
-
-$$P(\\text{die face}) = \\frac{1}{6} \\approx 16.7\\%, \\qquad P(\\text{one card}) = \\frac{1}{52} \\approx 1.9\\%.$$
-
-The die has the **smaller** sample space, so its single outcome carries a larger share of the total. This is the lesson’s size list seen through probability: coin $(2)$, die $(6)$, deck $(52)$ — as $\\Omega$ grows larger, each individual outcome becomes **less** likely.`,
-        venn: {
-          type: 'sample-space',
-          labelOmega: 'die Ω (6) vs deck Ω (52)',
-          outcomes: ['die face: 1/6', 'one card: 1/52'],
-          caption: '1/6 ≈ 16.7% > 1/52 ≈ 1.9% → the die face is more likely',
+          labelA: 'A: Aces',
+          outcomes: ['4 Aces', '48 others'],
+          eventOutcomes: ['4 Aces'],
+          caption: '|A| = 4 of |Ω| = 52 → P(A) = 1/13',
         },
       },
     },

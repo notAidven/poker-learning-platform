@@ -177,29 +177,92 @@ function testNoHiddenRequiredFieldDeadlock() {
   )
 }
 
-// Regression: the Lesson 1 die (die-sample-space, count-only) must be completable —
-// selecting all six faces and entering |Ω| = 6 must validate and unlock Continue.
-function testLesson1DieCompletable() {
-  const answer = { selected: [1, 2, 3, 4, 5, 6], count: 6 } // no probability → count-only
-  const requiresProbability = answer.probability !== undefined
-  const selected = new Set([1, 2, 3, 4, 5, 6])
-  const countInput = '6'
+// Lesson 1 p2: the roll-to-discover die (die-sample-space, discoverMode). Rolling
+// auto-populates Ω with distinct faces; lock-in stays disabled until all six faces have
+// appeared, and entering |Ω| = 6 then validates. (Count-only — no probability field.)
+function testLesson1DiscoverDie() {
+  const sides = 6
+  const answer = { selected: [1, 2, 3, 4, 5, 6], count: 6 } // discover die is count-only
+  const confirmCount = true
 
-  const selectionValid =
-    selected.size === answer.selected.length && answer.selected.every((f) => selected.has(f))
-  const countMatches = Number(countInput) === answer.count
-  const probabilityValid = !requiresProbability // count-only → no fraction expected
+  const sameSet = (a, b) => {
+    const s = new Set(a)
+    return s.size === b.length && b.every((x) => s.has(x))
+  }
+  const validCountInput = (raw) => raw.trim() !== '' && Number.isInteger(Number(raw))
+  const countMatches = (raw, n) => validCountInput(raw) && Number(raw) === n
 
-  assert.equal(requiresProbability, false, 'Lesson 1 die must be count-only (no fraction field)')
-  assert.equal(
-    selectionValid && countMatches && probabilityValid,
+  // canLockIn mirrors the widget: every face seen AND (if confirmCount) a valid count entry.
+  const canLockIn = (discovered, countInput) =>
+    discovered.length === sides && (!confirmCount || validCountInput(countInput))
+  const discoverValid = (discovered, countInput) =>
+    sameSet(discovered, answer.selected) && (!confirmCount || countMatches(countInput, answer.count))
+
+  // Lock-in is blocked until every face has appeared (no premature/incorrect lock-in).
+  assert.equal(canLockIn([1, 2, 3], '6'), false, 'cannot lock in before all six faces appear')
+
+  // Rolling (with repeats) eventually reveals all six distinct faces.
+  const rolls = [3, 1, 1, 5, 2, 6, 4, 2, 6]
+  const discovered = [...new Set(rolls)]
+  assert.equal(discovered.length, 6, 'distinct faces accumulate to the full Ω')
+  assert.equal(canLockIn(discovered, '6'), true)
+  assert.equal(discoverValid(discovered, '6'), true, 'all six discovered + |Ω| = 6 validates')
+  assert.equal(answer.probability, undefined, 'discover die is count-only (no fraction field)')
+  record(
+    'lesson1-discover-die',
     true,
-    'selecting all six faces + entering 6 must validate',
+    'Roll-to-discover die: reveal all 6 faces + enter |Ω| = 6 locks in Ω and unlocks Continue',
+  )
+}
+
+// Backward-compat: the classic select-all die (Lesson 1 p3/p4 and skill-check 1 q2) must
+// still be completable — selecting the event's faces, entering |A|, and entering a P(A)
+// that reduces to the expected fraction all validate (unreduced entries are accepted).
+function testClassicDieEventCompletable() {
+  const answer = { selected: [2, 4, 6], count: 3, probability: { num: 1, den: 2 } } // die "even"
+  const requiresProbability = answer.probability !== undefined
+  const selected = new Set([2, 4, 6])
+  const countInput = '3'
+  const fractionNum = '3'
+  const fractionDen = '6' // unreduced 3/6 must still match expected 1/2
+
+  const sameSet = (a, b) => {
+    const s = new Set(a)
+    return s.size === b.length && b.every((x) => s.has(x))
+  }
+  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b))
+  const reduce = (n, d) => {
+    const g = gcd(Math.abs(n), Math.abs(d)) || 1
+    return { num: n / g, den: d / g }
+  }
+  const fractionMatches = (n, d, exp) => {
+    if (Number(d) <= 0) return false
+    const r = reduce(Number(n), Number(d))
+    const e = reduce(exp.num, exp.den)
+    return r.num === e.num && r.den === e.den
+  }
+  const countMatches = (raw, n) => raw.trim() !== '' && Number(raw) === n
+
+  const selectionValid = sameSet([...selected], answer.selected)
+  const countOk = countMatches(countInput, answer.count)
+  const probOk = !requiresProbability || fractionMatches(fractionNum, fractionDen, answer.probability)
+
+  // Hardened gating: the fraction field is visible as soon as a face is selected — never
+  // gated behind a valid count — so Check can't enable while a validated field is hidden.
+  const manipulableReady = selected.size > 0
+  const fractionVisible = manipulableReady && requiresProbability
+
+  assert.equal(requiresProbability, true, 'classic die event requires a reduced P(A)')
+  assert.equal(fractionVisible, true, 'fraction field shows once faces are selected')
+  assert.equal(
+    selectionValid && countOk && probOk,
+    true,
+    'select {2,4,6} + |A| = 3 + (3/6 → 1/2) validates',
   )
   record(
-    'lesson1-die',
+    'classic-die-event',
     true,
-    'Lesson 1 die: select 6 faces + enter |Ω| = 6 validates and unlocks Continue',
+    'Classic select-all die (Lesson 1 + skill checks): event + |A| + reduced P(A) validates',
   )
 }
 
@@ -209,7 +272,8 @@ testSequentialUnlock()
 testSkillCheckThreshold()
 testNextLessonPathSkillCheckPending()
 testNoHiddenRequiredFieldDeadlock()
-testLesson1DieCompletable()
+testLesson1DiscoverDie()
+testClassicDieEventCompletable()
 
 const failed = results.filter((r) => !r.pass)
 console.log('\n--- Logic summary ---')
