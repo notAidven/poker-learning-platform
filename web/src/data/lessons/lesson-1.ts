@@ -52,7 +52,7 @@ This course teaches **Texas Hold'em**, the most popular form of poker.`,
     {
       type: 'problem',
       id: 'p2',
-      prompt: 'Now tap **all four Aces**, then enter how many there are.',
+      prompt: 'Now tap **all the Aces**, then enter how many there are.',
       interaction: 'card-deck',
       config: {
         helperText: 'The same rank appears once in each suit.',

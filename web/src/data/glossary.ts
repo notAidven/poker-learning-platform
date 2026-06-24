@@ -1,0 +1,150 @@
+/**
+ * Glossary of poker terms for the "Suited" course.
+ *
+ * Each key is a *normalized* canonical term (see `normalizeTerm`) mapped to a
+ * concise, beginner-friendly definition. Definitions are grounded in the
+ * verified research notes in `docs/poker-research/*` (rules/hand rankings,
+ * hand flow & betting, and poker math).
+ *
+ * `MathContent` looks up the **bolded** words it renders against this map: a
+ * match becomes a clickable `GlossaryTerm` popover; everything else stays plain
+ * bold. Lookups are case-insensitive and tolerate simple plurals, a leading
+ * article ("the flop"), and trailing parentheticals ("small blind (SB)").
+ */
+
+export type GlossaryEntry = {
+  /** The term exactly as it appeared in the prose (preserves the author's casing). */
+  term: string
+  definition: string
+}
+
+/**
+ * Canonical term → definition. Keys MUST already be normalized (lowercase, no
+ * parentheticals/punctuation). Aliases (trips/set, quads, EV, …) get their own
+ * entries that point at the same idea so they trigger too.
+ */
+const GLOSSARY: Record<string, string> = {
+  // --- the deck ---
+  deck: 'The 52 cards used in poker — 13 ranks in each of the four suits.',
+  suit: 'One of the four card families: spades ♠, hearts ♥, diamonds ♦, and clubs ♣. Suits never outrank one another.',
+  rank: "A card's value, running from 2 (low) up through 10, J, Q, K, and A (high).",
+
+  // --- Texas Hold'em structure ---
+  'hole cards': 'Your two private cards, dealt face down — only you can use them.',
+  'community cards':
+    'The shared, face-up cards in the middle of the table that everyone can use. Also called the board.',
+  board: 'The community cards in the middle — the shared, face-up cards every player can use.',
+  flop: 'The first three community cards, dealt at the same time.',
+  turn: 'The fourth community card, dealt by itself after the flop.',
+  river: 'The fifth and final community card.',
+  showdown:
+    'The end of a hand where the remaining players reveal their cards and the best five-card hand wins the pot.',
+  pot: "All the chips wagered in a hand — what you're playing to win.",
+
+  // --- the table: button, blinds, position ---
+  button:
+    "A marker showing who is 'the dealer' for the hand. It acts last after the flop and moves one seat to the left each hand.",
+  blinds:
+    "Two forced bets posted before the cards are dealt, so there's always something to play for.",
+  blind: "A forced bet posted before the cards are dealt, so there's always something to play for.",
+  'small blind':
+    'The forced bet posted by the player just left of the button — usually half the big blind.',
+  'big blind':
+    'The forced bet posted just left of the small blind — usually twice the small blind, and equal to the minimum bet.',
+  position:
+    'Where you sit relative to the button, which decides when you act. Acting later is a big advantage.',
+  'under the gun': 'The first seat to act before the flop — the player just left of the big blind.',
+  utg: 'Under the gun: the first seat to act before the flop, just left of the big blind.',
+
+  // --- hand rankings (strongest to weakest) ---
+  'royal flush': 'The best possible hand: A-K-Q-J-10, all of one suit.',
+  'straight flush': 'Five cards in a row by rank, all of the same suit.',
+  'four of a kind': 'Four cards of the same rank. Also called quads.',
+  quads: 'Four of a kind — four cards of the same rank.',
+  'full house': 'Three of a kind plus a pair (for example, three Kings and two Sevens).',
+  flush: 'Five cards of the same suit, not in a row.',
+  straight: 'Five cards in a row by rank, in any mix of suits (for example, 6-7-8-9-10).',
+  'three of a kind': 'Three cards of the same rank. Also called trips or a set.',
+  trips: 'Three of a kind — three cards of the same rank.',
+  set: 'Three of a kind made with a pocket pair plus a matching card on the board.',
+  'two pair': 'Two separate pairs, plus a fifth side card.',
+  'one pair': 'A single pair — two cards of the same rank — plus three side cards.',
+  pair: 'Two cards of the same rank.',
+  'high card': 'A hand that makes none of the other categories; its highest card plays. The weakest hand.',
+  kicker:
+    'A side card that breaks a tie when two hands are otherwise equal — for example, A-A-K beats A-A-Q.',
+
+  // --- betting actions ---
+  check: 'Pass the action without betting, staying in for free. Only legal when no one has bet yet.',
+  bet: 'Put the first chips into the pot on a betting round.',
+  call: 'Match the current bet to stay in the hand.',
+  raise: 'Increase the current bet, so others must put in more to keep playing.',
+  're-raise': 'A raise of a raise — the second (or later) raise in the same betting round.',
+  fold: 'Give up your cards and any claim to the pot. If you can check for free, never fold.',
+  'all-in': 'Betting every chip you have left.',
+  'all in': 'Betting every chip you have left.',
+
+  // --- the math (outs, odds, equity, EV) ---
+  out: 'An unseen card that improves your hand into a likely winner.',
+  draw: 'An unfinished hand that needs one more card to become strong (such as a flush draw).',
+  'flush draw': 'Four cards toward a flush — you need one more card of that suit (9 outs).',
+  'straight draw': 'Four cards toward a straight, needing one more card to complete it.',
+  'open-ended straight draw':
+    'Four cards in a row that are open at both ends, so a card at either end completes the straight (8 outs).',
+  gutshot: 'A straight draw missing one middle card, completed by just one rank (4 outs).',
+  'pot odds':
+    'The price of a call compared with the pot — the break-even win rate you need, found as call ÷ (pot + call).',
+  equity:
+    'Your share of the pot right now — how often your hand would win if all the remaining cards were dealt out.',
+  'expected value':
+    'EV — what a decision is worth on average over the long run. Positive EV makes money; negative EV loses it.',
+  ev: 'Expected value — what a decision is worth on average over the long run. Positive EV makes money; negative EV loses it.',
+  'value bet': 'A bet made with a strong hand, hoping a worse hand will call and pay you off.',
+  'betting for value': 'Betting a strong hand so that worse hands call and pay you off.',
+
+  // --- other useful terms that appear in the lessons ---
+  'playing the board':
+    "When the five community cards are your best hand and your hole cards don't help — you can only tie.",
+}
+
+/**
+ * Normalize a term for lookup: lowercase, drop trailing parentheticals like
+ * "(SB)" / "(EV)", strip surrounding punctuation, and collapse whitespace.
+ * Hyphens are kept ("all-in", "open-ended").
+ */
+export function normalizeTerm(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ') // drop parentheticals: "small blind (sb)" → "small blind"
+    .replace(/[^a-z0-9\s-]/g, ' ') // drop quotes, commas, periods, em-dashes, …
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Resolve a (possibly inflected) bold phrase to a glossary entry, or null.
+ * Tries the exact normalized form, the form without a leading article, and
+ * simple singular/plural variants — but only ever returns a *real* key, so the
+ * extra candidates can't produce false matches.
+ */
+export function lookupGlossaryTerm(raw: string): GlossaryEntry | null {
+  const normalized = normalizeTerm(raw)
+  if (!normalized) return null
+
+  const candidates = new Set<string>()
+  const bases = [normalized, normalized.replace(/^(the|a|an)\s+/, '')]
+  for (const base of bases) {
+    if (!base) continue
+    candidates.add(base)
+    if (base.endsWith('es')) candidates.add(base.slice(0, -2)) // flushes → flush
+    if (base.endsWith('s')) candidates.add(base.slice(0, -1)) // outs → out, blinds → blind
+    candidates.add(`${base}s`)
+    candidates.add(`${base}es`)
+  }
+
+  for (const candidate of candidates) {
+    const definition = GLOSSARY[candidate]
+    if (definition) return { term: raw.trim(), definition }
+  }
+  return null
+}

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 type CheckPanelProps = {
   canSubmit: boolean
   submitted: boolean
@@ -6,6 +8,20 @@ type CheckPanelProps = {
   onRetry: () => void
   submitLabel?: string
   allowRetry?: boolean
+  /**
+   * Hide the submit ("Check answer") button entirely. Use for genuinely
+   * no-input / observational steps that auto-complete once the required action
+   * is done (or that show their own confirmation), so the learner never sees a
+   * misleading "Check answer" when there is nothing to answer.
+   * Backward-compatible: defaults to false → unchanged behavior.
+   */
+  hideSubmit?: boolean
+  /**
+   * Small affirmation rendered once the step is `solved` (e.g. "✓ All cards
+   * dealt"). Intended for auto-completing no-input steps where there is no
+   * "Correct!" verdict to show. Backward-compatible: undefined → renders nothing.
+   */
+  confirmation?: ReactNode
 }
 
 export function CheckPanel({
@@ -16,10 +32,12 @@ export function CheckPanel({
   onRetry,
   submitLabel = 'Check answer',
   allowRetry = true,
+  hideSubmit = false,
+  confirmation,
 }: CheckPanelProps) {
   return (
     <div className="space-y-3">
-      {!submitted && (
+      {!hideSubmit && !submitted && (
         <button
           type="button"
           onClick={onSubmit}
@@ -29,7 +47,16 @@ export function CheckPanel({
           {submitLabel}
         </button>
       )}
-      {submitted && !solved && allowRetry && (
+      {confirmation && solved && (
+        <p
+          className="text-center text-sm font-semibold text-emerald-700"
+          role="status"
+          aria-live="polite"
+        >
+          {confirmation}
+        </p>
+      )}
+      {!hideSubmit && submitted && !solved && allowRetry && (
         <button
           type="button"
           onClick={onRetry}

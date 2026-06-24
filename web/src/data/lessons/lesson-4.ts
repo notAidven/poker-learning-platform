@@ -153,7 +153,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
         targetLabel: 'a heart',
         minDraws: 12,
         helperText:
-          'Deal cards and watch the running frequency of hearts. About a quarter of the deck is any one suit.',
+          'Deal cards and watch the running frequency of hearts settle toward its true value.',
         probabilityLabel: 'What is P(heart) for a single card, as a reduced fraction?',
       },
       answer: { probability: { num: 1, den: 4 } },

@@ -115,6 +115,53 @@ const CARD_STYLES = `
   to { opacity: 1; transform: scale(1); }
 }
 .cd-freq-bar { transition: width 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); }
+
+/* select-all deck: a responsive grid that always fits its container — never scrolls sideways.
+   minmax(0, 1fr) lets every column shrink, so the row can never be wider than the container. */
+.cd-deck {
+  container-type: inline-size;
+  container-name: cd-deck;
+}
+.cd-suit-grid {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: 3px;
+}
+/* On phone-width containers the 13 cards wrap to two rows so each card stays a comfortable
+   tap target instead of shrinking to an illegible sliver. */
+@container cd-deck (width < 384px) {
+  .cd-suit-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+.cd-cell {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+}
+/* Card face scales with the card itself via container-query units, capped for legibility. */
+.cd-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4cqw;
+  line-height: 1;
+}
+.cd-face__rank {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(7px, 44cqw, 15px);
+  letter-spacing: -0.03em;
+}
+.cd-face__suit {
+  width: clamp(7px, 40cqw, 15px);
+  height: clamp(7px, 40cqw, 15px);
+}
 `
 
 function PlayingCard({
@@ -146,6 +193,28 @@ function PlayingCard({
         <span className={`${rankText} font-bold tabular-nums`}>{rank}</span>
         <SuitIcon suit={suit} className={cornerSuit} />
       </span>
+    </span>
+  )
+}
+
+const SUIT_NAMES: Record<CardSuit, string> = {
+  S: 'Spades',
+  H: 'Hearts',
+  D: 'Diamonds',
+  C: 'Clubs',
+}
+
+/**
+ * Compact card face for the responsive deck grid: a centred rank over its suit.
+ * Stays legible at small sizes (rank + suit) and absolutely positioned so it never
+ * affects the cell's width — colour is inherited from the cell via `currentColor`.
+ */
+function GridCardFace({ id }: { id: CardId }) {
+  const { rank, suit } = parseCardId(id)
+  return (
+    <span className="cd-face" aria-hidden="true">
+      <span className="cd-face__rank">{rank}</span>
+      <SuitIcon suit={suit} className="cd-face__suit" />
     </span>
   )
 }
@@ -305,48 +374,55 @@ function SelectAllMode({
 
       <p className="text-center text-sm text-slate-600">{helperText}</p>
 
-      <div className="cd-scene overflow-x-auto rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white p-3 shadow-inner">
-        <div className="mx-auto flex w-max flex-col gap-2">
-          {rows.map(({ suit, cards }) => (
-            <div key={suit} className="flex items-center gap-1.5">
-              <span
-                className={`w-4 shrink-0 ${isRedSuit(suit) ? 'text-rose-300' : 'text-slate-300'}`}
-                aria-hidden="true"
-              >
-                <SuitIcon suit={suit} className="h-3.5 w-3.5" />
-              </span>
-              {cards.map((card, ri) => {
-                const active = selected.has(card)
-                const inEvent = answerSet.has(card)
-                const showOk = submitted && inEvent
-                const showBad = submitted && active && !inEvent
-                const index = CARD_SUITS.indexOf(suit) * 13 + ri
+      {/* Responsive deck: grouped by suit, every row fits the container width (no sideways scroll). */}
+      <div className="cd-scene rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white p-2 shadow-inner sm:p-3">
+        <div className="cd-deck space-y-2.5">
+          {rows.map(({ suit, cards }) => {
+            const red = isRedSuit(suit)
+            return (
+              <div key={suit}>
+                <p
+                  className={`mb-1 flex items-center gap-1 text-[0.68rem] font-semibold uppercase tracking-wide ${
+                    red ? 'text-rose-500' : 'text-slate-500'
+                  }`}
+                >
+                  <SuitIcon suit={suit} className="h-3 w-3" />
+                  <span>{SUIT_NAMES[suit]}</span>
+                </p>
+                <div className="cd-suit-grid">
+                  {cards.map((card, ri) => {
+                    const active = selected.has(card)
+                    const inEvent = answerSet.has(card)
+                    const showOk = submitted && inEvent
+                    const showBad = submitted && active && !inEvent
+                    const index = CARD_SUITS.indexOf(suit) * 13 + ri
 
-                let stateCls = 'border-slate-200'
-                if (showOk) stateCls = 'border-emerald-500 cd-card--ok'
-                else if (showBad) stateCls = 'border-rose-400 cd-card--bad'
-                else if (active) stateCls = 'border-brand-500 cd-card--active'
-                else stateCls = 'border-slate-200 hover:border-brand-300'
+                    let stateCls = 'border-slate-200 hover:border-brand-300'
+                    if (showOk) stateCls = 'border-emerald-500 cd-card--ok'
+                    else if (showBad) stateCls = 'border-rose-400 cd-card--bad'
+                    else if (active) stateCls = 'border-brand-500 cd-card--active'
 
-                return (
-                  <button
-                    key={card}
-                    type="button"
-                    disabled={locked}
-                    onClick={() => toggle(card)}
-                    aria-pressed={active}
-                    aria-label={cardLabel(card)}
-                    className={`cd-card h-14 w-10 shrink-0 border-2 bg-white shadow-sm disabled:cursor-not-allowed ${stateCls} ${
-                      dealt ? '' : 'cd-card--dealing'
-                    }`}
-                    style={dealt ? undefined : { animationDelay: `${index * 9}ms` }}
-                  >
-                    <PlayingCard id={card} className="h-full w-full" />
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+                    return (
+                      <button
+                        key={card}
+                        type="button"
+                        disabled={locked}
+                        onClick={() => toggle(card)}
+                        aria-pressed={active}
+                        aria-label={cardLabel(card)}
+                        className={`cd-cell cd-card border-2 bg-white shadow-sm disabled:cursor-not-allowed ${
+                          red ? 'text-rose-600' : 'text-slate-900'
+                        } ${stateCls} ${dealt ? '' : 'cd-card--dealing'}`}
+                        style={dealt ? undefined : { animationDelay: `${index * 9}ms` }}
+                      >
+                        <GridCardFace id={card} />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

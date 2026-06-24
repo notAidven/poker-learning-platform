@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   cardLabel,
   fullDeck,
@@ -19,10 +19,11 @@ import { usePrefersReducedMotion } from './usePrefersReducedMotion'
  * `board-dealer` (design doc §5.3). Deals the hole + community cards street by
  * street and covers two uses:
  *
- *  1. **Experiential reveal-gate** (Lessons 1 & 6): step through the streets and
- *     Check unlocks once `answer.minStreetsRevealed` streets are showing. Submission
- *     always counts correct — it is a "watch it happen" gate, mirroring `CardDeck`'s
- *     `draw-tally` `minDraws`.
+ *  1. **Experiential reveal-gate** (Lessons 1 & 6): step through the streets.
+ *     This is a no-input "watch it happen" gate, so there is no "Check answer"
+ *     to press — it auto-completes (showing a small "✓ All cards dealt"
+ *     confirmation) once `answer.minStreetsRevealed` streets are revealed.
+ *     Mirrors `CardDeck`'s `draw-tally` `minDraws`.
  *  2. **`askBestHandAt`** (Lesson 3): at each listed street the learner names their
  *     best made hand; the pick is validated against `evaluateHoldem(hole, boardSoFar)`.
  *
@@ -291,6 +292,11 @@ export function BoardDealer({
   const requiredReveals =
     answer.minStreetsRevealed ?? (askedStreets.length ? maxAskedIdx + 1 : streets.length)
 
+  // Pure reveal-gate: a no-input / observational step (no `askBestHandAt` picks),
+  // e.g. "deal a full hand and watch the cards appear." There is nothing to
+  // "check", so it auto-completes (below) instead of showing a "Check answer".
+  const isRevealGate = askedStreets.length === 0
+
   const [revealed, setRevealed] = useState(initialSolved ? streets.length : 0)
   const [picks, setPicks] = useState<Partial<Record<PokerStreet, HandCategory>>>(
     initialSolved ? { ...expectedByStreet } : {},
@@ -302,6 +308,17 @@ export function BoardDealer({
   const holeShown = preflopIndex === -1 ? true : revealed > preflopIndex
   const animate = !reduceMotion && !initialSolved
   const opponents = config.opponents ?? 0
+
+  // Auto-complete the reveal-gate: once the required streets are showing, mark
+  // the step solved exactly once so the learner just proceeds with the lesson's
+  // own Continue button — no "Check answer" for a step with no answer.
+  useEffect(() => {
+    if (!isRevealGate || submitted || disabled) return
+    if (revealed < requiredReveals) return
+    setSubmitted(true)
+    setSolved(true)
+    onCorrect()
+  }, [isRevealGate, submitted, disabled, revealed, requiredReveals, onCorrect])
 
   const communityGroups = streets
     .filter((s) => COMMUNITY_PER_STREET[s] > 0)
@@ -503,6 +520,8 @@ export function BoardDealer({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        hideSubmit={isRevealGate}
+        confirmation={isRevealGate ? '✓ All cards dealt' : undefined}
       />
     </div>
   )

@@ -725,3 +725,100 @@ body {
     transform: translateY(0);
   }
 }
+
+/* =====================================================================
+   Glossary terms — bolded key terms become subtly-blue, clickable words
+   that open a small definition popover above them. Additive + self-
+   contained (rendered into a body portal); safe to extend.
+   ===================================================================== */
+.glossary-term {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  vertical-align: baseline;
+  color: #2563eb; /* a quiet blue, deliberately distinct from the oxblood brand link colour */
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #93c5fd;
+  text-underline-offset: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glossary-term:hover {
+    color: #1d4ed8;
+    text-decoration-color: #2563eb;
+  }
+}
+
+.glossary-popover {
+  position: fixed;
+  z-index: 60;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: left;
+  box-shadow:
+    0 2px 6px rgba(7, 21, 15, 0.09),
+    0 18px 36px -18px rgba(12, 42, 30, 0.45);
+  animation: glossaryPop 0.16s ease-out both;
+}
+
+.glossary-popover__term {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.glossary-popover__def {
+  color: #475569;
+}
+
+.glossary-popover__arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+/* Popover above the word → arrow on its bottom edge, pointing down. */
+.glossary-popover[data-placement='top'] .glossary-popover__arrow {
+  bottom: -6px;
+  border-top: 0;
+  border-left: 0;
+}
+
+/* Popover below the word → arrow on its top edge, pointing up. */
+.glossary-popover[data-placement='bottom'] .glossary-popover__arrow {
+  top: -6px;
+  border-bottom: 0;
+  border-right: 0;
+}
+
+@keyframes glossaryPop {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
