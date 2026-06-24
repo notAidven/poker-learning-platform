@@ -223,7 +223,11 @@ export function DieSampleSpace({
             onChange={setCountInput}
             disabled={locked}
           />
-          {requiresProbability && countReady && (
+          {/* Render the fraction field whenever the answer requires it — never gate it
+              behind the count being valid. This guarantees the invariant "if Check is
+              enabled, every field handleSubmit validates is on screen", so a
+              prompt/answer mismatch can never leave the learner stuck. */}
+          {requiresProbability && (
             <FractionAnswerInput
               id={`die-probability-${sides}`}
               label={probabilityLabel}

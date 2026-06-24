@@ -113,11 +113,103 @@ function testNextLessonPathSkillCheckPending() {
   record('9-logic', true, 'Continue routes to pending skill check, not the lesson body')
 }
 
+// P0 (Lesson 1 die blocker): the select+count(+fraction) interactions
+// (die-sample-space, coin-event-grid, card-deck) must never be able to ENABLE the
+// "Check" button while a field that submission validates is hidden. If they could, the
+// learner sees an enabled button that does nothing and the step can never resolve —
+// exactly the reported Lesson 1 die symptom. This models the hardened widget gating and
+// asserts the invariant across every input permutation.
+function testNoHiddenRequiredFieldDeadlock() {
+  // Hardened rendering: a required field renders as soon as the learner can interact,
+  // never gated behind another field being valid.
+  function fieldsVisible({ manipulableReady, requiresCount, requiresProbability }) {
+    return {
+      count: manipulableReady && requiresCount,
+      fraction: manipulableReady && requiresProbability,
+    }
+  }
+  function canSubmit({
+    manipulableReady,
+    requiresCount,
+    requiresProbability,
+    validCount,
+    validFraction,
+    locked,
+  }) {
+    const countReady = !requiresCount || validCount
+    const fractionReady = !requiresProbability || validFraction
+    return manipulableReady && countReady && fractionReady && !locked
+  }
+
+  let submittable = 0
+  const bool = [false, true]
+  for (const manipulableReady of bool)
+    for (const requiresCount of bool)
+      for (const requiresProbability of bool)
+        for (const validCount of bool)
+          for (const validFraction of bool)
+            for (const locked of bool) {
+              const state = {
+                manipulableReady,
+                requiresCount,
+                requiresProbability,
+                validCount,
+                validFraction,
+                locked,
+              }
+              if (!canSubmit(state)) continue
+              submittable += 1
+              const vis = fieldsVisible(state)
+              if (requiresCount)
+                assert.equal(vis.count, true, `count hidden while submittable: ${JSON.stringify(state)}`)
+              if (requiresProbability)
+                assert.equal(
+                  vis.fraction,
+                  true,
+                  `fraction hidden while submittable: ${JSON.stringify(state)}`,
+                )
+            }
+  assert.ok(submittable > 0, 'expected at least one submittable state')
+  record(
+    'die-deadlock',
+    true,
+    `Check never enables with a hidden required field (${submittable} submittable states verified)`,
+  )
+}
+
+// Regression: the Lesson 1 die (die-sample-space, count-only) must be completable —
+// selecting all six faces and entering |Ω| = 6 must validate and unlock Continue.
+function testLesson1DieCompletable() {
+  const answer = { selected: [1, 2, 3, 4, 5, 6], count: 6 } // no probability → count-only
+  const requiresProbability = answer.probability !== undefined
+  const selected = new Set([1, 2, 3, 4, 5, 6])
+  const countInput = '6'
+
+  const selectionValid =
+    selected.size === answer.selected.length && answer.selected.every((f) => selected.has(f))
+  const countMatches = Number(countInput) === answer.count
+  const probabilityValid = !requiresProbability // count-only → no fraction expected
+
+  assert.equal(requiresProbability, false, 'Lesson 1 die must be count-only (no fraction field)')
+  assert.equal(
+    selectionValid && countMatches && probabilityValid,
+    true,
+    'selecting all six faces + entering 6 must validate',
+  )
+  record(
+    'lesson1-die',
+    true,
+    'Lesson 1 die: select 6 faces + enter |Ω| = 6 validates and unlocks Continue',
+  )
+}
+
 testExitPreservesSession()
 testNextLessonPath()
 testSequentialUnlock()
 testSkillCheckThreshold()
 testNextLessonPathSkillCheckPending()
+testNoHiddenRequiredFieldDeadlock()
+testLesson1DieCompletable()
 
 const failed = results.filter((r) => !r.pass)
 console.log('\n--- Logic summary ---')

@@ -132,7 +132,9 @@ export function CoinEventGrid({
             onChange={setCountInput}
             disabled={locked}
           />
-          {requiresProbability && countReady && (
+          {/* Always render the required fraction field (do not gate behind a valid
+              count) so Check can never be enabled while a validated field is hidden. */}
+          {requiresProbability && (
             <FractionAnswerInput
               id={`coin-event-probability-${config.coins}`}
               label={probabilityLabel}

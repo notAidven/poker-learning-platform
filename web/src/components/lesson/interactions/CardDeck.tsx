@@ -283,7 +283,11 @@ function SelectAllMode({
   const canSubmit = manipulableReady && countReady && fractionReady && !locked
 
   const showCount = requiresCount && manipulableReady
-  const showProbability = requiresProbability && manipulableReady && countReady
+  // Show the required fraction field as soon as the learner has a selection — never
+  // gate it behind a valid count. Combined with canSubmit (which still requires both a
+  // valid count and fraction), this makes it impossible for Check to be enabled while a
+  // validated field is hidden, so a prompt/answer mismatch can't deadlock the step.
+  const showProbability = requiresProbability && manipulableReady
 
   return (
     <div className="space-y-5">
@@ -772,7 +776,7 @@ function DrawTallyMode({
             />
           )}
 
-          {reachedMin && requiresProbability && countReady && (
+          {reachedMin && requiresProbability && (
             <FractionAnswerInput
               id="card-draw-probability"
               label={probabilityLabel}
