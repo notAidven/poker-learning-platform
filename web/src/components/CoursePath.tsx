@@ -30,6 +30,10 @@ const HEADER_PAD_TOP = 14
 const SECTION_GAP = 30
 /** A little tail below the last node so the final ring never clips */
 const TAIL_PAD = 28
+/** Shared box for a section banner's pill background and its text, so the two
+ *  layers (drawn below and above the connector trail) line up exactly. Compact
+ *  so the trail visibly enters the top and exits the bottom of each station. */
+const BANNER_BOX = 'h-[4.5rem] w-full max-w-[18rem]'
 
 /**
  * Per-section visual theme. Tints map onto the real palette tokens in index.css:
@@ -243,12 +247,28 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
             />
           ))}
 
-          {/* Connectors — ONE continuous trail through all nodes. Same-section segments
-              use that section's color; cross-section segments blend the two section
-              colors (a "stepping up to the next section" cue) and run behind the
-              next banner so the path visibly leads into it. */}
+          {/* Frosted "station" pill BACKGROUND for each banner, drawn BELOW the trail.
+              The connector trail is drawn above this and the banner TEXT above the trail,
+              so the path reads as one continuous line passing through each station. */}
+          {sectionLayouts.map((section) => (
+            <div
+              key={`banner-bg-${section.meta.id}`}
+              className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4"
+              style={{ top: section.headerTop }}
+              aria-hidden
+            >
+              <div
+                className={`${BANNER_BOX} rounded-2xl bg-white/85 shadow-sm ring-1 ring-inset backdrop-blur-sm ${SECTION_THEME[section.meta.id].headerRing}`}
+              />
+            </div>
+          ))}
+
+          {/* Connectors — ONE continuous trail through all nodes, drawn ABOVE the banner
+              pill backgrounds so each cross-section segment is clearly visible crossing
+              its station. Same-section segments use that section's color; cross-section
+              segments blend the two section colors (a "stepping up to the next section" cue). */}
           <svg
-            className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
+            className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible"
             viewBox={`0 0 ${Math.max(width, 1)} ${totalHeight}`}
             preserveAspectRatio="none"
             aria-hidden
@@ -304,10 +324,11 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
               })}
           </svg>
 
-          {/* Section banners */}
+          {/* Banner TEXT, drawn ABOVE the trail so each label stays crisp while the
+              gradient line passes behind it (the pill background is rendered below). */}
           {sectionLayouts.map((section) => (
-            <SectionHeader
-              key={`header-${section.meta.id}`}
+            <SectionBannerText
+              key={`banner-text-${section.meta.id}`}
               section={section.meta}
               index={section.index}
               top={section.headerTop}
@@ -315,7 +336,7 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
           ))}
 
           {/* Lesson nodes */}
-          <ol className="relative z-20 m-0 list-none p-0" style={{ height: totalHeight }}>
+          <ol className="relative z-40 m-0 list-none p-0" style={{ height: totalHeight }}>
             {lessonLayouts.map((ll) => {
               const index = ll.globalIndex
               const status = statuses[index]
@@ -368,7 +389,7 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
   )
 }
 
-function SectionHeader({
+function SectionBannerText({
   section,
   index,
   top,
@@ -381,21 +402,19 @@ function SectionHeader({
   const style: CSSProperties = { top }
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4"
+      className="pointer-events-none absolute inset-x-0 z-30 flex justify-center px-4"
       style={style}
     >
-      {/* A frosted "station" card: the trail runs behind it, so the path reads as
-          leading INTO each section rather than stopping at a break. */}
-      <div
-        className={`rounded-2xl bg-white/80 px-5 py-2 text-center shadow-sm ring-1 ring-inset backdrop-blur-sm ${theme.headerRing}`}
-      >
-        <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
+      {/* Text only (the frosted pill background is a separate layer below the trail),
+          so the connector line passes behind these labels and the path stays continuous. */}
+      <div className={`${BANNER_BOX} flex flex-col items-center justify-center px-3 text-center`}>
+        <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
           Section {index + 1}
         </p>
-        <h2 className={`mt-0.5 font-display text-lg font-bold leading-tight ${theme.title}`}>
+        <h2 className={`mt-0.5 font-display text-[15px] font-bold leading-tight ${theme.title}`}>
           {section.title}
         </h2>
-        <p className="mx-auto mt-0.5 max-w-[15rem] text-xs leading-snug text-slate-500">
+        <p className="mt-0.5 line-clamp-2 max-w-[15rem] text-[11px] leading-snug text-slate-500">
           {section.subtitle}
         </p>
       </div>
