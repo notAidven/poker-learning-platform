@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-import type { LessonMeta } from '../data/lessons'
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
 import { LessonPathModal } from './LessonPathModal'
 import { CheckIcon, LockIcon, StarIcon } from './icons'
 
@@ -20,30 +20,160 @@ const LABEL_GAP = 12
 const MIN_LABEL_WIDTH = 64
 /** Largest label width — matches the previous sm:max-w-[11rem] look */
 const MAX_LABEL_WIDTH = 176
-
-/** Zigzag direction per row (sign only) — Duolingo-style path down the page.
- *  The magnitude is derived from the live width so nodes + connectors stay aligned. */
-const PATH_DIRECTIONS = [0, 1, -1, 1, -1, 0]
 /** Zigzag amplitude as a fraction of the track width on roomy layouts */
 const OFFSET_RATIO = 0.21
+/** Vertical room reserved above each section's first node for its banner */
+const SECTION_HEADER_SPACE = 96
+/** Banner offset from the top of its section band */
+const HEADER_PAD_TOP = 14
+/** Breathing room between two section bands */
+const SECTION_GAP = 30
+/** A little tail below the last node so the final ring never clips */
+const TAIL_PAD = 28
+
+/**
+ * Per-section visual theme. Tints map onto the real palette tokens in index.css:
+ * felt-green → emerald-*, oxblood → brand-*, brass → gold-*. Class strings are
+ * literal (Tailwind needs them visible) and preserve the universal status
+ * affordances (check / number-or-star / lock + current pulse + badge).
+ */
+const SECTION_THEME: Record<
+  SectionId,
+  {
+    band: string
+    eyebrow: string
+    title: string
+    connector: string
+    node: { completed: string; current: string; locked: string }
+  }
+> = {
+  foundations: {
+    band: 'bg-emerald-50/70 ring-1 ring-inset ring-emerald-100',
+    eyebrow: 'text-emerald-600',
+    title: 'text-emerald-900',
+    connector: '#10b981',
+    node: {
+      completed: 'bg-emerald-500 text-white shadow-md ring-[5px] ring-emerald-200',
+      current:
+        'bg-emerald-600 text-white shadow-lg shadow-emerald-500/40 ring-[5px] ring-emerald-200 animate-[pulse_2.5s_ease-in-out_infinite]',
+      locked: 'bg-emerald-50 text-emerald-300 ring-[5px] ring-emerald-100',
+    },
+  },
+  playing: {
+    band: 'bg-brand-50/60 ring-1 ring-inset ring-brand-100',
+    eyebrow: 'text-brand-600',
+    title: 'text-brand-900',
+    connector: '#9b2c44',
+    node: {
+      completed: 'bg-brand-500 text-white shadow-md ring-[5px] ring-brand-200',
+      current:
+        'bg-brand-600 text-white shadow-lg shadow-brand-500/40 ring-[5px] ring-brand-200 animate-[pulse_2.5s_ease-in-out_infinite]',
+      locked: 'bg-brand-50 text-brand-300 ring-[5px] ring-brand-100',
+    },
+  },
+  math: {
+    band: 'bg-gold-200/30 ring-1 ring-inset ring-gold-200',
+    eyebrow: 'text-gold-600',
+    title: 'text-gold-600',
+    connector: '#bb8f3c',
+    node: {
+      completed: 'bg-gold-500 text-white shadow-md ring-[5px] ring-gold-200',
+      current:
+        'bg-gold-600 text-white shadow-lg shadow-gold-400/40 ring-[5px] ring-gold-200 animate-[pulse_2.5s_ease-in-out_infinite]',
+      locked: 'bg-gold-200/60 text-gold-600 ring-[5px] ring-gold-200',
+    },
+  },
+}
+
+type LessonLayout = {
+  lesson: LessonMeta
+  globalIndex: number
+  section: SectionId
+  /** Node center y, in the shared pixel coordinate system. */
+  y: number
+}
+
+type SectionLayout = {
+  meta: SectionMeta
+  index: number
+  bandTop: number
+  bandHeight: number
+  headerTop: number
+}
+
+type PathLayout = {
+  lessonLayouts: LessonLayout[]
+  sectionLayouts: SectionLayout[]
+  totalHeight: number
+}
+
+/**
+ * Vertical layout (width-independent): stack each section's banner + rows, with a
+ * gap between sections. Returns node y-centers plus per-section band/header bounds,
+ * all in one pixel coordinate system shared by the SVG connectors and the DOM nodes.
+ */
+function computeLayout(lessonList: LessonMeta[]): PathLayout {
+  const lessonLayouts: LessonLayout[] = []
+  const sectionLayouts: SectionLayout[] = []
+  let cursor = 0
+
+  sections.forEach((section) => {
+    const inSection = lessonList.filter((l) => l.section === section.id)
+    if (inSection.length === 0) return
+
+    const bandTop = cursor
+    const headerTop = cursor + HEADER_PAD_TOP
+    cursor += SECTION_HEADER_SPACE
+
+    inSection.forEach((lesson) => {
+      lessonLayouts.push({
+        lesson,
+        globalIndex: lessonList.indexOf(lesson),
+        section: section.id,
+        y: cursor + NODE_RADIUS + 20,
+      })
+      cursor += ROW_HEIGHT
+    })
+
+    sectionLayouts.push({
+      meta: section,
+      index: sectionLayouts.length,
+      bandTop,
+      bandHeight: cursor - bandTop,
+      headerTop,
+    })
+    cursor += SECTION_GAP
+  })
+
+  // Keep declared lesson order even if the data is grouped unusually.
+  lessonLayouts.sort((a, b) => a.globalIndex - b.globalIndex)
+
+  return { lessonLayouts, sectionLayouts, totalHeight: cursor - SECTION_GAP + TAIL_PAD }
+}
 
 function getLessonStatus(
   lesson: LessonMeta,
   index: number,
-  lessons: LessonMeta[],
+  lessonList: LessonMeta[],
   completedIds: string[],
 ): LessonStatus {
   if (completedIds.includes(lesson.id)) return 'completed'
   if (index === 0) return 'current'
-  const prev = lessons[index - 1]
+  const prev = lessonList[index - 1]
   if (completedIds.includes(prev.id)) return 'current'
   return 'locked'
 }
 
-/** Horizontal zigzag offset (px) for a row, clamped so the node (with its ring)
- *  and its outer label both stay inside the current track width at every breakpoint. */
+/** Zigzag direction (sign only) for any N: the first node is centered, then rows alternate. */
+function directionFor(index: number) {
+  if (index === 0) return 0
+  return index % 2 === 1 ? 1 : -1
+}
+
+/** Horizontal zigzag offset (px) for a row, clamped so the node (with its ring) and
+ *  its outer label both stay inside the current track width at every breakpoint. */
 function offsetFor(index: number, width: number) {
-  const dir = PATH_DIRECTIONS[index] ?? 0
+  const dir = directionFor(index)
   if (dir === 0 || width <= 0) return 0
   const ideal = OFFSET_RATIO * width
   const maxByNode = width / 2 - NODE_OUTER_RADIUS
@@ -60,22 +190,19 @@ function labelWidthFor(index: number, width: number) {
   return Math.min(MAX_LABEL_WIDTH, Math.max(0, outerEdge - NODE_RADIUS - LABEL_GAP))
 }
 
-function nodeCenter(index: number, width: number) {
-  return {
-    x: width / 2 + offsetFor(index, width),
-    y: index * ROW_HEIGHT + NODE_RADIUS + 20,
-  }
+function nodeCenter(index: number, y: number, width: number) {
+  return { x: width / 2 + offsetFor(index, width), y }
 }
 
-function connectorPath(from: number, to: number, width: number) {
-  const a = nodeCenter(from, width)
-  const b = nodeCenter(to, width)
+function connectorPath(from: LessonLayout, to: LessonLayout, width: number) {
+  const a = nodeCenter(from.globalIndex, from.y, width)
+  const b = nodeCenter(to.globalIndex, to.y, width)
   const midY = (a.y + b.y) / 2
   return `M ${a.x} ${a.y + NODE_RADIUS - 2} C ${a.x} ${midY}, ${b.x} ${midY}, ${b.x} ${b.y - NODE_RADIUS + 2}`
 }
 
 export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
-  const height = lessons.length * ROW_HEIGHT + 56
+  const { lessonLayouts, sectionLayouts, totalHeight } = computeLayout(lessons)
   const trackRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<{
@@ -95,26 +222,41 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
     return () => observer.disconnect()
   }, [])
 
+  const statuses = lessons.map((lesson, i) => getLessonStatus(lesson, i, lessons, completedIds))
+
   return (
     <>
-      <div className="relative mx-auto w-full max-w-md rounded-[2rem] bg-gradient-to-b from-sky-50/80 via-white to-violet-50/50 px-2 py-10 sm:max-w-lg sm:px-6">
-        <div ref={trackRef} className="relative mx-auto w-full" style={{ height }}>
+      <div className="relative mx-auto w-full max-w-md rounded-[2rem] bg-white px-2 py-8 ring-1 ring-night-900/5 sm:max-w-lg sm:px-6">
+        <div ref={trackRef} className="relative mx-auto w-full" style={{ height: totalHeight }}>
+          {/* Soft tinted band behind each section's banner + rows */}
+          {sectionLayouts.map((section) => (
+            <div
+              key={`band-${section.meta.id}`}
+              className={`absolute inset-x-0 z-0 rounded-[1.75rem] ${SECTION_THEME[section.meta.id].band}`}
+              style={{ top: section.bandTop, height: section.bandHeight }}
+              aria-hidden
+            />
+          ))}
+
+          {/* Connectors — drawn only between same-section nodes so section breaks read clearly */}
           <svg
-            className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-            viewBox={`0 0 ${Math.max(width, 1)} ${height}`}
+            className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
+            viewBox={`0 0 ${Math.max(width, 1)} ${totalHeight}`}
             preserveAspectRatio="none"
             aria-hidden
           >
             {width > 0 &&
-              lessons.slice(0, -1).map((_, i) => {
-                const from = getLessonStatus(lessons[i], i, lessons, completedIds)
-                const active = from === 'completed' || from === 'current'
+              lessonLayouts.slice(0, -1).map((from, i) => {
+                const to = lessonLayouts[i + 1]
+                if (from.section !== to.section) return null
+                const fromStatus = statuses[from.globalIndex]
+                const active = fromStatus === 'completed' || fromStatus === 'current'
                 return (
                   <path
-                    key={i}
-                    d={connectorPath(i, i + 1, width)}
+                    key={from.lesson.id}
+                    d={connectorPath(from, to, width)}
                     fill="none"
-                    stroke={active ? '#60a5fa' : '#cbd5e1'}
+                    stroke={active ? SECTION_THEME[from.section].connector : '#cbd5e1'}
                     strokeWidth={10}
                     strokeLinecap="round"
                     opacity={active ? 1 : 0.85}
@@ -123,16 +265,28 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
               })}
           </svg>
 
-          <ol className="relative m-0 list-none p-0" style={{ height }}>
-            {lessons.map((lesson, index) => {
-              const status = getLessonStatus(lesson, index, lessons, completedIds)
-              const center = nodeCenter(index, width)
+          {/* Section banners */}
+          {sectionLayouts.map((section) => (
+            <SectionHeader
+              key={`header-${section.meta.id}`}
+              section={section.meta}
+              index={section.index}
+              top={section.headerTop}
+            />
+          ))}
+
+          {/* Lesson nodes */}
+          <ol className="relative z-20 m-0 list-none p-0" style={{ height: totalHeight }}>
+            {lessonLayouts.map((ll) => {
+              const index = ll.globalIndex
+              const status = statuses[index]
+              const center = nodeCenter(index, ll.y, width)
               const isLast = index === lessons.length - 1
               const labelOnRight = offsetFor(index, width) >= 0
 
               return (
                 <li
-                  key={lesson.id}
+                  key={ll.lesson.id}
                   className="absolute"
                   style={{
                     left: width > 0 ? center.x : '50%',
@@ -142,14 +296,15 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
                 >
                   <div className="relative flex items-center justify-center">
                     <PathNode
-                      lesson={lesson}
+                      lesson={ll.lesson}
                       status={status}
+                      section={ll.section}
                       isLast={isLast}
-                      onSelect={() => setSelectedLesson({ lesson, status })}
+                      onSelect={() => setSelectedLesson({ lesson: ll.lesson, status })}
                     />
 
                     <LessonSideLabel
-                      lesson={lesson}
+                      lesson={ll.lesson}
                       status={status}
                       side={labelOnRight ? 'right' : 'left'}
                       width={width > 0 ? labelWidthFor(index, width) : undefined}
@@ -171,6 +326,32 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
         />
       )}
     </>
+  )
+}
+
+function SectionHeader({
+  section,
+  index,
+  top,
+}: {
+  section: SectionMeta
+  index: number
+  top: number
+}) {
+  const theme = SECTION_THEME[section.id]
+  const style: CSSProperties = { top }
+  return (
+    <div className="pointer-events-none absolute inset-x-0 z-20 px-4 text-center" style={style}>
+      <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
+        Section {index + 1}
+      </p>
+      <h2 className={`mt-0.5 font-display text-lg font-bold leading-tight ${theme.title}`}>
+        {section.title}
+      </h2>
+      <p className="mx-auto mt-0.5 max-w-[16rem] text-xs leading-snug text-slate-500">
+        {section.subtitle}
+      </p>
+    </div>
   )
 }
 
@@ -205,21 +386,19 @@ function LessonSideLabel({
 function PathNode({
   lesson,
   status,
+  section,
   isLast,
   onSelect,
 }: {
   lesson: LessonMeta
   status: LessonStatus
+  section: SectionId
   isLast: boolean
   onSelect: () => void
 }) {
   const shell = [
     'relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-full transition-transform',
-    status === 'current' &&
-      'bg-brand-600 text-white shadow-lg shadow-brand-500/40 ring-[5px] ring-brand-200 animate-[pulse_2.5s_ease-in-out_infinite]',
-    status === 'completed' &&
-      'bg-emerald-500 text-white shadow-md ring-[5px] ring-emerald-200',
-    status === 'locked' && 'bg-slate-200 text-slate-400 ring-[5px] ring-slate-100',
+    SECTION_THEME[section].node[status],
     'hover:scale-105 active:scale-95',
   ]
     .filter(Boolean)

@@ -6,6 +6,9 @@ const skillCheckLoaders: Record<string, () => Promise<SkillCheckDefinition>> = {
   '3': () => import('./skillChecks/skill-check-3').then((m) => m.skillCheck3),
   '4': () => import('./skillChecks/skill-check-4').then((m) => m.skillCheck4),
   '5': () => import('./skillChecks/skill-check-5').then((m) => m.skillCheck5),
+  '6': () => import('./skillChecks/skill-check-6').then((m) => m.skillCheck6),
+  '7': () => import('./skillChecks/skill-check-7').then((m) => m.skillCheck7),
+  '8': () => import('./skillChecks/skill-check-8').then((m) => m.skillCheck8),
 }
 
 const skillCheckCache = new Map<string, SkillCheckDefinition>()

@@ -1,70 +1,58 @@
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 
 /**
- * Skill Check 5 (design doc §6, Lesson 5): best action facing a bet, size a half-pot
- * bet, and the sign/value of an EV-of-call. All three reuse the `betting-round`
- * interaction. Keep `lessonId: '5'` / export `skillCheck5`.
+ * Skill Check 5 (Lesson 5 · Outs & Equity): count outs, then convert outs → equity
+ * with the Rule of 4 (flop) and Rule of 2 (turn). All three reuse the `outs-odds`
+ * widget, whose outs/equity are validated by the evaluator, not hard-coded. No pot
+ * odds or decision here — that is Lesson 6. Keep `lessonId: '5'` / export `skillCheck5`.
  */
 export const skillCheck5: SkillCheckDefinition = {
   lessonId: '5',
-  title: 'Betting Skill Check',
+  title: 'Outs & Equity Skill Check',
   questions: [
     {
       id: 'q1',
-      prompt: 'You flop the nut flush. The villain bets 30 into a pot of 60. Pick the best action.',
-      interaction: 'betting-round',
+      prompt: 'You hold two spades and two more are on the flop — a flush draw. How many outs do you have?',
+      interaction: 'outs-odds',
       config: {
-        hole: ['AH', '5H'],
-        board: ['KH', '9H', '2H'],
+        hole: ['JS', '9S'],
+        board: ['AS', '4S', '2H'],
+        drawLabel: 'a flush',
         street: 'flop',
-        pot: 90,
-        heroStack: 400,
-        villainStack: 400,
-        facing: { action: 'bet', amount: 30 },
-        sizingOptions: [0.5, 0.75, 1],        seed: 105,
-        task: 'choose-action',
+        ask: ['outs'],
       },
-      answer: { action: 'raise' },
-      incorrectFeedback:
-        'You hold the best possible hand (the nut flush) facing a bet — raise for value rather than only calling.',
+      answer: { outs: 9 },
+      incorrectFeedback: 'A suit has 13 cards and you can see four spades, so $13 - 4 = 9$ outs.',
     },
     {
       id: 'q2',
-      prompt:
-        'You want to make a half-pot value bet into an 80-chip pot. Which sizing is half the pot?',
-      interaction: 'betting-round',
+      prompt: 'Open-ended straight draw on the flop, two cards to come. Estimate your equity by the river (whole percent).',
+      interaction: 'outs-odds',
       config: {
-        hole: ['KD', 'KS'],
-        board: ['KC', '8D', '3S'],
+        hole: ['10D', '9C'],
+        board: ['8H', '7S', '2C'],
+        drawLabel: 'an open-ended straight',
         street: 'flop',
-        pot: 80,
-        heroStack: 400,
-        villainStack: 400,
-        sizingOptions: [0.33, 0.5, 0.75],        seed: 112,
-        task: 'choose-size',
+        ask: ['equity'],
       },
-      answer: { sizeFraction: 0.5, sizeTolerance: 0.05 },
+      answer: { equityPercent: 32, equityTolerance: 3 },
       incorrectFeedback:
-        'Half-pot is the middle option — half of the chips already in the pot (40 into 80).',
+        'Open-ended = 8 outs. On the flop use the Rule of 4: $8 \\times 4 = 32\\%$ (exact $\\approx 31.5\\%$).',
     },
     {
       id: 'q3',
-      prompt:
-        'With 25% equity, the pot holds 100 chips and it costs 20 to call. What is the EV of calling, in chips?',
-      interaction: 'betting-round',
+      prompt: 'You have a 9-out flush draw on the turn — only the river is left. Estimate your equity (whole percent).',
+      interaction: 'outs-odds',
       config: {
-        hole: ['JS', '10S'],
-        board: ['9D', '4C', '2H', 'QS'],
+        hole: ['AH', 'KH'],
+        board: ['QH', '7H', '2C', '3S'],
+        drawLabel: 'a flush',
         street: 'turn',
-        pot: 100,
-        heroStack: 300,
-        villainStack: 300,
-        facing: { action: 'bet', amount: 20 },        seed: 121,
-        task: 'ev-of-call',
+        ask: ['equity'],
       },
-      answer: { evChips: 10, evTolerance: 1 },
+      answer: { equityPercent: 18, equityTolerance: 3 },
       incorrectFeedback:
-        'EV = 0.25 × 100 − 0.75 × 20 = 25 − 15 = +10 chips, a profitable call.',
+        'One card to come, so use the Rule of 2: $9 \\times 2 = 18\\%$ (exact $\\frac{9}{46} \\approx 19.6\\%$).',
     },
   ],
 }

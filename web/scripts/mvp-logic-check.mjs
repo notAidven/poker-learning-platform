@@ -54,9 +54,10 @@ function testNextLessonPath() {
   record('4-logic', true, 'getNextLessonPath unlocks lesson 2 after lesson 1 complete')
 }
 
-// P1 #5: sequential unlock (mirrors isLessonUnlocked in lib/lessonProgress.ts)
+// P1 #5: sequential unlock (mirrors isLessonUnlocked in lib/lessonProgress.ts).
+// Now an 8-lesson path (Foundations → Playing a Hand → The Math).
 function testSequentialUnlock() {
-  const lessons = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }, { id: '5' }]
+  const lessons = ['1', '2', '3', '4', '5', '6', '7', '8'].map((id) => ({ id }))
 
   function isLessonUnlocked(lessonId, completedIds) {
     const index = lessons.findIndex((l) => l.id === lessonId)
@@ -66,9 +67,48 @@ function testSequentialUnlock() {
 
   assert.equal(isLessonUnlocked('1', []), true) // lesson 1 always unlocked
   assert.equal(isLessonUnlocked('5', ['1', '2', '3']), false) // L4 not done → L5 locked
-  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4']), true) // L4 done → L5 open
+  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4']), true) // L4 done → L5 (Math) open
+  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', '5', '6']), false) // L7 not done → L8 locked
+  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', '5', '6', '7']), true) // L7 done → L8 open
   assert.equal(isLessonUnlocked('99', []), true) // unknown id → page shows "not found"
-  record('5-logic', true, 'isLessonUnlocked blocks /lesson/5 until lesson 4 is completed')
+  record('5-logic', true, 'isLessonUnlocked gates each of the 8 lessons behind the previous one')
+}
+
+// New structure (mirrors data/lessons.ts): 8 lessons across 3 contiguous sections,
+// with the technical-theory track ("The Math") expanded to 4 dedicated lessons.
+function testSectionStructure() {
+  const lessons = [
+    { id: '1', section: 'foundations' },
+    { id: '2', section: 'foundations' },
+    { id: '3', section: 'playing' },
+    { id: '4', section: 'playing' },
+    { id: '5', section: 'math' },
+    { id: '6', section: 'math' },
+    { id: '7', section: 'math' },
+    { id: '8', section: 'math' },
+  ]
+  const expectedOrder = ['foundations', 'playing', 'math']
+
+  assert.equal(lessons.length, 8, 'course has 8 lessons total')
+
+  // Sections appear in the intended order.
+  const order = []
+  for (const l of lessons) if (!order.includes(l.section)) order.push(l.section)
+  assert.deepEqual(order, expectedOrder, 'sections: Foundations → Playing a Hand → The Math')
+
+  // Each section is a single contiguous run (so a single banner/band per section).
+  let changes = 0
+  for (let i = 1; i < lessons.length; i++) {
+    if (lessons[i].section !== lessons[i - 1].section) changes += 1
+  }
+  assert.equal(changes, expectedOrder.length - 1, 'each section is one contiguous run of lessons')
+
+  // The Math is the expanded technical track.
+  assert.equal(lessons.filter((l) => l.section === 'math').length, 4, 'The Math has 4 lessons')
+  assert.equal(lessons.filter((l) => l.section === 'foundations').length, 2, 'Foundations has 2')
+  assert.equal(lessons.filter((l) => l.section === 'playing').length, 2, 'Playing a Hand has 2')
+
+  record('sections', true, '8 lessons in 3 contiguous sections; The Math expanded to 4 lessons')
 }
 
 // P1 #3: skill-check pass threshold (mirrors isSkillCheckPassing in lib/gamification.ts)
@@ -352,6 +392,7 @@ function testAuthLoadNeverHangs() {
 testExitPreservesSession()
 testNextLessonPath()
 testSequentialUnlock()
+testSectionStructure()
 testSkillCheckThreshold()
 testNextLessonPathSkillCheckPending()
 testNoHiddenRequiredFieldDeadlock()
