@@ -4,7 +4,7 @@ import type { SkillCheckDefinition } from '../../types/skillCheck'
  * Skill Check 5 (Lesson 5 · Outs & Equity): count outs, then convert outs → equity
  * with the Rule of 4 (flop) and Rule of 2 (turn). All three reuse the `outs-odds`
  * widget, whose outs/equity are validated by the evaluator, not hard-coded. No pot
- * odds or decision here — that is Lesson 6. Keep `lessonId: '5'` / export `skillCheck5`.
+ * odds or decision here. That is Lesson 6. Keep `lessonId: '5'` / export `skillCheck5`.
  */
 export const skillCheck5: SkillCheckDefinition = {
   lessonId: '5',
@@ -12,7 +12,7 @@ export const skillCheck5: SkillCheckDefinition = {
   questions: [
     {
       id: 'q1',
-      prompt: 'You hold two spades and two more are on the flop — a flush draw. How many outs do you have?',
+      prompt: 'You hold two spades and two more are on the flop, a flush draw. How many outs do you have?',
       interaction: 'outs-odds',
       config: {
         hole: ['JS', '9S'],
@@ -41,7 +41,7 @@ export const skillCheck5: SkillCheckDefinition = {
     },
     {
       id: 'q3',
-      prompt: 'You have a 9-out flush draw on the turn — only the river is left. Estimate your equity (whole percent).',
+      prompt: 'You have a 9-out flush draw on the turn, with only the river left. Estimate your equity (whole percent).',
       interaction: 'outs-odds',
       config: {
         hole: ['AH', 'KH'],

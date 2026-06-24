@@ -113,14 +113,14 @@ function CompletedBody({
       <div className="grid grid-cols-2 gap-3">
         <StatCard
           label="Lesson accuracy"
-          value={stats.lessonAccuracy != null ? `${stats.lessonAccuracy}%` : '—'}
+          value={stats.lessonAccuracy != null ? `${stats.lessonAccuracy}%` : '–'}
         />
         <StatCard
           label="Skill check"
           value={
             stats.skillCheckCorrect != null && stats.skillCheckTotal != null
               ? `${stats.skillCheckCorrect}/${stats.skillCheckTotal}${skillPercent != null ? ` (${skillPercent}%)` : ''}`
-              : '—'
+              : '–'
           }
         />
       </div>

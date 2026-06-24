@@ -97,7 +97,7 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
               to pass the {lessonTitle} skill check.
             </p>
             <p className="mt-3 rounded-2xl bg-white/80 px-4 py-3 text-sm text-slate-700">
-              Your lesson progress is saved — retake the skill check whenever you're ready. No need
+              Your lesson progress is saved. Retake the skill check whenever you're ready. No need
               to redo the lesson.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">

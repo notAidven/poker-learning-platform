@@ -40,7 +40,7 @@ export const skillCheck2: SkillCheckDefinition = {
       prompt: 'Both players hold a pair of Kings. Which hand wins?',
       interaction: 'compare-events',
       config: {
-        helperText: 'Same pair — the kicker decides.',
+        helperText: 'Same pair, so the kicker decides.',
         chooseLabel: 'Which hand wins?',
         eventA: { label: 'Pair of Kings, Ace kicker', detail: 'K-K-A-7-4' },
         eventB: { label: 'Pair of Kings, Queen kicker', detail: 'K-K-Q-9-5' },

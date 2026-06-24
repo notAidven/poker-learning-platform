@@ -55,7 +55,7 @@ const CATEGORY_SHAPE: Record<HandCategory, string> = {
   trips: 'Three of one rank',
   'two-pair': 'Two pairs',
   pair: 'One pair',
-  'high-card': 'No pair — top card plays',
+  'high-card': 'No pair, top card plays',
 }
 
 type Size = 'sm' | 'md' | 'lg'

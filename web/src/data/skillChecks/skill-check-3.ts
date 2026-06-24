@@ -21,11 +21,11 @@ export const skillCheck3: SkillCheckDefinition = {
         opponents: 1,
         streets: ['preflop', 'flop', 'turn', 'river'],
         annotateStreets: true,
-        helperText: "Deal each street; at the river your opponent's cards flip up — then call the winner.",
+        helperText: "Deal each street. At the river your opponent's cards flip up, then call the winner.",
       },
       answer: { minStreetsRevealed: 4, winner: 'opponent' },
       incorrectFeedback:
-        "Your pair of Jacks loses to your opponent's three of a kind — the 7♥ 7♦ pair the 7♠ on the board for a set of sevens, which beats one pair.",
+        "Your pair of Jacks loses to your opponent's three of a kind. The 7♥ 7♦ pair the 7♠ on the board for a set of sevens, which beats one pair.",
     },
     {
       id: 'q2',
@@ -53,7 +53,7 @@ export const skillCheck3: SkillCheckDefinition = {
       },
       answer: { more: 'a' },
       incorrectFeedback:
-        'The button acts last on every post-flop street — that positional edge is why it’s the best seat.',
+        'The button acts last on every post-flop street, and that edge is why it’s the best seat.',
     },
   ],
 }

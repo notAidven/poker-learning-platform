@@ -120,7 +120,7 @@ const LADDER: LadderEntry[] = [
   {
     category: 'high-card',
     name: 'High card',
-    blurb: 'None of the above — the highest card plays',
+    blurb: 'None of the above, the highest card plays',
     example: ['AS', 'KD', '9C', '6H', '2S'],
   },
 ]

@@ -47,7 +47,7 @@ export function SkillCheckStepView({ question, onAnswered }: SkillCheckStepViewP
       {result === 'incorrect' && (
         <p className="text-sm font-semibold text-red-700" role="status">
           <MathContent>
-            {question.incorrectFeedback ?? 'Not quite — review the lesson and try the next one.'}
+            {question.incorrectFeedback ?? 'Not quite. Review the lesson and try the next one.'}
           </MathContent>
         </p>
       )}

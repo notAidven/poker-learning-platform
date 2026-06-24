@@ -2,7 +2,7 @@ import type { SkillCheckDefinition } from '../../types/skillCheck'
 
 /**
  * Skill Check 6 (Lesson 6 · Pot Odds): price a call (required equity), then make
- * the call/fold decision — once profitable (equity > price) and once not. All three
+ * the call/fold decision: once profitable (equity > price) and once not. All three
  * reuse the `outs-odds` widget, whose price and decision are computed by the widget
  * from pot/betToCall, not hard-coded. Keep `lessonId: '6'` / export `skillCheck6`.
  */
@@ -24,7 +24,7 @@ export const skillCheck6: SkillCheckDefinition = {
         betToCall: 20,
       },
       answer: { potOddsPercent: 17 },
-      incorrectFeedback: 'Required equity $= \\frac{20}{100 + 20} = \\frac{1}{6} \\approx 16.7\\%$ — round to 17%.',
+      incorrectFeedback: 'Required equity $= \\frac{20}{100 + 20} = \\frac{1}{6} \\approx 16.7\\%$, so round to 17%.',
     },
     {
       id: 'q2',
@@ -41,7 +41,7 @@ export const skillCheck6: SkillCheckDefinition = {
       },
       answer: { decision: 'call' },
       incorrectFeedback:
-        'Price $= \\frac{20}{120} \\approx 16.7\\%$. Your ~18% equity is higher, so calling is profitable — call.',
+        'Price $= \\frac{20}{120} \\approx 16.7\\%$. Your ~18% equity is higher, so calling is profitable. Call.',
     },
     {
       id: 'q3',

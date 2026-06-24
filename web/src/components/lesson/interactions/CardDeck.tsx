@@ -380,7 +380,7 @@ function SelectAllMode({
         <p className="text-sm font-semibold text-slate-700">
           Standard 52-card deck
           <span className="block text-xs font-normal text-slate-500">
-            Sample space Ω — {DECK_SIZE} equally likely cards
+            Sample space Ω: {DECK_SIZE} equally likely cards
           </span>
         </p>
       </div>
@@ -455,7 +455,7 @@ function SelectAllMode({
           )}
         </div>
         {selectedList.length === 0 ? (
-          <p className="text-sm text-slate-400">No cards selected yet — tap cards above.</p>
+          <p className="text-sm text-slate-400">No cards selected yet. Tap cards above.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {selectedList.map((card) => (

@@ -395,7 +395,7 @@ export function OutsOdds({
           return (
             <div key="decision">
               <p className="mb-2 text-sm font-semibold text-slate-800">
-                Compare your equity to the price — call or fold?
+                Compare your equity to the price: call or fold?
               </p>
               <div className="flex gap-3">
                 <button
@@ -439,9 +439,9 @@ export function OutsOdds({
       {config.empiricalTieIn && expectedOuts > 0 && (
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-sm font-semibold text-slate-700">
-            Deal it out
+            Deal it out.
             <span className="ml-1 font-normal text-slate-500">
-              — run the {cardsToCome === 2 ? 'turn & river' : 'river'} to feel how often you hit.
+              Run the {cardsToCome === 2 ? 'turn & river' : 'river'} to feel how often you hit.
             </span>
           </p>
           <div className="flex flex-wrap gap-2">
@@ -464,7 +464,7 @@ export function OutsOdds({
             <div className="mb-1 flex items-baseline justify-between text-sm">
               <span className="font-semibold text-slate-700">Hit rate</span>
               <span className="font-bold tabular-nums text-brand-700">
-                {trials > 0 ? `${hits}/${trials} = ${empiricalPct.toFixed(1)}%` : '—'}
+                {trials > 0 ? `${hits}/${trials} = ${empiricalPct.toFixed(1)}%` : '–'}
               </span>
             </div>
             <div className="relative h-3 overflow-hidden rounded-full bg-slate-100">
@@ -482,7 +482,7 @@ export function OutsOdds({
               />
             </div>
             <p className="mt-1 text-xs text-slate-500" role="status" aria-live="polite">
-              Theoretical equity ≈ {theoreticalPct.toFixed(1)}% (dashed line). Keep dealing — the bar
+              Theoretical equity ≈ {theoreticalPct.toFixed(1)}% (dashed line). Keep dealing, and the bar
               settles toward it.
             </p>
           </div>

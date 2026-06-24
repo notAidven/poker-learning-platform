@@ -1,4 +1,4 @@
-/** Canonical course path — 8 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
+/** Canonical course path: 8 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
 
 /** The three visually-distinct sections of the learning path. */
 export type SectionId = 'foundations' | 'playing' | 'math'
@@ -9,8 +9,8 @@ export type SectionMeta = {
   /** One-line banner subtitle shown under the section title on the path. */
   subtitle: string
   /** Theme token family for this section's tint (felt-green / oxblood / brass).
-   *  Concrete Tailwind class strings live in CoursePath's SECTION_THEME — Tailwind
-   *  needs literal class names, so this is a documentation/lookup token only. */
+   *  Concrete Tailwind class strings live in CoursePath's SECTION_THEME (Tailwind
+   *  needs literal class names), so this is a documentation/lookup token only. */
   accent: 'emerald' | 'brand' | 'gold'
 }
 
@@ -18,13 +18,13 @@ export const sections: SectionMeta[] = [
   {
     id: 'foundations',
     title: 'Foundations',
-    subtitle: 'The 52-card deck and the ten hand rankings',
+    subtitle: 'The 52-card deck and how hands rank',
     accent: 'emerald',
   },
   {
     id: 'playing',
     title: 'Playing a Hand',
-    subtitle: 'How a hand flows, and the five betting actions',
+    subtitle: 'How a hand plays out, and the betting actions',
     accent: 'brand',
   },
   {

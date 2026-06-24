@@ -37,7 +37,7 @@ function AuthAside() {
           Learn Texas Hold&apos;em by playing.
         </h2>
         <p className="mt-3 max-w-xs text-sm leading-relaxed text-white/65">
-          From the deck and hand rankings to pot odds, EV, and bet sizing — eight lessons you
+          From the deck and hand rankings to pot odds, EV, and bet sizing. Eight lessons you
           play through, not read.
         </p>
 

@@ -456,7 +456,7 @@ export function BoardDealer({
         ? 'You win the pot.'
         : showdown.winner === 'opponent'
           ? 'Your opponent wins the pot.'
-          : "It's a split pot — the hands tie."
+          : "It's a split pot. The hands tie."
 
   return (
     <div className="space-y-4">
@@ -595,7 +595,7 @@ export function BoardDealer({
                 </select>
                 {state === 'ok' && (
                   <p className="mt-1 text-xs font-semibold text-emerald-700">
-                    Correct — {CATEGORY_LABEL[expectedByStreet[s]].toLowerCase()}.
+                    Correct: {CATEGORY_LABEL[expectedByStreet[s]].toLowerCase()}.
                   </p>
                 )}
                 {state === 'bad' && (

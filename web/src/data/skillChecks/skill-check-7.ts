@@ -67,7 +67,7 @@ export const skillCheck7: SkillCheckDefinition = {
       },
       answer: { action: 'bet' },
       incorrectFeedback:
-        'Betting a strong draw is a semibluff — fold equity now plus your flush outs if called. Bet.',
+        'Betting a strong draw is a semibluff: fold equity now plus your flush outs if called. Bet.',
     },
   ],
 }

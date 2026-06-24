@@ -249,7 +249,7 @@ function buildTableReveal(
     lines.push('You fold and give up the hand.')
     lines.push(`Villain takes the pot of ${pot}.`)
   } else if (heroAction === 'check') {
-    lines.push('You check — no chips in, action passes.')
+    lines.push('You check. No chips in, action passes.')
     // Scripted: the opponent only bets back when the lesson explicitly scripts it.
     if (scripted === 'bet') {
       const amt = Math.min(config.villainAmount ?? Math.round(pot * 0.66), villainStack)
@@ -259,14 +259,14 @@ function buildTableReveal(
       lines.push(`Villain bets ${amt}, so now there is a bet back to you.`)
     } else {
       villainAction = 'check'
-      lines.push('Villain checks behind — the round is checked through and the next card is free.')
+      lines.push('Villain checks behind. The round is checked through and the next card is free.')
     }
   } else if (heroAction === 'call') {
     const amt = Math.min(facing, heroStack)
     heroStack -= amt
     pot += amt
     lines.push(`You call ${amt}.`)
-    lines.push(`Both stacks have matched — the betting is settled and the pot is ${pot}.`)
+    lines.push(`Both stacks have matched. The betting is settled and the pot is ${pot}.`)
   } else {
     // bet or raise: hero puts chips in, then the scripted opponent answers the price.
     const total = Math.max(0, Math.min(heroBetTotal, heroStack))
@@ -281,7 +281,7 @@ function buildTableReveal(
     const villToCall = heroAction === 'raise' ? Math.max(0, total - facing) : total
     if (scripted === 'fold') {
       villainAction = 'fold'
-      lines.push(`Villain folds — you win the pot of ${pot} with no showdown.`)
+      lines.push(`Villain folds. You win the pot of ${pot} with no showdown.`)
     } else if (scripted === 'raise') {
       const amt = Math.min(
         config.villainAmount ?? Math.round((startPot + 2 * total) * 0.6) + villToCall,
@@ -290,7 +290,7 @@ function buildTableReveal(
       villainStack -= amt
       pot += amt
       villainAction = 'raise'
-      lines.push(`Villain re-raises to ${amt} — the decision comes back to you.`)
+      lines.push(`Villain re-raises to ${amt}. The decision comes back to you.`)
     } else {
       // Default scripted response: the opponent calls the price laid.
       const amt = Math.min(villToCall, villainStack)
@@ -701,7 +701,7 @@ export function BettingRound({
           ))}
           {task === 'choose-size' && reveal.priceLaidPercent !== null && (
             <p className="pt-1 text-xs text-slate-500">
-              That bet lays your opponent {reveal.priceLaidPercent.toFixed(1)}% pot odds — they need at
+              That bet lays your opponent {reveal.priceLaidPercent.toFixed(1)}% pot odds. They need at
               least that much equity to call profitably.
             </p>
           )}

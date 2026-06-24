@@ -1,7 +1,7 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 4 — "Betting Basics" (Section 2 · Playing a Hand).
+ * Lesson 4: "Betting Basics" (Section 2 · Playing a Hand).
  *
  * The five actions and when each is legal, how a round opens and closes, and
  * sizing a bet as a fraction of the pot (to board texture & purpose, not hand
@@ -27,7 +27,7 @@ export const lesson4: LessonDefinition = {
 - **No bet yet?** You may **check** (pass for free) or **bet**.
 - **Facing a bet?** You may **call** (match it), **raise** (increase it), or **fold**.
 
-A round **opens** on the first bet and **closes** once everyone still in has matched the top bet or folded — or everyone checks. One rule you will never regret: if you can check for free, **never fold**.`,
+A round **opens** on the first bet and **closes** once everyone still in has matched the top bet or folded, or everyone checks. One rule you will never regret: if you can check for free, **never fold**.`,
     },
     {
       type: 'problem',
@@ -48,11 +48,11 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Yes — with a monster you **bet** to build the pot while you are far ahead.',
+        correct: 'Yes. With a monster you **bet** to build the pot while you are far ahead.',
         incorrect:
           'Checking a monster wins only the tiny pot already there. With the best hand by a mile, bet to grow it.',
         hints: [
-          'Is there a bet to you? No — so your choices are check or bet.',
+          'Is there a bet to you? No, so your choices are check or bet.',
           'You hold the near-nuts; you want chips in the pot.',
           'Betting for value builds the pot you are very likely to win.',
         ],
@@ -79,7 +79,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { action: 'raise' },
       feedback: {
-        correct: 'Right — **raise** for value. A set is crushing this board, so build the pot now.',
+        correct: 'Right. **Raise** for value. A set is crushing this board, so build the pot now.',
         incorrect:
           'Calling keeps the pot small with the best hand; folding a monster is a disaster. **Raise** to get value.',
         hints: [
@@ -87,14 +87,14 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
           'Three Kings is almost certainly the best hand here.',
           'When you are far ahead, raise to put more chips in while you can.',
         ],
-        why: 'Top set on K-9-4 is a huge favorite. Just calling lets the villain see cheap cards. **Raising for value** swells the pot you will usually win. (The minimum legal raise is the current bet plus the last raise increment — not simply "double it.")',
+        why: 'Top set on K-9-4 is a huge favorite. Just calling lets the villain see cheap cards. **Raising for value** swells the pot you will usually win. (The minimum legal raise is the current bet plus the last raise increment, not simply "double it.")',
       },
     },
     {
       type: 'problem',
       id: 'p3',
       prompt:
-        'You hold two hearts and two more land on the flop — a flush draw, but no made hand yet. The villain bets 15 into a pot of 60. What is the best action?',
+        'You hold two hearts and two more land on the flop, a flush draw, but no made hand yet. The villain bets 15 into a pot of 60. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'KH'],
@@ -111,15 +111,15 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       answer: { action: 'call' },
       feedback: {
         correct:
-          'Good — **call**. A strong draw is worth continuing, and the price is small, so you stay in cheaply to try to complete it.',
+          'Good. **Call**. A strong draw is worth continuing, and the price is small, so you stay in cheaply to try to complete it.',
         incorrect:
           'You have a strong draw but no made hand. Folding throws it away; raising commits a lot with a hand that has not made anything yet. **Call** and see the next card.',
         hints: [
           'A bet faces you: call, raise, or fold.',
-          'You have a flush draw — strong, but not a made hand yet.',
+          'You have a flush draw, strong but not a made hand yet.',
           'Calling keeps you in cheaply to try to hit; it is too good to fold and too unmade to raise big.',
         ],
-        why: 'A **call** simply matches the bet to stay in. With a strong draw and a small price, calling lets you continue toward your flush without bloating the pot — folding gives up a great draw, and raising risks chips with a hand that still has to improve. (Exactly *when* a draw is worth the price is the pot-odds math coming up in The Math.)',
+        why: 'A **call** simply matches the bet to stay in. With a strong draw and a small price, calling lets you continue toward your flush without bloating the pot. Folding gives up a great draw, and raising risks chips with a hand that still has to improve. (Exactly *when* a draw is worth the price is the pot-odds math coming up in The Math.)',
       },
     },
     {
@@ -142,15 +142,15 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { action: 'fold' },
       feedback: {
-        correct: 'Correct — **fold**. You have nothing, the price is steep, and calling just burns chips.',
+        correct: 'Correct. **Fold**. You have nothing, the price is steep, and calling just burns chips.',
         incorrect:
           'With no pair and no draw against a big bet, calling or raising only loses chips. **Fold**.',
         hints: [
-          'You can call, raise, or fold — but what do you actually have?',
+          'You can call, raise, or fold, but what do you actually have?',
           '8-high has no pair and no draw on A-K-Q.',
           'There is nothing to continue with against a big bet.',
         ],
-        why: 'You hold 8-high with **no pair and no draw** on A-K-Q — almost nothing can come to save this hand. Calling a big bet just to "see what happens" bleeds chips, and you cannot raise a busted hand profitably. **Fold** and wait for a better spot. (This only applies because there is a bet — if it were checked to you, you would never fold a free look.)',
+        why: 'You hold 8-high with **no pair and no draw** on A-K-Q, so almost nothing can come to save this hand. Calling a big bet just to "see what happens" bleeds chips, and you cannot raise a busted hand profitably. **Fold** and wait for a better spot. (This only applies because there is a bet. If it were checked to you, you would never fold a free look.)',
       },
     },
     {
@@ -172,25 +172,25 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       answer: { action: 'check' },
       feedback: {
         correct:
-          'Good — **check**. A weak hand takes a free card; there is no need to bet (and never fold for free).',
+          'Good. **Check**. A weak hand takes a free card; there is no need to bet (and never fold for free).',
         incorrect:
           'Betting a weak hand bloats the pot with little to gain, and folding for free is the classic mistake. Just **check**.',
         hints: [
           'No bet faces you, so your only choices are check or bet.',
-          'Ace-high is weak — what would betting actually accomplish?',
+          'Ace-high is weak, so what would betting actually accomplish?',
           'You can see the next card for free; there is no reason to fold or bloat the pot.',
         ],
-        why: 'Ace-high is too weak to bet for value (worse hands fold, better hands keep going). **Checking** keeps the pot small and buys a free card. Crucially, when you can check for free you should **never fold** — folding throws away a hand that might still improve.',
+        why: 'Ace-high is too weak to bet for value (worse hands fold, better hands keep going). **Checking** keeps the pot small and buys a free card. Crucially, when you can check for free you should **never fold**. Folding throws away a hand that might still improve.',
       },
     },
     {
       type: 'concept',
       id: 'c2',
       title: 'Sizing a bet',
-      content: `You size a bet as a **fraction of the pot**, and you size it to the **board and your purpose — not to how strong your hand is** (betting big only with big hands tells opponents exactly what you have).
+      content: `You size a bet as a **fraction of the pot**, and you size it to the **board and your purpose, not how strong your hand is** (betting big only with big hands tells opponents exactly what you have).
 
 - **Small (about ⅓ pot):** dry, unconnected boards.
-- **Medium (½–⅔ pot):** the everyday default — good for value and for charging draws.
+- **Medium (½–⅔ pot):** the everyday default, good for value and for charging draws.
 - **Large (¾–pot):** wet, draw-heavy boards, to make draws pay.`,
     },
     {
@@ -212,7 +212,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { sizeFraction: 0.5, sizeTolerance: 0.05 },
       feedback: {
-        correct: 'Half of a 60-chip pot is 30 — a solid default value bet.',
+        correct: 'Half of a 60-chip pot is 30, a solid default value bet.',
         incorrect: 'Half-pot means betting half of what is already in the middle (30 into 60).',
         hints: [
           'The pot is 60 chips.',
@@ -241,14 +241,14 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { sizeFraction: 0.75, sizeTolerance: 0.05 },
       feedback: {
-        correct: 'Right — a large ¾-pot bet makes draws pay the maximum to chase you.',
+        correct: 'Right. A large ¾-pot bet makes draws pay the maximum to chase you.',
         incorrect: 'On a wet, draw-heavy board a small bet lets draws continue cheaply. Size up.',
         hints: [
           'Wet boards have many draws; you want them to pay to continue.',
           'Bigger bets charge draws more.',
           'Pick the largest of the three sizings here (¾ pot).',
         ],
-        why: 'On a soaked 9-8-7 board, opponents often hold straight and flush draws. A **large (¾-pot)** bet makes those draws pay a bad price to chase and builds the pot with your strong hand; a small bet lets them continue cheaply. The principle: small on dry boards, **big on wet boards** — sizing to the board, not announcing your exact hand.',
+        why: 'On a soaked 9-8-7 board, opponents often hold straight and flush draws. A **large (¾-pot)** bet makes those draws pay a bad price to chase and builds the pot with your strong hand; a small bet lets them continue cheaply. The principle: small on dry boards, **big on wet boards**: size to the board, not announcing your exact hand.',
       },
     },
   ],

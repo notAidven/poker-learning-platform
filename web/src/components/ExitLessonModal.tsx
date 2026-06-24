@@ -15,7 +15,7 @@ export function ExitLessonModal({
   onStay,
   onExit,
   title = 'Leave this lesson?',
-  description = 'Your progress is saved — you can pick up right where you left off anytime.',
+  description = 'Your progress is saved. You can pick up right where you left off anytime.',
   stayLabel = 'Stay',
   exitLabel = 'Leave',
 }: ExitLessonModalProps) {

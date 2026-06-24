@@ -63,7 +63,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </div>
           <h1 className="text-xl font-bold text-slate-900">Something went wrong</h1>
           <p className="mt-2 text-sm text-slate-600">
-            This screen hit an unexpected error. Your progress is saved — reloading usually fixes it.
+            This screen hit an unexpected error. Your progress is saved, and reloading usually fixes it.
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button

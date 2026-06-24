@@ -1,11 +1,11 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 7 — "Expected Value (EV)" (Section 3 · The Math).
+ * Lesson 7: "Expected Value (EV)" (Section 3 · The Math).
  *
  * EV of a call = p·(chips won) − (1−p)·(chips called); positive → call, negative →
  * fold. This is the same break-even as pot odds (Lesson 6), now in chips. Then the
- * idea of **fold equity** — a bet can win two ways (best hand OR everyone folds),
+ * idea of **fold equity**: a bet can win two ways (best hand OR everyone folds),
  * which makes a semibluff profitable. Built on the `betting-round` widget:
  * `ev-of-call` grades the entered EV (the widget recovers equity from it), and
  * `choose-action` grades the action.
@@ -31,7 +31,7 @@ $$\\text{EV} = p \\cdot (\\text{chips you win}) - (1 - p) \\cdot (\\text{chips y
 
 where $p$ is your equity (your chance to win). If EV is **positive**, calling makes money over the long run; if it is **negative**, fold.
 
-This is the same break-even as **pot odds** — just measured in chips instead of a percent.`,
+This is the same break-even as **pot odds**, just measured in chips instead of a percent.`,
     },
     {
       type: 'problem',
@@ -52,7 +52,7 @@ This is the same break-even as **pot odds** — just measured in chips instead o
       },
       answer: { evChips: 16, evTolerance: 1 },
       feedback: {
-        correct: 'Yes — EV $= 0.30 \\times 100 - 0.70 \\times 20 = +16$ chips. A positive EV means calling profits over time.',
+        correct: 'Yes. EV $= 0.30 \\times 100 - 0.70 \\times 20 = +16$ chips. A positive EV means calling profits over time.',
         incorrect:
           'EV = (win chance) × (chips won) − (lose chance) × (chips called). Try $0.30 \\times 100 - 0.70 \\times 20$.',
         hints: [
@@ -60,7 +60,7 @@ This is the same break-even as **pot odds** — just measured in chips instead o
           'EV $= 0.30 \\times 100 - 0.70 \\times 20$.',
           '$0.30 \\times 100 = 30$ and $0.70 \\times 20 = 14$, so EV $= 30 - 14$.',
         ],
-        why: 'The chips you can win are the 100 already in the pot; the chips you risk are the 20 call.\n\n$$\\text{EV} = 0.30 \\times 100 - 0.70 \\times 20 = +16$$\n\nA positive EV means a profitable call — and it matches pot odds: a 20-into-100 call needs only $\\frac{20}{120} \\approx 16.7\\%$, and 30% clears that.',
+        why: 'The chips you can win are the 100 already in the pot; the chips you risk are the 20 call.\n\n$$\\text{EV} = 0.30 \\times 100 - 0.70 \\times 20 = +16$$\n\nA positive EV means a profitable call, and it matches pot odds: a 20-into-100 call needs only $\\frac{20}{120} \\approx 16.7\\%$, and 30% clears that.',
       },
     },
     {
@@ -82,8 +82,8 @@ This is the same break-even as **pot odds** — just measured in chips instead o
       },
       answer: { evChips: -2, evTolerance: 1 },
       feedback: {
-        correct: 'Right — EV $= 0.15 \\times 100 - 0.85 \\times 20 = -2$ chips. A negative EV means you should fold.',
-        incorrect: 'EV $= 0.15 \\times 100 - 0.85 \\times 20$. That comes out below zero — a losing call.',
+        correct: 'Right. EV $= 0.15 \\times 100 - 0.85 \\times 20 = -2$ chips. A negative EV means you should fold.',
+        incorrect: 'EV $= 0.15 \\times 100 - 0.85 \\times 20$. That comes out below zero, a losing call.',
         hints: [
           'You win 100 chips 15% of the time, and lose 20 chips 85% of the time.',
           'EV $= 0.15 \\times 100 - 0.85 \\times 20$.',
@@ -111,7 +111,7 @@ This is the same break-even as **pot odds** — just measured in chips instead o
       },
       answer: { evChips: 10, evTolerance: 1 },
       feedback: {
-        correct: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = +10$ chips — a clearly profitable call.',
+        correct: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = +10$ chips, a clearly profitable call.',
         incorrect: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = 25 - 15 = +10$ chips.',
         hints: [
           'You win 100 chips 25% of the time, and lose 20 chips 75% of the time.',
@@ -127,7 +127,7 @@ This is the same break-even as **pot odds** — just measured in chips instead o
       title: 'Fold equity',
       content: `So far you only win by having the best hand. But when **you** are the one betting, you can also win when **everyone folds**. That extra chance is **fold equity**.
 
-A bet can win **two ways**: opponents fold now, **or** you go on to make the best hand. A **semibluff** — betting a strong draw — uses both: it can take the pot immediately, and if called you still have your outs.
+A bet can win **two ways**: opponents fold now, **or** you go on to make the best hand. A **semibluff** (betting a strong draw) uses both: it can take the pot immediately, and if called you still have your outs.
 
 A bluff only works when your opponent *can* fold. With no fold equity, betting a weak hand just burns chips.`,
     },
@@ -150,15 +150,15 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Yes — **bet** as a semibluff. You can win now if they fold, and you still have your flush outs if they call.',
+        correct: 'Yes. **Bet** as a semibluff. You can win now if they fold, and you still have your flush outs if they call.',
         incorrect:
           'A strong draw with no bet yet is the classic **semibluff**: betting wins two ways (a fold now, or your flush later). Bet.',
         hints: [
           'No bet faces you, so your choices are check or bet.',
-          'You have a strong draw — betting can win the pot two ways.',
+          'You have a strong draw, and betting can win the pot two ways.',
           'Betting a draw like this is called a semibluff.',
         ],
-        why: 'A **semibluff** bet has **fold equity** (opponents may fold now) **plus** your ~35% flush equity if called — two ways to win. That combination makes betting the draw profitable, where betting pure air would not.',
+        why: 'A **semibluff** bet has **fold equity** (opponents may fold now) **plus** your ~35% flush equity if called: two ways to win. That combination makes betting the draw profitable, where betting pure air would not.',
       },
     },
     {
@@ -180,15 +180,15 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
       },
       answer: { action: 'check' },
       feedback: {
-        correct: 'Right — **check**. Against someone who never folds there is no fold equity, so a bluff cannot work; and your hand is too weak to bet for value.',
+        correct: 'Right. **Check**. Against someone who never folds there is no fold equity, so a bluff cannot work; and your hand is too weak to bet for value.',
         incorrect:
-          'A bluff needs fold equity. If the opponent never folds, betting Ace-high only loses chips — **check** and try to win at showdown.',
+          'A bluff needs fold equity. If the opponent never folds, betting Ace-high only loses chips, so **check** and try to win at showdown.',
         hints: [
           'A bluff only works if the opponent can fold.',
           'This opponent never folds, so betting has no fold equity.',
-          'Ace-high is too weak to bet for value — check.',
+          'Ace-high is too weak to bet for value, so check.',
         ],
-        why: 'Betting wins two ways only when fold equity exists. Against a player who **never folds**, the "they fold" path is gone, and Ace-high is too weak to value bet. So a bet has no way to profit — **check** and keep your showdown chance.',
+        why: 'Betting wins two ways only when fold equity exists. Against a player who **never folds**, the "they fold" path is gone, and Ace-high is too weak to value bet. So a bet has no way to profit. **Check** and keep your showdown chance.',
       },
     },
   ],

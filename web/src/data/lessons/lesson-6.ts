@@ -1,13 +1,13 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 6 — "Pot Odds" (Section 3 · The Math).
+ * Lesson 6: "Pot Odds" (Section 3 · The Math).
  *
  * Price a call as required equity = call / (pot + call) (a bigger bet = a worse
  * price), then make the call/fold decision by comparing your equity (from Lesson 5)
  * to that price. All problems reuse the `outs-odds` widget: the required equity is
  * computed by the widget from pot/betToCall, and the decision is graded by comparing
- * the Rule-of-2/4 equity estimate to that price — never hard-coded.
+ * the Rule-of-2/4 equity estimate to that price, never hard-coded.
  *
  * Ratio: 6 problems / 8 steps = 75% interactive. Concepts never run back-to-back.
  * Keep `id: '6'` / export `lesson6`.
@@ -24,7 +24,7 @@ export const lesson6: LessonDefinition = {
 
 $$\\text{required equity} = \\frac{\\text{call}}{\\text{pot} + \\text{call}}$$
 
-The pot here already includes the bet you face. The bigger the bet relative to the pot, the **worse** the price — so a pot-sized bet asks for far more equity than a small one.`,
+The pot here already includes the bet you face. The bigger the bet relative to the pot, the **worse** the price. So a pot-sized bet asks for far more equity than a small one.`,
     },
     {
       type: 'problem',
@@ -43,7 +43,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
       answer: { potOddsPercent: 17 },
       feedback: {
         correct:
-          'Required equity is the call over the pot **after** you call: $\\frac{20}{100 + 20} = \\frac{1}{6} \\approx 16.7\\%$ — round to 17%.',
+          'Required equity is the call over the pot **after** you call: $\\frac{20}{100 + 20} = \\frac{1}{6} \\approx 16.7\\%$, so round to 17%.',
         incorrect:
           'Use $\\frac{\\text{call}}{\\text{pot} + \\text{call}}$. Add your call to the pot in the denominator: $\\frac{20}{100 + 20}$.',
         hints: [
@@ -99,7 +99,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
         correct: 'A pot-sized bet needs **33%**: $\\frac{60}{120 + 60} = \\frac{60}{180} = \\frac13$.',
         incorrect: 'Same formula: $\\frac{60}{120 + 60} = \\frac{60}{180} \\approx 33\\%$.',
         hints: [
-          'The bet is as big as the pot — expect a steep price.',
+          'The bet is as big as the pot, so expect a steep price.',
           '$\\frac{60}{120 + 60} = \\frac{60}{180}$.',
           '$\\frac{60}{180} = \\frac13 \\approx 33\\%$.',
         ],
@@ -133,7 +133,7 @@ That single comparison is the whole decision.`,
       },
       answer: { decision: 'call' },
       feedback: {
-        correct: 'Your ~18% equity clears the ~16.7% you need, so calling is **profitable** — call.',
+        correct: 'Your ~18% equity clears the ~16.7% you need, so calling is **profitable**. Call.',
         incorrect:
           'Compare equity to price: 18% is **greater** than the 16.7% required, so this is a profitable call, not a fold.',
         hints: [
@@ -141,7 +141,7 @@ That single comparison is the whole decision.`,
           'Your flush draw is worth about 18% on the turn (Rule of 2).',
           'Equity 18% > price 16.7% → calling wins money over time.',
         ],
-        why: 'Price $= \\frac{20}{120} \\approx 16.7\\%$; your equity $\\approx 18\\%$ (exactly $\\frac{9}{46} \\approx 19.6\\%$). Since equity > price, the call is **profitable** — call.',
+        why: 'Price $= \\frac{20}{120} \\approx 16.7\\%$; your equity $\\approx 18\\%$ (exactly $\\frac{9}{46} \\approx 19.6\\%$). Since equity > price, the call is **profitable**. Call.',
       },
     },
     {
@@ -168,7 +168,7 @@ That single comparison is the whole decision.`,
           'Your draw is still only about 18% on the turn.',
           'Equity 18% < price 25% → folding loses the least.',
         ],
-        why: 'Same draw, worse price: $\\frac{50}{200} = 25\\%$ required vs only ~18% equity. Equity < price, so calling is **−EV** — fold. The draw did not change; the price did.',
+        why: 'Same draw, worse price: $\\frac{50}{200} = 25\\%$ required vs only ~18% equity. Equity < price, so calling is **−EV**. Fold. The draw did not change; the price did.',
       },
     },
     {

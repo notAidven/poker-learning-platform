@@ -25,7 +25,7 @@ export const skillCheck8: SkillCheckDefinition = {
         task: 'choose-size',
       },
       answer: { sizeFraction: 0.5, sizeTolerance: 0.05 },
-      incorrectFeedback: 'Half-pot is the middle option — half of the 80 already in the pot (40).',
+      incorrectFeedback: 'Half-pot is the middle option: half of the 80 already in the pot (40).',
     },
     {
       id: 'q2',
@@ -64,7 +64,7 @@ export const skillCheck8: SkillCheckDefinition = {
       },
       answer: { action: 'bet' },
       incorrectFeedback:
-        'With a monster and worse hands able to call, bet for value — checking lets them off the hook.',
+        'With a monster and worse hands able to call, bet for value. Checking lets them off the hook.',
     },
   ],
 }

@@ -205,7 +205,7 @@ export function CompareEvents({
       : 'They are equal.'
     : isProbabilistic
       ? `${correctLabel} is more likely.`
-      : `${correctLabel} — correct.`
+      : `${correctLabel}: correct.`
 
   return (
     <div className="space-y-5">

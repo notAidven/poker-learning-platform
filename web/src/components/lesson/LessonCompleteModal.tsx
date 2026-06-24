@@ -69,7 +69,7 @@ export function LessonCompleteModal({ open, onStartSkillCheck, onClose }: Lesson
         </h2>
         <p id="lesson-complete-desc" className="mt-2 text-sm text-slate-600">
           You finished all the steps in this lesson. Next up is a 3-question skill check with no
-          hints — pass 2 of 3 to complete the lesson and unlock the next one.
+          hints. Pass 2 of 3 to complete the lesson and unlock the next one.
         </p>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

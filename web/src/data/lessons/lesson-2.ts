@@ -1,7 +1,7 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 2 — "Hand Rankings" (design doc §6, Lesson 2).
+ * Lesson 2: "Hand Rankings" (design doc §6, Lesson 2).
  *
  * Objectives: rank any hand into the 10 categories, explain why rarer = stronger,
  * and decide which of two hands wins (including kickers). Every hand-ranker problem
@@ -19,9 +19,9 @@ export const lesson2: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'The ranking ladder',
-      content: `Every poker hand falls into one of **ten categories**, and a hand in a higher category *always* beats one in a lower category — whatever cards are inside it.
+      content: `Every poker hand falls into one of **ten categories**. A hand in a higher category *always* beats one in a lower category, no matter the cards inside it.
 
-The ladder below runs from the strongest hand down to the weakest. Anchor the two ends first: a **royal flush is unbeatable**, and **high card is the floor** (the worst possible hand is 7-5-4-3-2). Tap any rung to flip up an example five-card hand.`,
+The ladder below runs from the strongest hand down to the weakest. Start with the two ends: a **royal flush is unbeatable**, and **high card is the floor** (the worst hand is 7-5-4-3-2). Tap any rung to flip up an example five-card hand.`,
     },
     {
       type: 'problem',
@@ -30,7 +30,7 @@ The ladder below runs from the strongest hand down to the weakest. Anchor the tw
       interaction: 'hand-ranking-ladder',
       config: {
         helperText:
-          'Tap a hand to flip up an example. The further up the ladder, the rarer — and stronger — the hand.',
+          'Tap a hand to flip up an example. The further up the ladder, the rarer and stronger the hand.',
       },
       answer: { minExamplesRevealed: 1 },
       feedback: {
@@ -58,7 +58,7 @@ The ladder below runs from the strongest hand down to the weakest. Anchor the tw
       answer: { category: 'flush' },
       feedback: {
         correct: 'Five cards of one suit (and not in sequence) is a **flush**.',
-        incorrect: 'Check the suits — all five cards are hearts, so this is a flush.',
+        incorrect: 'Check the suits: all five cards are hearts, so this is a flush.',
         hints: [
           'Look at the suit of each card.',
           'All five cards are hearts.',
@@ -79,7 +79,7 @@ The ladder below runs from the strongest hand down to the weakest. Anchor the tw
       },
       answer: { category: 'full-house' },
       feedback: {
-        correct: 'Three of a kind **plus** a pair is a **full house** — here, Kings full of Sevens.',
+        correct: 'Three of a kind **plus** a pair is a **full house**: here, Kings full of Sevens.',
         incorrect:
           'There are three Kings *and* two Sevens. Three of a kind plus a pair is a full house, not just three of a kind.',
         hints: [
@@ -105,8 +105,8 @@ The ladder below runs from the strongest hand down to the weakest. Anchor the tw
         correct: 'Full house → flush → straight → two pair → one pair. A higher category always wins.',
         incorrect: 'Not quite. Remember: full house beats flush, and flush beats straight.',
         hints: [
-          '"Full beats Flush" — full house sits above flush.',
-          '"Feeling Flush beats a Straight" — flush sits above straight.',
+          '"Full beats Flush": full house sits above flush.',
+          '"Feeling Flush beats a Straight": flush sits above straight.',
           'Two pair beats one pair, and both sit below a straight.',
         ],
         why: 'By rarity: a full house ($3{,}744$ ways) is rarer than a flush ($5{,}108$), which is rarer than a straight ($10{,}200$), then two pair ($123{,}552$), then one pair ($1{,}098{,}240$). Rarer = stronger.',
@@ -120,10 +120,10 @@ The ladder below runs from the strongest hand down to the weakest. Anchor the tw
 
 Two hooks for the spots beginners miss most:
 
-- **"Full beats Flush"** — a full house outranks a flush.
-- **"Feeling Flush beats a Straight"** — a flush outranks a straight.
+- **"Full beats Flush"**: a full house outranks a flush.
+- **"Feeling Flush beats a Straight"**: a flush outranks a straight.
 
-Fun fact: across **seven** cards, plain *high card* is actually rarer than one pair — with seven cards it is hard **not** to pair up.`,
+Fun fact: across **seven** cards, plain *high card* is actually rarer than one pair. With seven cards it is hard **not** to pair up.`,
     },
     {
       type: 'problem',
@@ -151,7 +151,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
         correct:
           'A straight ($10{,}200$ ways) is dealt about twice as often as a flush ($5{,}108$). Because the flush is **rarer**, it **outranks** the straight.',
         incorrect:
-          "Compare the counts: a straight has $10{,}200$ ways versus the flush's $5{,}108$. The straight is more common — which is exactly why the flush ranks higher.",
+          "Compare the counts: a straight has $10{,}200$ ways versus the flush's $5{,}108$. The straight is more common, which is exactly why the flush ranks higher.",
         hints: [
           'More ways to make a hand means it is more common, and therefore weaker.',
           'Straights: $10{,}200$ ways. Flushes: $5{,}108$ ways.',
@@ -173,7 +173,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
       },
       answer: { category: 'flush', cards: ['AH', 'KH', '9H', '5H', '2H'] },
       feedback: {
-        correct: "Five hearts — that's a flush. Any five cards of one suit will do.",
+        correct: "Five hearts make a flush. Any five cards of one suit will do.",
         incorrect: 'A flush needs **five cards of the same suit**. Tap the five hearts.',
         hints: [
           'A flush is five of one suit.',
@@ -198,7 +198,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
       answer: { more: 'b' },
       feedback: {
         correct: 'Both have a pair of Aces, so the **kicker** decides: a King beats a Queen. A-A-**K** wins.',
-        incorrect: 'The pairs tie (Aces vs Aces), so compare the highest side card — a King beats a Queen.',
+        incorrect: 'The pairs tie (Aces vs Aces), so compare the highest side card: a King beats a Queen.',
         hints: [
           'The pair is identical, so look past it.',
           'Compare the highest card that is not part of the pair.',
@@ -245,7 +245,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
       },
       answer: { cards: ['AH', 'KH', 'QH', '9H', '4H'] },
       feedback: {
-        correct: 'The five hearts make a flush — stronger than the two pair (Kings and Fours). Best five of seven wins.',
+        correct: 'The five hearts make a flush, stronger than the two pair (Kings and Fours). Best five of seven wins.',
         incorrect: 'There is a flush hiding here: five hearts. A flush beats the two pair of Kings and Fours.',
         hints: [
           'Look for five cards of one suit.',

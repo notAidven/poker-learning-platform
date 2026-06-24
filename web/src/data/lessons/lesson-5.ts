@@ -1,7 +1,7 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 5 — "Outs & Equity" (Section 3 · The Math).
+ * Lesson 5: "Outs & Equity" (Section 3 · The Math).
  *
  * Count outs (flush draw = 9, open-ended = 8, gutshot = 4) → convert to a rough win
  * chance with the Rule of 2 & 4. Outs are validated by the evaluator (`countOuts`)
@@ -22,7 +22,7 @@ export const lesson5: LessonDefinition = {
       title: 'Outs',
       content: `An **out** is an unseen card that improves your hand.
 
-Say you hold two hearts and two more land on the board — a **flush draw**. A suit has 13 cards and you can already see 4, so the rest are still out there:
+Say you hold two hearts and two more land on the board: a **flush draw**. A suit has 13 cards and you can already see 4, so the rest are still out there:
 
 $$\\text{flush outs} = 13 - 4 = 9$$
 
@@ -31,7 +31,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
     {
       type: 'problem',
       id: 'p1',
-      prompt: 'You hold two hearts and two more land on the flop — a flush draw. How many cards complete your flush?',
+      prompt: 'You hold two hearts and two more land on the flop, a flush draw. How many cards complete your flush?',
       interaction: 'outs-odds',
       config: {
         hole: ['AH', 'KH'],
@@ -55,7 +55,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
     {
       type: 'problem',
       id: 'p2',
-      prompt: 'Your 9-8 sits on a 7-6-2 flop, giving you 9-8-7-6 — an open-ended straight draw. How many cards complete the straight?',
+      prompt: 'Your 9-8 sits on a 7-6-2 flop, giving you 9-8-7-6, an open-ended straight draw. How many cards complete the straight?',
       interaction: 'outs-odds',
       config: {
         hole: ['9C', '8D'],
@@ -68,19 +68,19 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
       feedback: {
         correct:
           'Either end fills it: any **10** (four of them) makes 10-9-8-7-6, any **5** (four) makes 9-8-7-6-5. That is $4 + 4 = 8$ outs.',
-        incorrect: 'An open-ended draw fills at **both** ends — count four 10s plus four 5s.',
+        incorrect: 'An open-ended draw fills at **both** ends, so count four 10s plus four 5s.',
         hints: [
           'You already have four in a row: 9-8-7-6.',
           'A card at either end completes the straight.',
           'Four 10s on top + four 5s on the bottom $= 8$.',
         ],
-        why: 'An **open-ended** straight draw (four in a row, open at both ends) has **8 outs** — four cards complete each end.',
+        why: 'An **open-ended** straight draw (four in a row, open at both ends) has **8 outs**: four cards complete each end.',
       },
     },
     {
       type: 'problem',
       id: 'p3',
-      prompt: 'Same 9-8, but now the flop is 7-5-2: you hold 9-8-7 and 5 — an inside (gutshot) straight draw missing the 6. How many cards complete the straight?',
+      prompt: 'Same 9-8, but now the flop is 7-5-2: you hold 9-8-7 and 5, an inside (gutshot) straight draw missing the 6. How many cards complete the straight?',
       interaction: 'outs-odds',
       config: {
         hole: ['9C', '8D'],
@@ -91,14 +91,14 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
       },
       answer: { outs: 4 },
       feedback: {
-        correct: 'Only a **6** fills the gap (9-8-7-6-5), and there are four of them — **4 outs**.',
-        incorrect: 'A gutshot is missing one middle rank. Only that one rank completes it — count how many of it remain.',
+        correct: 'Only a **6** fills the gap (9-8-7-6-5), and there are four of them: **4 outs**.',
+        incorrect: 'A gutshot is missing one middle rank. Only that one rank completes it, so count how many of it remain.',
         hints: [
-          'You have 9-8-7 and a 5 — what single rank is missing in the middle?',
+          'You have 9-8-7 and a 5. What single rank is missing in the middle?',
           'Only a 6 makes 9-8-7-6-5.',
           'There are four 6s in the deck.',
         ],
-        why: 'A **gutshot** (inside) straight draw needs one specific middle rank, so it has just **4 outs** — half of the open-ended draw\'s 8. Same two cards in your hand; one different board card turns 8 outs into 4.',
+        why: 'A **gutshot** (inside) straight draw needs one specific middle rank, so it has just **4 outs**, half of the open-ended draw\'s 8. Same two cards in your hand; one different board card turns 8 outs into 4.',
       },
     },
     {
@@ -111,12 +111,12 @@ $$\\text{flop: outs} \\times 4 \\qquad\\qquad \\text{turn: outs} \\times 2$$
 
 On the **flop**, two cards are still coming, so multiply by **4**. On the **turn**, only the river is left, so multiply by **2**.
 
-Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your all-in chance), and it **overestimates** with many outs — for 9 or more outs, correct it with $(\\text{outs} \\times 4) - (\\text{outs} - 8)$.`,
+Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your all-in chance), and it **overestimates** with many outs. For 9 or more outs, correct it with $(\\text{outs} \\times 4) - (\\text{outs} - 8)$.`,
     },
     {
       type: 'problem',
       id: 'p4',
-      prompt: 'Back to your flush draw — 9 outs on the flop, two cards still to come. Estimate your chance to complete the flush by the river.',
+      prompt: 'Back to your flush draw: 9 outs on the flop, two cards still to come. Estimate your chance to complete the flush by the river.',
       interaction: 'outs-odds',
       config: {
         hole: ['AH', 'KH'],
@@ -132,7 +132,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
         correct:
           'Rule of 4: $9 \\times 4 = 36\\%$. With many outs that runs a touch high, so the corrected (and exact) value is about **35%**.',
         incorrect:
-          'On the **flop**, two cards are coming — use the Rule of **4**: $9 \\times 4 \\approx 36\\%$ (about 35% after the big-draw correction).',
+          'On the **flop**, two cards are coming, so use the Rule of **4**: $9 \\times 4 \\approx 36\\%$ (about 35% after the big-draw correction).',
         hints: [
           'Two cards to come on the flop means multiply by **4**.',
           '$9 \\times 4 = 36$.',
@@ -144,7 +144,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     {
       type: 'problem',
       id: 'p5',
-      prompt: 'A blank hits the turn — you still hold the 9-out flush draw, but now only the river is left. Estimate your equity now.',
+      prompt: 'A blank hits the turn. You still hold the 9-out flush draw, but now only the river is left. Estimate your equity now.',
       interaction: 'outs-odds',
       config: {
         hole: ['AH', 'KH'],
@@ -158,13 +158,13 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
         correct:
           'Rule of 2: $9 \\times 2 = 18\\%$ (exactly $\\frac{9}{46} \\approx 19.6\\%$). One card to come, so the same draw is worth far less than on the flop.',
         incorrect:
-          'On the **turn**, only the river is left — use the Rule of **2**: $9 \\times 2 = 18\\%$ (exact $\\frac{9}{46} \\approx 19.6\\%$).',
+          'On the **turn**, only the river is left, so use the Rule of **2**: $9 \\times 2 = 18\\%$ (exact $\\frac{9}{46} \\approx 19.6\\%$).',
         hints: [
           'One card to come on the turn means multiply by **2**.',
           '$9 \\times 2 = 18$.',
-          'Exactly $\\frac{9}{46} \\approx 19.6\\%$ — 46 unseen cards remain after the turn.',
+          'Exactly $\\frac{9}{46} \\approx 19.6\\%$. After the turn, 46 unseen cards remain.',
         ],
-        why: 'Only the river is left, so Rule of 2: $9 \\times 2 = 18\\%$. The exact one-card chance is $\\frac{9}{46} \\approx 19.6\\%$. Same draw, much less equity once a street has passed — because you have one shot instead of two.',
+        why: 'Only the river is left, so Rule of 2: $9 \\times 2 = 18\\%$. The exact one-card chance is $\\frac{9}{46} \\approx 19.6\\%$. Same draw, much less equity once a street has passed, because you have one shot instead of two.',
       },
     },
     {

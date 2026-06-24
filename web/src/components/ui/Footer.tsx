@@ -9,7 +9,7 @@ export function Footer({ signedIn }: { signedIn: boolean }) {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-3 text-sm leading-relaxed text-night-800/70">
-            Texas Hold&apos;em you learn by dealing, drawing and betting — six hands-on
+            Texas Hold&apos;em you learn by dealing, drawing and betting. Six hands-on
             lessons with instant feedback.
           </p>
           <p className="mt-3 flex items-center gap-2.5 text-lg leading-none" aria-hidden>

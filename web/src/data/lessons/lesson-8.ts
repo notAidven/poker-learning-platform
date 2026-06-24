@@ -1,7 +1,7 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 8 — "Bet Sizing & Value Betting" (Section 3 · The Math).
+ * Lesson 8: "Bet Sizing & Value Betting" (Section 3 · The Math).
  *
  * Why we bet: value (a strong hand wants worse hands to call) vs a bluff (a weak
  * hand wants better hands to fold), plus thin value, and how big to size to the
@@ -25,7 +25,7 @@ export const lesson8: LessonDefinition = {
 - A **value bet** is a bet with a strong hand, hoping a **worse** hand calls and pays you off.
 - A **bluff** is a bet with a weak hand, hoping a **better** hand folds.
 
-The key test for value: *will worse hands call?* If nothing worse can call — worse hands fold, better hands keep going — a value bet earns nothing, so you check instead.`,
+The key test for value: *will worse hands call?* If nothing worse can call (worse hands fold, better hands keep going), a value bet earns nothing, so you check instead.`,
     },
     {
       type: 'problem',
@@ -46,9 +46,9 @@ The key test for value: *will worse hands call?* If nothing worse can call — w
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Yes — **bet for value**. Worse hands can call, so betting charges them and grows the pot you will usually win.',
+        correct: 'Yes. **Bet for value**. Worse hands can call, so betting charges them and grows the pot you will usually win.',
         incorrect:
-          'With a monster and worse hands able to call, **bet for value** — checking just lets them off the hook.',
+          'With a monster and worse hands able to call, **bet for value**. Checking just lets them off the hook.',
         hints: [
           'No bet faces you, so it is check or bet.',
           'You have a huge hand and worse hands can call.',
@@ -61,7 +61,7 @@ The key test for value: *will worse hands call?* If nothing worse can call — w
       type: 'problem',
       id: 'p2',
       prompt:
-        'You hold top pair, good kicker (A-J on J-8-3) and no one has bet. Many worse hands — a weaker Jack, a pair of 8s, a draw — would call a bet. What is the best action?',
+        'You hold top pair, good kicker (A-J on J-8-3) and no one has bet. Many worse hands (a weaker Jack, a pair of 8s, a draw) would call a bet. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'JC'],
@@ -76,15 +76,15 @@ The key test for value: *will worse hands call?* If nothing worse can call — w
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Right — a **thin value bet**. Top pair is not a monster, but enough worse hands call to make betting profitable.',
+        correct: 'Right. A **thin value bet**. Top pair is not a monster, but enough worse hands call to make betting profitable.',
         incorrect:
-          'Top pair good kicker still beats many hands that will call. That is **thin value** — bet, do not check it down.',
+          'Top pair good kicker still beats many hands that will call. That is **thin value**, so bet, do not check it down.',
         hints: [
           'No bet faces you: check or bet.',
           'Top pair beats weaker Jacks, smaller pairs, and draws that will call.',
           'Betting a good-but-not-great hand for value is called thin value.',
         ],
-        why: '**Thin value** means betting a medium-strength hand because *enough* worse hands still call. Top pair good kicker on J-8-3 beats weaker Jacks, smaller pairs and draws — so a value bet profits on average, even though you are not always ahead.',
+        why: '**Thin value** means betting a medium-strength hand because *enough* worse hands still call. Top pair good kicker on J-8-3 beats weaker Jacks, smaller pairs and draws, so a value bet profits on average, even though you are not always ahead.',
       },
     },
     {
@@ -106,22 +106,22 @@ The key test for value: *will worse hands call?* If nothing worse can call — w
       },
       answer: { action: 'check' },
       feedback: {
-        correct: 'Right — **check**. Nothing worse calls (worse hands fold, better hands continue), so there is no value in betting.',
+        correct: 'Right. **Check**. Nothing worse calls (worse hands fold, better hands continue), so there is no value in betting.',
         incorrect:
-          'A value bet needs worse hands that call. On A-K-9 your pair of Fives is only called by better — so betting for value earns nothing. **Check**.',
+          'A value bet needs worse hands that call. On A-K-9 your pair of Fives is only called by better, so betting for value earns nothing. **Check**.',
         hints: [
           'A value bet only profits if worse hands call.',
           'On A-K-9, what worse hand would call a bet from you?',
-          'Worse hands fold and better hands call — so check.',
+          'Worse hands fold and better hands call, so check.',
         ],
-        why: 'The value test fails here: a pair of Fives on A-K-9 is called only by **better** hands (any Ace, King, Nine, or bigger pair) while worse hands fold. With no worse hands to pay you off, a value bet loses on average — so **check**.',
+        why: 'The value test fails here: a pair of Fives on A-K-9 is called only by **better** hands (any Ace, King, Nine, or bigger pair) while worse hands fold. With no worse hands to pay you off, a value bet loses on average, so **check**.',
       },
     },
     {
       type: 'concept',
       id: 'c2',
       title: 'Sizing to the board',
-      content: `Once you decide to bet, size it to the **board and purpose — not to your hand's strength** (always betting big with big hands gives you away).
+      content: `Once you decide to bet, size it to the **board and purpose, not your hand's strength** (always betting big with big hands gives you away).
 
 - **Small (about ⅓ pot):** dry, disconnected boards where little can call.
 - **Medium (½ pot):** the everyday default.
@@ -133,7 +133,7 @@ Use the **same** sizes for value bets and bluffs so opponents can never read you
       type: 'problem',
       id: 'p4',
       prompt:
-        'Top pair on a K-7-2 board, and you want the everyday default value bet — half the pot. The pot is 60. Which sizing is half the pot?',
+        'Top pair on a K-7-2 board, and you want the everyday default value bet, half the pot. The pot is 60. Which sizing is half the pot?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'KD'],
@@ -148,10 +148,10 @@ Use the **same** sizes for value bets and bluffs so opponents can never read you
       },
       answer: { sizeFraction: 0.5, sizeTolerance: 0.05 },
       feedback: {
-        correct: 'Half of a 60-chip pot is 30 — the everyday default value size.',
+        correct: 'Half of a 60-chip pot is 30, the everyday default value size.',
         incorrect: 'Half-pot is the middle option: half of the 60 already in the middle (30).',
         hints: ['The pot is 60.', 'Half of the pot is the middle option.', 'Half-pot is the default value size.'],
-        why: '**Half-pot** is the reliable default — into 60 you bet 30. It gets called by worse hands and charges draws, without over-committing.',
+        why: '**Half-pot** is the reliable default: into 60 you bet 30. It gets called by worse hands and charges draws, without over-committing.',
       },
     },
     {
@@ -173,7 +173,7 @@ Use the **same** sizes for value bets and bluffs so opponents can never read you
       },
       answer: { sizeFraction: 0.75, sizeTolerance: 0.05 },
       feedback: {
-        correct: 'Right — a large ¾-pot bet makes the draws pay the maximum to chase you.',
+        correct: 'Right. A large ¾-pot bet makes the draws pay the maximum to chase you.',
         incorrect: 'On a wet, draw-heavy board, size up so draws pay a bad price. Pick the largest option (¾ pot).',
         hints: [
           'Wet boards are full of draws you want to charge.',
@@ -187,7 +187,7 @@ Use the **same** sizes for value bets and bluffs so opponents can never read you
       type: 'problem',
       id: 'p6',
       prompt:
-        'Top pair on a very dry, disconnected Q-8-3 rainbow board — little can call, so a small bet does the job. The pot is 60. Which is the small, ⅓-pot bet?',
+        'Top pair on a very dry, disconnected Q-8-3 rainbow board where little can call, so a small bet does the job. The pot is 60. Which is the small, ⅓-pot bet?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'QD'],
@@ -202,11 +202,11 @@ Use the **same** sizes for value bets and bluffs so opponents can never read you
       },
       answer: { sizeFraction: 0.33, sizeTolerance: 0.05 },
       feedback: {
-        correct: 'Right — about ⅓ of the pot (20 into 60). On a dry board a small bet is plenty.',
+        correct: 'Right. About ⅓ of the pot (20 into 60). On a dry board a small bet is plenty.',
         incorrect: 'On a dry, disconnected board a small bet is enough. Pick the smallest option (about ⅓ pot).',
         hints: [
           'Dry boards have few draws and few hands that can call.',
-          'A small bet does the job — pick the smallest option.',
+          'A small bet does the job, so pick the smallest option.',
           'About ⅓ of 60 is 20.',
         ],
         why: 'On a **dry, disconnected** board there is little for opponents to call with, so a **small (⅓-pot)** bet gets thin value and keeps your risk low. Size to the board: small here, big on wet boards.',
