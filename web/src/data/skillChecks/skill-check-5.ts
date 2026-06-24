@@ -7,12 +7,16 @@ export const skillCheck5: SkillCheckDefinition = {
     {
       id: 'q1',
       prompt:
-        'Birthday problem: simulate groups of **23 people** until you see the match rate near 50%, then **enter 23** — the classic threshold group size.',
+        'Birthday problem: simulate small groups, then **enter $|\\Omega|$** — how many equally likely birthdays does one person have (ignore leap years)?',
       interaction: 'birthday-simulation',
-      config: { people: 23, minTrials: 8 },
-      answer: { count: 23 },
+      config: {
+        people: 10,
+        minTrials: 8,
+        countLabel: 'How many day-of-year slots does one person have? Enter |Ω|.',
+      },
+      answer: { count: 365 },
       incorrectFeedback:
-        'With 23 people, a shared birthday becomes more likely than not — enter **23**.',
+        'One person has one of **365** equally likely birthdays, so $|\\Omega| = 365$.',
     },
     {
       id: 'q2',
@@ -22,7 +26,7 @@ export const skillCheck5: SkillCheckDefinition = {
       config: { labels: ['A', 'B', 'C'] },
       answer: { derangementCount: 2 },
       incorrectFeedback:
-        'Only BCA and CAB work — there are **2** derangements. Enter $D_3 = 2$.',
+        'Only BCA and CAB leave every letter wrong — there are **2** derangements. Enter $D_3 = 2$.',
     },
     {
       id: 'q3',

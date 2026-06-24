@@ -62,38 +62,42 @@ With **10 people**, you compare many birthdays at once — matches become likely
       type: 'problem',
       id: 'p2',
       prompt:
-        'Now simulate **23 people** per trial. Run at least **20 trials** and note the match rate near 50%. Then **enter $23$** — the classic group size where a shared birthday becomes more likely than not.',
+        'Now simulate **23 people** per trial. Run at least **20 trials** and watch the match rate hover near 50%. The surprise comes from **pairs** — every two people are one chance to match. **Enter the number of pairs** among 23 people, $\\binom{23}{2}$.',
       interaction: 'birthday-simulation',
-      config: { people: 23, minTrials: 20 },
-      answer: { count: 23 },
+      config: {
+        people: 23,
+        minTrials: 20,
+        countLabel: 'How many pairs of people can be formed? Enter C(23, 2).',
+      },
+      answer: { count: 253 },
       feedback: {
         correct:
-          'With **23** people, $P(\\text{at least one match}) \\approx 50.7\\%$. The simulation should cluster near half the trials showing a match. Counter-intuitive — but counting $365^n$ outcomes explains it.',
+          '$\\binom{23}{2} = \\frac{23 \\times 22}{2} = 253$ pairs. That is the secret: 23 people *feels* small, but it hides **253** chances for a collision — enough to push the match probability just past half, $P(\\text{match}) \\approx 50.7\\%$.',
         incorrect:
-          'Run 20+ trials with 23 people, observe ~50% match rate, then enter the group size **23**.',
+          'Count **pairs**, not people. Use a combination: $\\binom{23}{2} = \\frac{23 \\times 22}{2} = 253$.',
         hints: [
-          'This trial uses 23 people per group — that is the famous threshold.',
-          'The match rate should be near 50%, much higher than with 10 people.',
-          'Enter **23**.',
+          'Each unordered pair of people is one chance to match — that is a combination $\\binom{n}{2}$.',
+          '$\\binom{23}{2} = \\frac{23 \\times 22}{2}$.',
+          'Enter **253**.',
         ],
         why: `**Event:** “at least one shared birthday” among $n = 23$ people.
 
-For one person, $|\\Omega| = 365$. For 23 people, ordered birthday assignments form a huge sample space ($365^{23}$ outcomes) — but we care whether **some pair** matches.
+For one person, $|\\Omega| = 365$. The reason matches appear so soon is the number of **pairs** we compare:
 
-**Key insight:** with 23 people there are $\\binom{23}{2} = 253$ **pairs** to compare. Each pair has a $\\frac{1}{365}$ chance to share a birthday (rough intuition), and collisions accumulate fast.
+$$\\binom{23}{2} = \\frac{23 \\times 22}{2} = 253.$$
 
-**Classic result:**
+Each of those 253 pairs has roughly a $\\frac{1}{365}$ chance to share a birthday, and the chances accumulate. The exact result is
 
-$$P(\\text{at least one match}) \\approx 50.7\\% \\quad \\text{when } n = 23$$
+$$P(\\text{at least one match}) \\approx 50.7\\% \\quad \\text{when } n = 23,$$
 
-So **23** is the smallest group size where a shared birthday is **more likely than not**. The simulation should show matches in roughly half the trials.`,
+so **23** is the smallest group where a shared birthday is more likely than not. The count $\\binom{23}{2} = 253$ — combinations from the previous lesson — is what makes it work.`,
         venn: {
           type: 'two-events',
           labelA: 'A: ≥1 match',
           labelB: 'B: all distinct',
-          eventOutcomes: ['overlap pairs'],
+          eventOutcomes: ['253 pairs'],
           outcomes: ['no shared days'],
-          caption: 'n = 23 → P(A) ≈ 50.7% (253 pairs to check)',
+          caption: 'n = 23 → C(23,2) = 253 pairs → P(A) ≈ 50.7%',
         },
       },
     },
@@ -101,31 +105,33 @@ So **23** is the smallest group size where a shared birthday is **more likely th
       type: 'problem',
       id: 'p3',
       prompt:
-        'Simulate **30 people**. Run at least **15 trials** — the match rate should be high (~70%). Then **enter $30$** — the group size you just tested.',
+        'Simulate **30 people**. Run at least **15 trials** — the match rate should be high (~70%). **Enter the number of pairs** among 30 people, $\\binom{30}{2}$, and compare it to the 253 pairs you found for 23 people.',
       interaction: 'birthday-simulation',
-      config: { people: 30, minTrials: 15 },
-      answer: { count: 30 },
+      config: {
+        people: 30,
+        minTrials: 15,
+        countLabel: 'How many pairs of people can be formed? Enter C(30, 2).',
+      },
+      answer: { count: 435 },
       feedback: {
         correct:
-          'With 30 people, matches occur in most trials ($P \\approx 71\\%$). The birthday problem shows how **pairwise collisions** grow quickly — not because 30 is large compared to 365, but because there are $\\binom{30}{2} = 435$ pairs to compare.',
+          '$\\binom{30}{2} = \\frac{30 \\times 29}{2} = 435$ pairs — up from 253 at $n = 23$. Those extra chances push the match probability to $P \\approx 71\\%$. The jump is not because 30 is a big fraction of 365; it is the **number of pairs** that grows fast.',
         incorrect:
-          'Run the simulation, then enter the number of people in each trial: **30**.',
+          'Count **pairs**: $\\binom{30}{2} = \\frac{30 \\times 29}{2} = 435$.',
         hints: [
-          'Each trial generates 30 random birthdays.',
-          'You should see matches in most trials.',
-          'Enter **30**.',
+          'Pairs again — use $\\binom{30}{2}$, not 30.',
+          '$\\binom{30}{2} = \\frac{30 \\times 29}{2}$.',
+          'Enter **435**.',
         ],
-        why: `With **$n = 30$** people, pairwise comparisons explode:
+        why: `With **$n = 30$** people, the number of pairs to compare grows:
 
-$$\\binom{30}{2} = \\frac{30 \\times 29}{2} = 435 \\text{ pairs}$$
+$$\\binom{30}{2} = \\frac{30 \\times 29}{2} = 435 \\text{ pairs}.$$
 
-Each pair can potentially share a birthday, so collisions become **very** likely even though 30 is small compared to 365.
+Each pair can share a birthday, so collisions become **very** likely:
 
-**Classic probability:**
+$$P(\\text{at least one match}) \\approx 71\\%.$$
 
-$$P(\\text{at least one match}) \\approx 71\\%$$
-
-The simulation should show matches in most trials. The surprise is not “30 is a big fraction of 365” — it is how many **pairs** you get from a modest group.`,
+Compare to $n = 23$ (253 pairs, ~50.7%): only seven more people add nearly 200 pairs. The surprise is not “30 is a big fraction of 365” — it is how many **pairs** a modest group hides.`,
         venn: {
           type: 'two-events',
           labelA: 'A: ≥1 match',

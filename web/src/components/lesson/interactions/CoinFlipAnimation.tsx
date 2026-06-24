@@ -1,4 +1,5 @@
 import { CheckIcon } from '../../icons'
+import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 
 export function CoinFlipAnimation({
   history,
@@ -15,6 +16,9 @@ export function CoinFlipAnimation({
   onFlip: () => void
   requireBothFaces?: boolean
 }) {
+  const reducedMotion = usePrefersReducedMotion()
+  // When reduced motion is preferred, skip the 3D spin and snap to the result.
+  const animateFlip = flipping && !reducedMotion
   const flips = history.length
   const sawH = history.includes('H')
   const sawT = history.includes('T')
@@ -30,9 +34,9 @@ export function CoinFlipAnimation({
           aria-label="Flip coin"
         >
           <div
-            className={`coin-3d ${flipping ? 'coin-3d--flip' : ''}`}
+            className={`coin-3d ${animateFlip ? 'coin-3d--flip' : ''}`}
             style={
-              flipping
+              animateFlip
                 ? undefined
                 : { transform: showHeads ? 'rotateY(0deg)' : 'rotateY(180deg)' }
             }

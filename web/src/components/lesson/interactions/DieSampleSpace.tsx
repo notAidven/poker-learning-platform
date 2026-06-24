@@ -13,6 +13,17 @@ type DieSampleSpaceProps = InteractionProps & {
   answer: DieSampleSpaceAnswer
 }
 
+/** Cap on the visible roll-history "library" so the row stays tidy on small screens. */
+const MAX_ROLL_HISTORY = 24
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
 export function DieSampleSpace({
   config,
   answer,
@@ -27,6 +38,7 @@ export function DieSampleSpace({
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [rolled, setRolled] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
+  const [rollHistory, setRollHistory] = useState<number[]>([])
   const [countInput, setCountInput] = useState('')
   const [fractionNum, setFractionNum] = useState('')
   const [fractionDen, setFractionDen] = useState('')
@@ -41,16 +53,33 @@ export function DieSampleSpace({
     config.probabilityLabel ?? 'What is P(ω) for one outcome? (fraction)'
   const requiresProbability = answer.probability !== undefined
 
+  function recordRoll(value: number) {
+    setRolled(value)
+    setRollHistory((prev) => [...prev, value].slice(-MAX_ROLL_HISTORY))
+  }
+
   function roll() {
     if (locked || rolling) return
+
+    const draw = () => Math.floor(Math.random() * sides) + 1
+
+    // Reduced motion: skip the tumble (rapid face flashing) and settle immediately,
+    // but still record the outcome into the roll-history library.
+    if (prefersReducedMotion()) {
+      recordRoll(draw())
+      return
+    }
+
     setRolling(true)
     let ticks = 0
     const interval = window.setInterval(() => {
-      setRolled(Math.floor(Math.random() * sides) + 1)
       ticks++
       if (ticks > 10) {
         window.clearInterval(interval)
+        recordRoll(draw())
         setRolling(false)
+      } else {
+        setRolled(draw())
       }
     }, 55)
   }
@@ -95,6 +124,7 @@ export function DieSampleSpace({
     setSolved(false)
     setSelected(new Set())
     setRolled(null)
+    setRollHistory([])
     setCountInput('')
     setFractionNum('')
     setFractionDen('')
@@ -104,6 +134,10 @@ export function DieSampleSpace({
   const countReady = hasValidCountInput(countInput)
   const fractionReady = !requiresProbability || hasValidFractionInput(fractionNum, fractionDen)
   const canSubmit = manipulableReady && countReady && fractionReady && !locked
+
+  const rollCount = rollHistory.length
+  const distinctFaces = new Set(rollHistory).size
+  const lastRoll = rollCount > 0 ? rollHistory[rollCount - 1] : null
 
   return (
     <div className="space-y-5">
@@ -119,6 +153,39 @@ export function DieSampleSpace({
         </button>
       </div>
       <p className="text-center text-xs text-slate-500">Roll the die, then tap faces below</p>
+
+      <p className="sr-only" aria-live="polite">
+        {lastRoll !== null
+          ? `Rolled ${lastRoll}. ${rollCount} ${rollCount === 1 ? 'roll' : 'rolls'} so far; ${distinctFaces} of ${sides} ${distinctFaces === 1 ? 'face' : 'faces'} seen.`
+          : ''}
+      </p>
+
+      {rollCount > 0 && (
+        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span>Rolls so far (building Ω)</span>
+            <span className="tabular-nums normal-case tracking-normal text-slate-400">
+              {rollCount} {rollCount === 1 ? 'roll' : 'rolls'} · {distinctFaces}/{sides} faces seen
+            </span>
+          </div>
+          <div
+            className="flex flex-wrap justify-center gap-2"
+            role="list"
+            aria-label="Roll history — outcomes rolled so far"
+          >
+            {rollHistory.map((value, i) => (
+              <span
+                key={`${i}-${value}`}
+                role="listitem"
+                aria-label={`Roll ${i + 1}: ${value}`}
+                className="anim-pop"
+              >
+                <DieFace value={value} size="sm" />
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="scene-3d flex flex-wrap justify-center gap-3">
         {faces.map((face) => {

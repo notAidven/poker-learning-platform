@@ -89,6 +89,20 @@ export type SampleSpacePickerConfig = {
   listLabel?: string
   /** Show interactive coin flip above the picker (exploration only) */
   showCoinFlip?: boolean
+  /**
+   * Discovery mode: no preset chips. The learner flips the coin and each
+   * distinct outcome auto-populates Ω (duplicates collapse). `options` is
+   * ignored in this mode; Ω is validated against `answer.selected`.
+   */
+  discoverMode?: boolean
+  /** Instruction shown above the discovery sample-space area */
+  discoverHelperText?: string
+  /** Also require entering |Ω|; validated against answer.selected.length */
+  confirmCount?: boolean
+  /** Prompt for the optional |Ω| numeric field (discovery mode) */
+  countLabel?: string
+  /** Submit button label used in discovery mode */
+  lockInLabel?: string
 }
 
 export type SampleSpacePickerAnswer = {
@@ -138,8 +152,21 @@ export type FairnessScaleConfig = {
   countLabel?: string
   /** Require a whole-number percent for one face after bars are fair */
   requireCount?: boolean
-  /** UX mode: tap-to-equalize (default) — no slider */
-  mode?: 'equalize-button'
+  /**
+   * Interaction style (defaults to 'rebalance'):
+   * - 'rebalance': learner drags each face's weight until the die is fair
+   * - 'equalize-button': legacy one-tap "split evenly" (kept backward compatible)
+   * - 'identify': learner reasons about a fixed loaded die (no rebalancing)
+   */
+  mode?: 'rebalance' | 'equalize-button' | 'identify'
+  /** Granularity (0–1) of the rebalance sliders / nudge buttons (default 0.005 = 0.5%) */
+  step?: number
+  /** Helper text above the bars in 'rebalance' mode */
+  rebalanceLabel?: string
+  /** Prompt for the "which face is most likely" sub-task in 'identify' mode */
+  identifyLabel?: string
+  /** Prompt for the P(face) fraction field in 'identify' mode */
+  probabilityLabel?: string
 }
 
 export type FairnessScaleAnswer = {
@@ -147,6 +174,10 @@ export type FairnessScaleAnswer = {
   each: number
   /** Expected whole-number percent for one face (e.g. 17 for 1/6) */
   countAnswer?: number
+  /** 'identify' mode: 1-based index of the most-likely face (defaults to argmax of initialWeights) */
+  mostLikelyFace?: number
+  /** 'identify' mode: expected P(most-likely face) as a reduced fraction */
+  identifyProbability?: FractionProbability
 }
 
 export type FairnessScaleStep = ProblemStepBase & {
@@ -341,6 +372,135 @@ export type VennDiagramStep = ProblemStepBase & {
   answer: VennDiagramAnswer
 }
 
+// --- card deck ---
+export type CardSuit = 'S' | 'H' | 'D' | 'C'
+export type CardRank =
+  | 'A'
+  | '2'
+  | '3'
+  | '4'
+  | '5'
+  | '6'
+  | '7'
+  | '8'
+  | '9'
+  | '10'
+  | 'J'
+  | 'Q'
+  | 'K'
+
+/** A card id is `${rank}${suit}`, e.g. "AS", "10H", "KD", "7C". */
+export type CardId = string
+
+export const DECK_SIZE = 52
+export const CARD_SUITS: CardSuit[] = ['S', 'H', 'D', 'C']
+export const CARD_RANKS: CardRank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+export const RED_SUITS: CardSuit[] = ['H', 'D']
+export const FACE_RANKS: CardRank[] = ['J', 'Q', 'K']
+
+export function isRedSuit(suit: CardSuit): boolean {
+  return suit === 'H' || suit === 'D'
+}
+
+export function cardId(rank: CardRank, suit: CardSuit): CardId {
+  return `${rank}${suit}`
+}
+
+export function parseCardId(id: CardId): { rank: CardRank; suit: CardSuit } {
+  const suit = id.slice(-1) as CardSuit
+  const rank = id.slice(0, -1) as CardRank
+  return { rank, suit }
+}
+
+/** Full 52-card sample space, ordered by suit (♠♥♦♣) then rank (A→K). */
+export function fullDeck(): CardId[] {
+  const out: CardId[] = []
+  for (const suit of CARD_SUITS) for (const rank of CARD_RANKS) out.push(cardId(rank, suit))
+  return out
+}
+
+/** The 13 cards of one suit (A→K). */
+export function cardsBySuit(suit: CardSuit): CardId[] {
+  return CARD_RANKS.map((rank) => cardId(rank, suit))
+}
+
+/** The 4 cards of one rank (♠♥♦♣). */
+export function cardsByRank(rank: CardRank): CardId[] {
+  return CARD_SUITS.map((suit) => cardId(rank, suit))
+}
+
+/** All 26 red cards (hearts + diamonds). */
+export function redCards(): CardId[] {
+  return RED_SUITS.flatMap((suit) => cardsBySuit(suit))
+}
+
+/** All 26 black cards (spades + clubs). */
+export function blackCards(): CardId[] {
+  return CARD_SUITS.filter((suit) => !isRedSuit(suit)).flatMap((suit) => cardsBySuit(suit))
+}
+
+/** All 12 face cards (J, Q, K of every suit). */
+export function faceCards(): CardId[] {
+  return FACE_RANKS.flatMap((rank) => cardsByRank(rank))
+}
+
+const CARD_RANK_NAMES: Record<CardRank, string> = {
+  A: 'Ace',
+  '2': 'Two',
+  '3': 'Three',
+  '4': 'Four',
+  '5': 'Five',
+  '6': 'Six',
+  '7': 'Seven',
+  '8': 'Eight',
+  '9': 'Nine',
+  '10': 'Ten',
+  J: 'Jack',
+  Q: 'Queen',
+  K: 'King',
+}
+
+const CARD_SUIT_NAMES: Record<CardSuit, string> = {
+  S: 'spades',
+  H: 'hearts',
+  D: 'diamonds',
+  C: 'clubs',
+}
+
+/** Human-readable label, e.g. "Ten of hearts" — used for accessibility. */
+export function cardLabel(id: CardId): string {
+  const { rank, suit } = parseCardId(id)
+  return `${CARD_RANK_NAMES[rank]} of ${CARD_SUIT_NAMES[suit]}`
+}
+
+export type CardDeckConfig = {
+  /** Instruction shown above the deck (defaults in widget). */
+  helperText?: string
+  /** Heading for the learner-built "your selection" area. */
+  selectionLabel?: string
+  /** Prompt for the |A| numeric count field. */
+  countLabel?: string
+  /** Prompt for the optional P(event) fraction field. */
+  probabilityLabel?: string
+  /** Play a staggered deal-in animation on mount (default true; auto-disabled for reduced motion). */
+  deal?: boolean
+}
+
+export type CardDeckAnswer = {
+  /** Exact set of card ids that belong to the event A. Ω is always the 52-card deck. */
+  cards: CardId[]
+  /** |A| — when set, the learner must also enter this count. */
+  count?: number
+  /** When set, the learner must also enter P(A) = |A|/52 as a reduced fraction. */
+  probability?: FractionProbability
+}
+
+export type CardDeckStep = ProblemStepBase & {
+  interaction: 'card-deck'
+  config: CardDeckConfig
+  answer: CardDeckAnswer
+}
+
 export type ProblemStep =
   | CoinFlipLabStep
   | SampleSpacePickerStep
@@ -355,6 +515,7 @@ export type ProblemStep =
   | BirthdaySimulationStep
   | DerangementMatchStep
   | VennDiagramStep
+  | CardDeckStep
 
 export type LessonStep = ConceptStep | ProblemStep
 

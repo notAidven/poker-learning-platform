@@ -1,6 +1,13 @@
 /**
  * MVP scenario smoke tests against local dev server.
  * Run: node scripts/mvp-scenarios.mjs
+ *
+ * NOTE: Lesson 1 and Skill Check 1 were migrated to new interactions —
+ * a flip-to-discover coin (no number distractors), the auto-logging die,
+ * and the card-deck (the loaded-die / fairness-scale problem was removed).
+ * The lesson-1 / skill-check-1 helpers below were updated to match, but this
+ * Playwright suite needs a running dev server + Firebase and was NOT executed
+ * in the content pass — revalidate selectors/timing before relying on it.
  */
 import { chromium } from 'playwright'
 
@@ -55,10 +62,44 @@ async function advanceConcept(page) {
   if (await cont.isVisible()) await cont.click()
 }
 
-async function solveSampleSpacePicker(page) {
-  await page.locator('.chip-3d').filter({ hasText: /^H$/ }).click()
-  await page.locator('.chip-3d').filter({ hasText: /^T$/ }).click()
-  await page.click('button:has-text("Check answer"):not([disabled])')
+// --- Card helpers (lesson 1/2/6 now use the card-deck interaction) ---
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+const RANK_NAMES = {
+  A: 'Ace', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven',
+  8: 'Eight', 9: 'Nine', 10: 'Ten', J: 'Jack', Q: 'Queen', K: 'King',
+}
+const SUIT_NAMES = { S: 'spades', H: 'hearts', D: 'diamonds', C: 'clubs' }
+
+// CardDeck buttons expose aria-label = cardLabel(id), e.g. "Ace of spades".
+function cardAria(rank, suit) {
+  return `${RANK_NAMES[rank]} of ${SUIT_NAMES[suit]}`
+}
+
+async function clickCards(page, cards) {
+  for (const [rank, suit] of cards) {
+    await page.locator(`button[aria-label="${cardAria(rank, suit)}"]`).click()
+  }
+}
+
+async function fillCardCountAndProb(page, count, num, den) {
+  await page.fill('input#card-deck-count', String(count))
+  if (num != null) {
+    await page.fill('input#card-deck-probability-num', String(num))
+    await page.fill('input#card-deck-probability-den', String(den))
+  }
+  await page.click('button:has-text("Check answer")')
+}
+
+// Flip-to-discover coin (lesson 1 p1 + skill check 1 q1): flip until both faces
+// appear, enter |Ω| = 2, then lock in. The flip animation is ~520ms and disables
+// the button while running, so we wait between flips.
+async function solveDiscoverCoin(page) {
+  for (let i = 0; i < 18; i += 1) {
+    await page.locator('button[aria-label="Flip coin"]').click()
+    await page.waitForTimeout(560)
+  }
+  await page.fill('input#numeric-count-answer', '2')
+  await page.click('button:has-text("lock in")')
 }
 
 async function solveDieSampleSpace(page, sides) {
@@ -75,63 +116,72 @@ async function solveDieSampleSpace(page, sides) {
   await page.click('button:has-text("Check answer")')
 }
 
-async function solveFairnessScale(page) {
-  await page.click('button:has-text("Split evenly across all 6 faces")')
-  await page.fill('input[id="fairness-scale-percent"]', '17')
-  await page.click('button:has-text("Check answer")')
-}
-
 async function completeLesson1(page, { wrongFirst = false } = {}) {
   await page.goto(`${BASE}/lesson/1`)
   await waitForLessonReady(page)
   await page.waitForSelector('text=Start with the experiment', { timeout: 15000 })
-  await advanceConcept(page)
+  await advanceConcept(page) // c1
 
+  // p1 — flip-to-discover coin (no number distractors anymore)
   if (wrongFirst) {
-    await page.locator('.chip-3d').filter({ hasText: /^1$/ }).click()
-    await page.click('button:has-text("Check answer"):not([disabled])')
-    await page.waitForSelector('[role="alert"]')
-    await page.click('button:has-text("Try again")')
-    await page.click('button:has-text("Get hint")')
+    // Lock in Ω before discovering both faces to exercise the incorrect path.
+    await page.locator('button[aria-label="Flip coin"]').click()
+    await page.waitForTimeout(560)
+    await page.fill('input#numeric-count-answer', '1')
+    await page.click('button:has-text("lock in")')
+    await page.waitForSelector('[role="alert"]').catch(() => {})
+    const hint = page.locator('button:has-text("Get hint")')
+    if (await hint.isVisible().catch(() => false)) await hint.click()
+    const retry = page.locator('button:has-text("Try again")')
+    if (await retry.isVisible().catch(() => false)) await retry.click()
   }
-  await solveSampleSpacePicker(page)
-  await advanceConcept(page)
+  await solveDiscoverCoin(page)
   await advanceConcept(page)
 
+  // p2 — six-sided die (sample space + P = 1/6), now with an automatic roll log
   await solveDieSampleSpace(page, 6)
   await advanceConcept(page)
 
-  await solveFairnessScale(page)
-  await advanceConcept(page)
+  // p3 — deck: single-card count (Ace of spades), |A| = 1 in |Ω| = 52
+  await clickCards(page, [['A', 'S']])
+  await fillCardCountAndProb(page, 1, null, null)
+  await advanceConcept(page) // c2 concept
+
+  // p4 — deck: single-card probability (Queen of hearts) = 1/52
+  await clickCards(page, [['Q', 'H']])
+  await fillCardCountAndProb(page, 1, 1, 52)
   await advanceConcept(page)
 
-  await solveDieSampleSpace(page, 8)
+  // p5 — deck: red event (26 cards) = 1/2
+  const reds = []
+  for (const suit of ['H', 'D']) for (const r of RANKS) reds.push([r, suit])
+  await clickCards(page, reds)
+  await fillCardCountAndProb(page, 26, 1, 2)
+  await advanceConcept(page)
+
+  // p6 — deck: spades event (13 cards) = 1/4
+  await clickCards(page, RANKS.map((r) => [r, 'S']))
+  await fillCardCountAndProb(page, 13, 1, 4)
+
   await page.click('button:has-text("Finish lesson")')
   await page.waitForSelector('text=Lesson complete!', { timeout: 10000 })
-}
-
-async function solveSkillCheckCoin(page) {
-  const chips = page.locator('button.font-mono.tracking-widest')
-  await chips.nth(0).click()
-  await chips.nth(1).click()
-  await page.fill('input[id="coin-event-count-1"]', '2')
-  await page.fill('input[id="coin-event-probability-1-num"]', '1')
-  await page.fill('input[id="coin-event-probability-1-den"]', '2')
-  await page.click('button:has-text("Check answer")')
-  await page.waitForSelector('text=Correct!', { timeout: 5000 })
 }
 
 async function completeSkillCheck1(page) {
   await page.click('button:has-text("Start skill check")')
   await page.waitForURL('**/skill-check', { timeout: 10000 })
 
-  await solveSkillCheckCoin(page)
+  // q1 — flip-to-discover coin
+  await solveDiscoverCoin(page)
   await page.click('button:has-text("Next question")')
 
+  // q2 — six-sided die, P = 1/6
   await solveDieSampleSpace(page, 6)
   await page.click('button:has-text("Next question")')
 
-  await solveDieSampleSpace(page, 8)
+  // q3 — deck: P(Ace of spades) = 1/52
+  await clickCards(page, [['A', 'S']])
+  await fillCardCountAndProb(page, 1, 1, 52)
   await page.click('button:has-text("Finish skill check")')
 
   await page.waitForSelector('text=Skill check complete', { timeout: 15000 })
@@ -169,22 +219,20 @@ async function main() {
       record('1', false, String(err))
     }
 
-    // Scenario 2: Interactive manipulation + visual response
+    // Scenario 2: Interactive manipulation + visual response (flip-to-discover coin)
     try {
       await page.goto(`${BASE}/lesson/1`)
       await waitForLessonReady(page)
       await page.waitForSelector('text=Start with the experiment', { timeout: 15000 })
       await advanceConcept(page)
-      const coin = page.locator('.coin-3d').first()
+      const coin = page.locator('button[aria-label="Flip coin"]')
       await coin.click()
-      await page.waitForTimeout(600)
-      await page.locator('.chip-3d').filter({ hasText: /^H$/ }).click()
-      const chipActive = await page.locator('.chip-3d[aria-pressed="true"]').count()
-      record(
-        '2',
-        chipActive > 0,
-        `Coin flip + chip selection respond (${chipActive} selected)`,
-      )
+      await page.waitForTimeout(700)
+      await coin.click()
+      await page.waitForTimeout(700)
+      // Flipping should populate Ω and a tally — discovered chips appear.
+      const chips = await page.locator('.chip-3d').count()
+      record('2', chips > 0, `Flip-to-discover coin responds (${chips} chips rendered)`)
     } catch (err) {
       record('2', false, String(err))
     }

@@ -1,4 +1,7 @@
+import { cardsByRank } from '../../types/lesson'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
+
+const aceOrKing = [...cardsByRank('A'), ...cardsByRank('K')]
 
 export const skillCheck6: SkillCheckDefinition = {
   lessonId: '6',
@@ -38,17 +41,17 @@ export const skillCheck6: SkillCheckDefinition = {
     {
       id: 'q3',
       prompt:
-        '$|A| = 12$, $|B| = 10$, $|A \\cap B| = 4$. **Select every region** that belongs to $A \\cup B$ (union).',
-      interaction: 'venn-diagram',
+        'Draw one card ($|\\Omega| = 52$). **Event:** the card is an **Ace or a King**. Tap every card in $A \\cup B$, enter $|A \\cup B|$, then enter $P(A \\cup B)$ as a reduced fraction.',
+      interaction: 'card-deck',
       config: {
-        sizeA: 12,
-        sizeB: 10,
-        intersection: 4,
-        task: 'select-union',
+        helperText: 'Tap every Ace and every King. No card is both, so the sets do not overlap.',
+        selectionLabel: 'Your selection (Aces ∪ Kings)',
+        countLabel: 'How many cards are Aces or Kings? Enter |A ∪ B|.',
+        probabilityLabel: 'What is P(A ∪ B) = |A ∪ B| / 52 as a reduced fraction?',
       },
-      answer: { selectedRegions: ['aOnly', 'bOnly', 'ab'] },
+      answer: { cards: aceOrKing, count: 8, probability: { num: 2, den: 13 } },
       incorrectFeedback:
-        'Union = A-only + B-only + overlap — select all three regions (not outside the circles).',
+        'Aces and Kings are disjoint, so $|A \\cup B| = 4 + 4 = 8$ and $P = \\frac{8}{52} = \\frac{2}{13}$.',
     },
   ],
 }

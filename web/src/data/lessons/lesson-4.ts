@@ -16,7 +16,9 @@ When order **does** matter, use permutations ($n!$). When it **does not**, count
 
 $$\\binom{n}{k} = \\frac{n!}{k!(n-k)!}$$
 
-Read $\\binom{n}{k}$ as “$n$ choose $k$.”`,
+Read $\\binom{n}{k}$ as “$n$ choose $k$.”
+
+**Cards are the classic example.** A 5-card poker hand is a choice of 5 cards from 52, order ignored, so the number of possible hands is $\\binom{52}{5} = 2{,}598{,}960$. That single count is why poker odds work the way they do.`,
       visual: {
         type: 'sample-space',
         labelOmega: 'Ω (pick 2 of A, B, C)',
@@ -212,7 +214,7 @@ Binomial counting gives the numerator; $2^n$ gives the denominator.`,
       type: 'problem',
       id: 'p5',
       prompt:
-        'A exam has **7 questions**; you must **answer 4**. Order of answers does not matter. Select 4 questions in the widget, then **enter $\\binom{7}{4}$**.',
+        'An exam has **7 questions**; you must **answer 4**. Order of answers does not matter. Select 4 questions in the widget, then **enter $\\binom{7}{4}$**.',
       interaction: 'select-combination',
       config: {
         items: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7'],

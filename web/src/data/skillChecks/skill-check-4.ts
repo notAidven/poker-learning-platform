@@ -2,7 +2,6 @@ import { coinPatterns, countHeads } from '../../types/lesson'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 
 const exactlyTwoHeadsFour = coinPatterns(4).filter((p) => countHeads(p) === 2)
-const exactlyTwoHeadsThree = coinPatterns(3).filter((p) => countHeads(p) === 2)
 
 export const skillCheck4: SkillCheckDefinition = {
   lessonId: '4',
@@ -33,21 +32,20 @@ export const skillCheck4: SkillCheckDefinition = {
       },
       answer: { patterns: exactlyTwoHeadsFour, count: 6 },
       incorrectFeedback:
-        'Select all patterns with exactly 2 H’s — there are $\\binom{4}{2} = 6$ — then enter $|A| = 6$.',
+        'Choose which 2 of the 4 flips are heads: $\\binom{4}{2} = 6$ patterns, so $|A| = 6$.',
     },
     {
       id: 'q3',
       prompt:
-        'Flip **3 fair coins**. **Event $A$:** exactly **2 heads**. Select every pattern in $A$, then **enter $|A|$** ($|\\Omega| = 8$).',
-      interaction: 'coin-event-grid',
+        'An exam has **7 questions**; you must **answer 4** (order does not matter). Select any 4, then **enter $\\binom{7}{4}$**.',
+      interaction: 'select-combination',
       config: {
-        coins: 3,
-        maxHeads: 3,
-        countLabel: 'Enter |A| — patterns with exactly 2 heads?',
+        items: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7'],
+        selectCount: 4,
       },
-      answer: { patterns: exactlyTwoHeadsThree, count: 3 },
+      answer: { combinationCount: 35 },
       incorrectFeedback:
-        'Patterns with exactly 2 H’s: HHT, HTH, THH — enter $|A| = 3$, so $P(A) = \\frac{3}{8}$.',
+        'Choosing 4 to answer = choosing 3 to skip: $\\binom{7}{4} = \\binom{7}{3} = 35$.',
     },
   ],
 }

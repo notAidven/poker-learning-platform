@@ -5,6 +5,9 @@ import type { InteractionProps } from './interactions/types'
 const BirthdaySimulation = lazy(() =>
   import('./interactions/BirthdaySimulation').then((m) => ({ default: m.BirthdaySimulation })),
 )
+const CardDeck = lazy(() =>
+  import('./interactions/CardDeck').then((m) => ({ default: m.CardDeck })),
+)
 const CoinEventGrid = lazy(() =>
   import('./interactions/CoinEventGrid').then((m) => ({ default: m.CoinEventGrid })),
 )
@@ -123,6 +126,9 @@ export function InteractionRenderer({
       break
     case 'venn-diagram':
       interaction = <VennDiagram key={step.id} config={step.config} answer={step.answer} {...props} />
+      break
+    case 'card-deck':
+      interaction = <CardDeck key={step.id} config={step.config} answer={step.answer} {...props} />
       break
     default:
       return null

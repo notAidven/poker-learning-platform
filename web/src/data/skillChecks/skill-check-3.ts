@@ -7,32 +7,7 @@ export const skillCheck3: SkillCheckDefinition = {
     {
       id: 'q1',
       prompt:
-        'Outfit choice: **3 shirts** and **2 pants** (pick one of each). Try combinations, then **enter $|\\Omega|$** using the multiplication principle.',
-      interaction: 'counting-product',
-      config: {
-        stages: [
-          { label: 'Shirt', options: ['Red', 'Blue', 'Green'] },
-          { label: 'Pants', options: ['Khaki', 'Black'] },
-        ],
-        countLabel: 'Enter |Ω| — total outfits (3 × 2)?',
-      },
-      answer: { product: 6 },
-      incorrectFeedback: 'Multiply stage counts: $3 \\times 2 = 6$ outfits in $\\Omega$.',
-    },
-    {
-      id: 'q2',
-      prompt:
-        'Seat **3 distinct guests** (A, B, C) in **3 chairs** where order matters. Seat everyone, then **enter $3!$** — total arrangements.',
-      interaction: 'seat-permutation',
-      config: { guests: ['A', 'B', 'C'] },
-      answer: { totalArrangements: 6 },
-      incorrectFeedback:
-        'Count seatings: $3 \\times 2 \\times 1 = 3! = 6$ total arrangements in $\\Omega$.',
-    },
-    {
-      id: 'q3',
-      prompt:
-        'A meal has **2 appetizers**, **3 entrées**, and **2 desserts** (pick one of each). Build a meal, then **enter the total** using the multiplication principle.',
+        'A meal has **2 appetizers**, **3 entrées**, and **2 desserts** (pick one of each). Build a meal, then **enter $|\\Omega|$** using the multiplication principle.',
       interaction: 'counting-product',
       config: {
         stages: [
@@ -40,10 +15,38 @@ export const skillCheck3: SkillCheckDefinition = {
           { label: 'Entrée', options: ['Pasta', 'Fish', 'Tofu'] },
           { label: 'Dessert', options: ['Cake', 'Fruit'] },
         ],
-        countLabel: 'Enter total meals (2 × 3 × 2)?',
+        countLabel: 'Enter |Ω| — total meals (2 × 3 × 2)?',
       },
       answer: { product: 12 },
-      incorrectFeedback: 'Multiply: $2 \\times 3 \\times 2 = 12$ meals in $\\Omega$.',
+      incorrectFeedback: 'Multiply the stages: $2 \\times 3 \\times 2 = 12$ meals in $\\Omega$.',
+    },
+    {
+      id: 'q2',
+      prompt:
+        'Every card is one **suit** (4 options) and one **rank** (13 options). Pick one of each, then **enter $|\\Omega|$** — the size of a standard deck.',
+      interaction: 'counting-product',
+      config: {
+        stages: [
+          { label: 'Suit', options: ['Spades', 'Hearts', 'Diamonds', 'Clubs'] },
+          {
+            label: 'Rank',
+            options: ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'],
+          },
+        ],
+        countLabel: 'Enter |Ω| — total cards (4 × 13)?',
+      },
+      answer: { product: 52 },
+      incorrectFeedback: 'Each card is one (suit, rank) pair: $4 \\times 13 = 52$.',
+    },
+    {
+      id: 'q3',
+      prompt:
+        'Seat **4 distinct guests** in **4 chairs** where order matters. Seat everyone, then **enter $4!$** — total arrangements.',
+      interaction: 'seat-permutation',
+      config: { guests: ['1', '2', '3', '4'] },
+      answer: { totalArrangements: 24 },
+      incorrectFeedback:
+        'Count seatings: $4 \\times 3 \\times 2 \\times 1 = 4! = 24$ arrangements in $\\Omega$.',
     },
   ],
 }
