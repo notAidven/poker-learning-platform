@@ -12,8 +12,9 @@
 import { geminiProvider } from './gemini'
 import { openaiProvider } from './openai'
 import { anthropicProvider } from './anthropic'
+import { openaiProxyProvider } from './openai-proxy'
 
-export type LLMProviderId = 'gemini' | 'openai' | 'anthropic'
+export type LLMProviderId = 'gemini' | 'openai' | 'anthropic' | 'openai-proxy'
 
 export type LLMProvider = {
   id: LLMProviderId
@@ -36,6 +37,7 @@ const PROVIDERS: Record<LLMProviderId, LLMProvider> = {
   gemini: geminiProvider,
   openai: openaiProvider,
   anthropic: anthropicProvider,
+  'openai-proxy': openaiProxyProvider,
 }
 
 /** Read a string env var, trimmed; non-strings (incl. undefined) become ''. */
@@ -45,16 +47,25 @@ function readEnv(value: unknown): string {
 
 /**
  * Resolve the active provider id:
- *   1. explicit `VITE_LLM_PROVIDER` ('gemini' | 'openai' | 'anthropic') wins;
+ *   1. explicit `VITE_LLM_PROVIDER` ('gemini' | 'openai' | 'anthropic' | 'openai-proxy') wins;
  *   2. else auto-detect: `VITE_OPENAI_API_KEY` -> openai, `VITE_ANTHROPIC_API_KEY` -> anthropic;
  *   3. else default to `gemini` (existing Firebase AI Logic).
+ *
+ * `openai-proxy` is opt-in only (step 1): it routes calls through the secure server
+ * proxy (the `aiChat` callable) and is never auto-selected, so the safe default
+ * (gemini, then rule-based) is unchanged until the flag is explicitly set.
  *
  * Each `import.meta.env.VITE_*` is read via static member access so Vite can inline
  * the value at build time (dynamic indexing would not be statically replaced).
  */
 function selectProviderId(): LLMProviderId {
   const explicit = readEnv(import.meta.env.VITE_LLM_PROVIDER).toLowerCase()
-  if (explicit === 'gemini' || explicit === 'openai' || explicit === 'anthropic') {
+  if (
+    explicit === 'gemini' ||
+    explicit === 'openai' ||
+    explicit === 'anthropic' ||
+    explicit === 'openai-proxy'
+  ) {
     return explicit
   }
   if (readEnv(import.meta.env.VITE_OPENAI_API_KEY)) return 'openai'

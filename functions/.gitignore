@@ -1,0 +1,13 @@
+# Compiled output
+lib/
+
+# Dependencies
+node_modules/
+
+# Firebase / local
+.env
+.env.*
+*.local
+firebase-debug.log
+firebase-debug.*.log
+*.log
