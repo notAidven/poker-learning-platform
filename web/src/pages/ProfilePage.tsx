@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
+import { useBankroll } from '../lib/bankroll'
 import { AnimalAvatar } from '../components/AnimalAvatar'
+import { Chip } from '../components/lesson/interactions/cards/PlayingCardKit'
 import { Button, buttonVariants } from '../components/ui/Button'
 import { NightPanel } from '../components/ui/NightPanel'
 import { StatToken } from '../components/ui/StatToken'
@@ -9,6 +11,7 @@ import { FlameIcon, StarIcon, TrendingUpIcon } from '../components/icons'
 
 export function ProfilePage() {
   const { user, profile, logOut } = useAuth()
+  const { chips: bankroll, granted: bankrollGranted } = useBankroll()
   const totalXp = profile?.totalXp ?? 0
   const levelProgress = getLevelProgress(totalXp)
   const streak = getEffectiveStreak(profile?.streak ?? 0, profile?.lastActivityDate ?? null)
@@ -54,6 +57,16 @@ export function ProfilePage() {
             />
           </div>
         </div>
+
+        {bankrollGranted && (
+          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/10 bg-night-950/40 p-4">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-white/85">
+              <Chip size={18} tone="gold" />
+              Casino bankroll
+            </span>
+            <span className="tnum text-lg font-bold text-gold-300">{bankroll.toLocaleString()}</span>
+          </div>
+        )}
       </NightPanel>
 
       <div className="grid gap-3 sm:grid-cols-2">

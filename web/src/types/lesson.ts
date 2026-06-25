@@ -332,6 +332,10 @@ export type BoardDealerConfig = {
   askBestHandAt?: PokerStreet[]
   /** Label each street with its name as it's revealed (default true). */
   annotateStreets?: boolean
+  /** Show the stacked deck / stock pile (with a remaining-card count) (default true). */
+  showDeck?: boolean
+  /** Show the burn card dealt before the flop, turn, and river (default true). */
+  showBurns?: boolean
   helperText?: string
 }
 

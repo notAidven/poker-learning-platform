@@ -158,6 +158,12 @@ export function clearLocalProgress() {
   try {
     localStorage.removeItem(STATS_KEY)
     localStorage.removeItem(COMPLETED_KEY)
+    // Phase 2 casino tables keep their own "cleared" list + bankroll mirror
+    // outside the XP economy. Drop them too so a different account on this device
+    // can never inherit the previous user's table progress or chips.
+    localStorage.removeItem('cleared-table-ids')
+    localStorage.removeItem('bankroll-chips')
+    localStorage.removeItem('bankroll-granted')
 
     const sessionKeys: string[] = []
     for (let i = 0; i < localStorage.length; i += 1) {

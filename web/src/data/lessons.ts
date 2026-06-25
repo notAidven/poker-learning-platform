@@ -1,7 +1,7 @@
 /** Canonical course path: 8 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
 
-/** The three visually-distinct sections of the learning path. */
-export type SectionId = 'foundations' | 'playing' | 'math'
+/** The visually-distinct sections of the learning path. */
+export type SectionId = 'foundations' | 'playing' | 'math' | 'casino'
 
 export type SectionMeta = {
   id: SectionId
@@ -33,6 +33,12 @@ export const sections: SectionMeta[] = [
     subtitle: 'Outs, pot odds, EV, and bet sizing',
     accent: 'gold',
   },
+  {
+    id: 'casino',
+    title: 'Casino Floor',
+    subtitle: 'Play vs. AI at the felt',
+    accent: 'gold',
+  },
 ]
 
 export function getSection(id: SectionId): SectionMeta {
@@ -45,6 +51,13 @@ export type LessonMeta = {
   section: SectionId
   unit: string
   primaryInteraction: string
+  /**
+   * Path-node kind. Omitted/`'lesson'` is a normal interactive lesson (XP + skill
+   * check). `'ai-table'` is a Phase 2 casino table: it navigates to `/table/:id`,
+   * unlocks via its `TableConfig.prereqId`, and is kept OUT of the lesson XP /
+   * completion math (see CoursePage / HomePage).
+   */
+  kind?: 'lesson' | 'ai-table'
 }
 
 export const lessons: LessonMeta[] = [
@@ -103,5 +116,47 @@ export const lessons: LessonMeta[] = [
     section: 'math',
     unit: 'The Math · Bet sizing',
     primaryInteraction: 'Value bets; size to the board',
+  },
+
+  // --- Casino Floor (Phase 2 AI tables) — ids match data/tables.ts -------------
+  {
+    id: 'tbl-coached-1',
+    title: 'The Kitchen Table',
+    section: 'casino',
+    unit: 'Casino Floor · Coached',
+    primaryInteraction: 'Play a full hand with an AI coach',
+    kind: 'ai-table',
+  },
+  {
+    id: 'tbl-coached-2',
+    title: 'The Card Room',
+    section: 'casino',
+    unit: 'Casino Floor · Coached',
+    primaryInteraction: 'Coached play vs. solid opponents',
+    kind: 'ai-table',
+  },
+  {
+    id: 'tbl-coached-3',
+    title: 'The High Limit Room',
+    section: 'casino',
+    unit: 'Casino Floor · Coached',
+    primaryInteraction: 'Coached play vs. sharp opponents',
+    kind: 'ai-table',
+  },
+  {
+    id: 'tbl-ai-1',
+    title: 'Heads-Up Arena',
+    section: 'casino',
+    unit: 'Casino Floor · AI opponents',
+    primaryInteraction: 'Heads-up duel vs. an AI player',
+    kind: 'ai-table',
+  },
+  {
+    id: 'tbl-ai-2',
+    title: 'The Main Event',
+    section: 'casino',
+    unit: 'Casino Floor · AI opponents',
+    primaryInteraction: 'Four-handed table vs. AI players',
+    kind: 'ai-table',
   },
 ]
