@@ -29,7 +29,7 @@ export const skillCheck2: SkillCheckDefinition = {
       config: {
         mode: 'order-categories',
         categories: ['two-pair', 'flush', 'full-house', 'straight'],
-        helperText: 'Use the arrows to reorder.',
+        helperText: 'Drag the rows to reorder, strongest at the top.',
       },
       answer: { categoryOrder: ['full-house', 'flush', 'straight', 'two-pair'] },
       incorrectFeedback:

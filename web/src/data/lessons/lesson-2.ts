@@ -21,7 +21,7 @@ export const lesson2: LessonDefinition = {
       title: 'The ranking ladder',
       content: `Every poker hand falls into one of **ten categories**. A hand in a higher category *always* beats one in a lower category, no matter the cards inside it.
 
-The ladder below runs from the strongest hand down to the weakest. Start with the two ends: a **royal flush is unbeatable**, and **high card is the floor** (the worst hand is 7-5-4-3-2). Tap any rung to flip up an example five-card hand.`,
+The ladder below runs from the strongest hand down to the weakest. Start with the two ends: a **royal flush is unbeatable**, and **high card is the floor** (the worst hand is 7-5-4-3-2). Each rung shows an example five-card hand.`,
     },
     {
       type: 'problem',
@@ -30,15 +30,15 @@ The ladder below runs from the strongest hand down to the weakest. Start with th
       interaction: 'hand-ranking-ladder',
       config: {
         helperText:
-          'Tap a hand to flip up an example. The further up the ladder, the rarer and stronger the hand.',
+          'Each rank shows an example hand. The further up the ladder, the rarer and stronger the hand.',
       },
       answer: { minExamplesRevealed: 1 },
       feedback: {
         correct:
           'A higher category always beats a lower one: a royal flush can’t lose, and high card is the floor.',
-        incorrect: 'Tap any hand on the ladder to reveal its example cards.',
+        incorrect: 'Each hand on the ladder shows its example cards.',
         hints: [
-          'Tap a row to flip up an example five-card hand.',
+          'Each row shows an example five-card hand.',
           'The ladder runs strongest (top) to weakest (bottom).',
           'A higher category always beats a lower category, whatever the kickers.',
         ],
@@ -98,7 +98,7 @@ The ladder below runs from the strongest hand down to the weakest. Start with th
       config: {
         mode: 'order-categories',
         categories: ['straight', 'full-house', 'two-pair', 'flush', 'pair'],
-        helperText: 'Use the arrows to move each row up or down.',
+        helperText: 'Drag the rows to order the categories, strongest at the top.',
       },
       answer: { categoryOrder: ['full-house', 'flush', 'straight', 'two-pair', 'pair'] },
       feedback: {
@@ -214,7 +214,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
       interaction: 'hand-ranker',
       config: {
         mode: 'order-hands',
-        helperText: 'Name each hand, then use the arrows to order them.',
+        helperText: 'Name each hand, then drag the rows to order them.',
         hands: [
           { id: 'h-straight', cards: ['9C', '8D', '7H', '6S', '5C'] },
           { id: 'h-twopair', cards: ['KS', 'KD', '7C', '7H', '2S'] },
