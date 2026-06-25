@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
 import { AnimalAvatar } from '../components/AnimalAvatar'
+import { SetPasswordCard } from '../components/SetPasswordCard'
 import { Button, buttonVariants } from '../components/ui/Button'
 import { NightPanel } from '../components/ui/NightPanel'
 import { StatToken } from '../components/ui/StatToken'
@@ -55,6 +56,8 @@ export function ProfilePage() {
           </div>
         </div>
       </NightPanel>
+
+      <SetPasswordCard />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link to="/course" className={buttonVariants({ variant: 'primary', size: 'lg', className: 'w-full' })}>

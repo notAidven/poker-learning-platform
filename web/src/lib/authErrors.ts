@@ -18,9 +18,19 @@ export function getAuthErrorMessage(error: unknown): string {
     case 'auth/too-many-requests':
       return 'Too many attempts. Try again later.'
     case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
       return 'Sign-in was cancelled.'
     case 'auth/popup-blocked':
       return 'Pop-up was blocked. Allow pop-ups and try again.'
+    // --- Linking an email/password credential to an existing account ---------
+    case 'auth/provider-already-linked':
+      return 'A password is already set for this account.'
+    case 'auth/credential-already-in-use':
+      return 'That email and password are already linked to another account.'
+    case 'auth/account-exists-with-different-credential':
+      return 'This email is already registered with a different sign-in method. Sign in with that method, then set a password from your profile.'
+    case 'auth/requires-recent-login':
+      return 'Please confirm it\u2019s you and try again.'
     default:
       // A coded error we don't explicitly map (an unexpected Firebase Auth or
       // Firestore code) must NOT surface its raw "Firebase: Error (...)" string:
