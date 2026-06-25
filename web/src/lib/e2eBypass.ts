@@ -14,7 +14,7 @@ export const E2E_BYPASS_AUTH =
 export const E2E_MOCK_PROFILE: UserProfile = {
   profileComplete: true,
   username: 'e2e_tester',
-  profileAnimal: 'fox' as ProfileAnimalId,
+  profileAnimal: 'spade' as ProfileAnimalId,
   email: 'e2e@test.local',
   level: 1,
   totalXp: 0,

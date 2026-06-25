@@ -11,8 +11,9 @@ import type { LessonDefinition } from '../../types/lesson'
  * (Lesson 7), so this lesson never teaches sizing strategy or forward-references
  * pot odds.
  *
- * Ratio: 6 problems / 8 steps = 75% interactive. Concepts never run back-to-back.
- * Money is written as plain chip counts so prose can reserve `$…$` for KaTeX.
+ * Ratio: 6 problems / 9 steps = 67% interactive. Concepts never run back-to-back.
+ * Money is written as plain chip counts so prose can reserve `$…$` for KaTeX; the
+ * chip-denominations page renders its dollar values in a self-contained visual.
  * Keep `id: '4'` / export `lesson4`.
  */
 export const lesson4: LessonDefinition = {
@@ -122,6 +123,18 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
         ],
         why: 'A **call** simply matches the bet to stay in. With a strong draw and a small price, calling lets you continue toward your flush without bloating the pot. Folding gives up a great draw, and raising risks chips with a hand that still has to improve. (Exactly *when* a draw is worth the price is the pot-odds math coming up in The Math.)',
       },
+    },
+    {
+      type: 'concept',
+      id: 'c3',
+      title: 'What the chips are worth',
+      content: `Every bet, call, and raise is made with **chips**, and each color stands for a fixed dollar value. Knowing the colors lets you size a bet and read the **pot** at a glance.
+
+- **white** is worth 1, **red** is 5, and **green** is 25
+- **black** is 100 and **purple** is 500 (bigger games add an **orange** 1000)
+
+You will not be quizzed on these, but the standard colors below are the ones you will meet at almost any table.`,
+      visual: 'chip-denominations',
     },
     {
       type: 'problem',

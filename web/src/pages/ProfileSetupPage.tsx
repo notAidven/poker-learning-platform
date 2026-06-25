@@ -16,7 +16,7 @@ export function ProfileSetupPage() {
   const navigate = useNavigate()
   const { user, refreshProfile } = useAuth()
   const [username, setUsername] = useState('')
-  const [animal, setAnimal] = useState<ProfileAnimalId | null>(null)
+  const [avatar, setAvatar] = useState<ProfileAnimalId | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,8 +30,8 @@ export function ProfileSetupPage() {
       return
     }
 
-    if (!animal) {
-      setError('Choose a profile animal.')
+    if (!avatar) {
+      setError('Choose a profile avatar.')
       return
     }
 
@@ -48,7 +48,7 @@ export function ProfileSetupPage() {
         return
       }
 
-      await completeProfileSetup(user.uid, user.email, username, animal)
+      await completeProfileSetup(user.uid, user.email, username, avatar)
       await refreshProfile()
       navigate('/')
     } catch (err) {
@@ -82,10 +82,10 @@ export function ProfileSetupPage() {
         />
 
         <fieldset>
-          <legend className="text-sm font-medium text-slate-700">Profile animal</legend>
+          <legend className="text-sm font-medium text-slate-700">Profile avatar</legend>
           <p className="mt-0.5 text-xs text-slate-500">This shows up next to your name.</p>
           <div className="mt-3">
-            <AnimalPicker value={animal} onChange={setAnimal} />
+            <AnimalPicker value={avatar} onChange={setAvatar} />
           </div>
         </fieldset>
 

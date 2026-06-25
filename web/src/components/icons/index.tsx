@@ -17,15 +17,14 @@ import type { SVGProps } from 'react'
 export type IconProps = SVGProps<SVGSVGElement>
 
 export {
-  FoxIcon,
-  OwlIcon,
-  BearIcon,
-  CatIcon,
-  DogIcon,
-  RabbitIcon,
-  PandaIcon,
-  FrogIcon,
-  PawIcon,
+  SpadeSuitIcon,
+  HeartSuitIcon,
+  DiamondSuitIcon,
+  ClubSuitIcon,
+  PokerChipIcon,
+  CardPairIcon,
+  DealerButtonIcon,
+  AceCardIcon,
 } from './animals'
 
 const OUTLINE = {

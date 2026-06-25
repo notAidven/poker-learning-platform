@@ -18,9 +18,11 @@ type AnimalAvatarProps = {
 }
 
 /**
- * A profile animal rendered as a tinted chip with its designed icon. The chip
- * derives its background, icon color, and ring from the animal's accent so it
- * stays legible on both light surfaces and the dark "night" panels.
+ * A profile avatar rendered as a tinted chip with its designed poker glyph. The
+ * chip derives its background, icon color, and ring from the avatar's accent so
+ * it stays legible on both light surfaces and the dark "night" panels. (The
+ * component keeps its historical name so the stored `profileAnimal` field and
+ * `firestore.rules` are untouched.)
  */
 export function AnimalAvatar({ id, size = 'md', className }: AnimalAvatarProps) {
   const { accent, Icon } = getAnimalVisual(id)

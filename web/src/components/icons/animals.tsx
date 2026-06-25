@@ -2,17 +2,23 @@ import type { ReactNode } from 'react'
 import type { IconProps } from './index'
 
 /**
- * Profile animal avatars.
+ * Profile avatars (poker themed).
  *
- * A small set of friendly, geometric animal-face glyphs that share the same
- * language as the rest of the icon set: a 24×24 grid, `currentColor`, and a
- * 1.8px round-capped outline with a few solid accents (eyes / noses). Pair
- * them with a tinted chip (see `AnimalAvatar`) for a per-animal color identity.
+ * A small, cohesive set of poker glyphs: the four suits, a poker chip, a pair of
+ * cards, the dealer button, and an ace. They share the same language as the rest
+ * of the icon set: a 24x24 grid, `currentColor`, and a 1.8px round-capped outline
+ * with a few solid accents. Pair them with a tinted chip (see `AnimalAvatar`) for
+ * a per-avatar color identity.
+ *
+ * The exported names keep the icon set's `...Icon` suffix. The data + storage
+ * layer (`data/animals.ts`, the `profileAnimal` Firestore field) keeps its
+ * historical names on purpose so `firestore.rules` is untouched; only the option
+ * ids and art changed from the old animal set.
  */
 
-type AnimalIconBaseProps = IconProps & { children: ReactNode }
+type AvatarIconBaseProps = IconProps & { children: ReactNode }
 
-function AnimalBase({ className = 'h-5 w-5', children, ...props }: AnimalIconBaseProps) {
+function AvatarBase({ className = 'h-5 w-5', children, ...props }: AvatarIconBaseProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -32,134 +38,122 @@ function AnimalBase({ className = 'h-5 w-5', children, ...props }: AnimalIconBas
 
 const SOLID = { fill: 'currentColor', stroke: 'none' } as const
 
-/** Fox — pointed ears, narrow chin. */
-export function FoxIcon(props: IconProps) {
+/** Spade suit — the default avatar. */
+export function SpadeSuitIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <path {...SOLID} d="M4 3.5 9.6 8 6 10.2 Z" />
-      <path {...SOLID} d="M20 3.5 14.4 8 18 10.2 Z" />
-      <path d="M6 8.6c2-1.6 10-1.6 12 0 -.4 5.4-2.9 9.9-6 11.9 -3.1-2-5.6-6.5-6-11.9Z" />
-      <circle {...SOLID} cx="9.5" cy="12.6" r="0.95" />
-      <circle {...SOLID} cx="14.5" cy="12.6" r="0.95" />
-      <path {...SOLID} d="M11 15.4 13 15.4 12 17 Z" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <path
+        {...SOLID}
+        d="M12 3C12 3 5 8.7 5 13.4c0 2.4 1.85 4.3 4.25 4.3 1 0 1.85-.32 2.5-.86-.2 2.05-1.2 3.6-2.85 4.46h6.2c-1.65-.86-2.65-2.41-2.85-4.46.65.54 1.5.86 2.5.86 2.4 0 4.25-1.9 4.25-4.3C19 8.7 12 3 12 3Z"
+      />
+    </AvatarBase>
   )
 }
 
-/** Owl — ear tufts, big round eyes. */
-export function OwlIcon(props: IconProps) {
+/** Heart suit. */
+export function HeartSuitIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <path {...SOLID} d="M6 7.6 8 3.6 10 7.6 Z" />
-      <path {...SOLID} d="M14 7.6 16 3.6 18 7.6 Z" />
-      <ellipse cx="12" cy="13.2" rx="7.4" ry="7" />
-      <circle cx="9.1" cy="12.2" r="2.3" />
-      <circle cx="14.9" cy="12.2" r="2.3" />
-      <circle {...SOLID} cx="9.1" cy="12.2" r="0.95" />
-      <circle {...SOLID} cx="14.9" cy="12.2" r="0.95" />
-      <path {...SOLID} d="M11 14.6 13 14.6 12 16.6 Z" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <path
+        {...SOLID}
+        d="M12 20.6C12 20.6 3.4 14.7 3.4 8.7 3.4 5.9 5.6 3.7 8.4 3.7 10.05 3.7 11.5 4.65 12 5.95 12.5 4.65 13.95 3.7 15.6 3.7 18.4 3.7 20.6 5.9 20.6 8.7 20.6 14.7 12 20.6 12 20.6Z"
+      />
+    </AvatarBase>
   )
 }
 
-/** Bear — round ears, soft snout. */
-export function BearIcon(props: IconProps) {
+/** Diamond suit. */
+export function DiamondSuitIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <circle cx="7" cy="7.4" r="2.4" />
-      <circle cx="17" cy="7.4" r="2.4" />
-      <circle cx="12" cy="13.4" r="7" />
-      <circle {...SOLID} cx="9.6" cy="12.4" r="0.95" />
-      <circle {...SOLID} cx="14.4" cy="12.4" r="0.95" />
-      <ellipse cx="12" cy="16.2" rx="2.7" ry="2" />
-      <circle {...SOLID} cx="12" cy="15.2" r="0.95" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <path {...SOLID} d="M12 2.5 20 12 12 21.5 4 12Z" />
+    </AvatarBase>
   )
 }
 
-/** Cat — pointed ears, whiskers. */
-export function CatIcon(props: IconProps) {
+/** Club suit. */
+export function ClubSuitIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <path d="M6.4 8.8 6 4 10.2 7.2" />
-      <path d="M17.6 8.8 18 4 13.8 7.2" />
-      <circle cx="12" cy="13.6" r="6.4" />
-      <circle {...SOLID} cx="9.6" cy="13" r="0.95" />
-      <circle {...SOLID} cx="14.4" cy="13" r="0.95" />
-      <path {...SOLID} d="M11.2 15.2 12.8 15.2 12 16.3 Z" />
-      <path d="M5 14.6 8.4 15.1M5.2 17 8.5 16.2M19 14.6 15.6 15.1M18.8 17 15.5 16.2" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <g {...SOLID}>
+        <circle cx="12" cy="7.4" r="3.4" />
+        <circle cx="7.6" cy="13" r="3.4" />
+        <circle cx="16.4" cy="13" r="3.4" />
+        <path d="M10.5 12.4C10.5 15.4 9.9 18.7 8.1 21h7.8c-1.8-2.3-2.4-5.6-2.4-8.6Z" />
+      </g>
+    </AvatarBase>
   )
 }
 
-/** Dog — floppy ears, round snout. */
-export function DogIcon(props: IconProps) {
+/** Poker chip. */
+export function PokerChipIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <path {...SOLID} d="M6.6 7.8C3.8 8.3 3.2 12.8 5.2 15.6 6.7 14.4 7.2 11.6 7.6 9.2Z" />
-      <path {...SOLID} d="M17.4 7.8C20.2 8.3 20.8 12.8 18.8 15.6 17.3 14.4 16.8 11.6 16.4 9.2Z" />
-      <path d="M6.6 9C7.8 7.4 9.6 6.6 12 6.6s4.2.8 5.4 2.4c1 1.3 1.4 3.1 1.4 5 0 4.1-3 6.6-6.8 6.6S5.2 18.1 5.2 14c0-1.9.4-3.7 1.4-5Z" />
-      <circle {...SOLID} cx="9.8" cy="12.2" r="0.95" />
-      <circle {...SOLID} cx="14.2" cy="12.2" r="0.95" />
-      <ellipse cx="12" cy="15.8" rx="2.5" ry="2" />
-      <circle {...SOLID} cx="12" cy="14.9" r="0.95" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21" />
+      <path d="M5.64 5.64 8.04 8.04M18.36 5.64 15.96 8.04M5.64 18.36 8.04 15.96M18.36 18.36 15.96 15.96" />
+    </AvatarBase>
   )
 }
 
-/** Rabbit — tall ears. */
-export function RabbitIcon(props: IconProps) {
+/** A pair of cards: a front card with a second peeking behind it. */
+export function CardPairIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <path d="M9.6 11.4C8.4 8.4 8.4 5 9.5 3.2 10.7 5 11 8.4 10.6 11.2Z" />
-      <path d="M14.4 11.4C13.6 8.4 13.4 5 14.5 3.2 15.7 5 15.8 8.4 14.6 11.2Z" />
-      <circle cx="12" cy="15" r="5.1" />
-      <circle {...SOLID} cx="10" cy="14.4" r="0.9" />
-      <circle {...SOLID} cx="14" cy="14.4" r="0.9" />
-      <path {...SOLID} d="M11.3 16.2 12.7 16.2 12 17.2 Z" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <path d="M9 4.6h7.6a1.8 1.8 0 0 1 1.8 1.8V15" />
+      <rect x="5.5" y="7" width="9.5" height="12.6" rx="1.9" />
+      <path
+        {...SOLID}
+        d="M10.25 10.9C10.25 10.9 8.35 12.5 8.35 13.85c0 .66.5 1.18 1.16 1.18.27 0 .5-.09.69-.24-.06.56-.34.98-.79 1.22h1.68c-.45-.24-.73-.66-.79-1.22.19.15.42.24.69.24.66 0 1.16-.52 1.16-1.18C12.15 12.5 10.25 10.9 10.25 10.9Z"
+      />
+    </AvatarBase>
   )
 }
 
-/** Panda — solid ears + eye patches. */
-export function PandaIcon(props: IconProps) {
+/** Dealer button. */
+export function DealerButtonIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <circle {...SOLID} cx="6.6" cy="7.6" r="2.4" />
-      <circle {...SOLID} cx="17.4" cy="7.6" r="2.4" />
-      <circle cx="12" cy="13.4" r="7" />
-      <ellipse {...SOLID} cx="9.2" cy="12.4" rx="1.7" ry="2.2" />
-      <ellipse {...SOLID} cx="14.8" cy="12.4" rx="1.7" ry="2.2" />
-      <circle {...SOLID} cx="12" cy="15.8" r="1.05" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="6.6" strokeWidth={1.2} />
+      <text
+        x="12"
+        y="12.4"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize="8"
+        fontWeight={800}
+        fill="currentColor"
+        stroke="none"
+      >
+        D
+      </text>
+    </AvatarBase>
   )
 }
 
-/** Frog — eyes on top, wide smile. */
-export function FrogIcon(props: IconProps) {
+/** Ace (of spades). */
+export function AceCardIcon(props: IconProps) {
   return (
-    <AnimalBase {...props}>
-      <path d="M5 12c0-2.5 2-3.5 7-3.5s7 1 7 3.5c0 4-3 6.6-7 6.6S5 16 5 12Z" />
-      <circle cx="8.6" cy="7.8" r="2.3" />
-      <circle cx="15.4" cy="7.8" r="2.3" />
-      <circle {...SOLID} cx="8.6" cy="7.8" r="0.95" />
-      <circle {...SOLID} cx="15.4" cy="7.8" r="0.95" />
-      <path d="M8.6 13.4c1.6 2 5.2 2 6.8 0" />
-      <circle {...SOLID} cx="10.8" cy="11.4" r="0.6" />
-      <circle {...SOLID} cx="13.2" cy="11.4" r="0.6" />
-    </AnimalBase>
-  )
-}
-
-/** Paw — neutral fallback when an animal id is unknown. */
-export function PawIcon(props: IconProps) {
-  return (
-    <AnimalBase {...props}>
-      <ellipse {...SOLID} cx="12" cy="15.5" rx="3.6" ry="3" />
-      <circle {...SOLID} cx="7.6" cy="11" r="1.7" />
-      <circle {...SOLID} cx="10.7" cy="8.4" r="1.7" />
-      <circle {...SOLID} cx="13.3" cy="8.4" r="1.7" />
-      <circle {...SOLID} cx="16.4" cy="11" r="1.7" />
-    </AnimalBase>
+    <AvatarBase {...props}>
+      <rect x="5" y="3.4" width="14" height="17.2" rx="2.4" />
+      <path
+        {...SOLID}
+        d="M12 7.6C12 7.6 8.4 10.5 8.4 12.9c0 1.25.96 2.24 2.2 2.24.5 0 .96-.16 1.28-.44-.1 1.05-.62 1.85-1.46 2.3h3.16c-.84-.45-1.36-1.25-1.46-2.3.32.28.78.44 1.28.44 1.24 0 2.2-.99 2.2-2.24C15.6 10.5 12 7.6 12 7.6Z"
+      />
+      <text
+        x="7.4"
+        y="7.6"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize="4.6"
+        fontWeight={800}
+        fill="currentColor"
+        stroke="none"
+      >
+        A
+      </text>
+    </AvatarBase>
   )
 }

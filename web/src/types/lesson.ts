@@ -1,10 +1,19 @@
 import type { BettingAction, HandCategory, PokerStreet } from './poker'
 
+/**
+ * An optional, self-contained illustration rendered under a concept step's
+ * prose (see `ConceptStepView`). Each value maps to one small presentational
+ * component; authors opt in per step without touching the widget.
+ */
+export type ConceptVisual = 'chip-denominations'
+
 export type ConceptStep = {
   type: 'concept'
   id: string
   title?: string
   content: string
+  /** Optional diagram shown beneath the prose for this concept page. */
+  visual?: ConceptVisual
 }
 
 export type ProblemFeedback = {
