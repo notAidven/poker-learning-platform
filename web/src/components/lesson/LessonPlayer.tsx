@@ -207,7 +207,7 @@ export function LessonPlayer({
 
       <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         {isConceptStep(step) && (
-          <ConceptStepView key={step.id} title={step.title} content={step.content} visual={step.visual} />
+          <ConceptStepView key={step.id} title={step.title} content={step.content} />
         )}
 
         {isProblemStep(step) && (

@@ -103,7 +103,6 @@ export function ProblemStepView({
         open={whyOpen}
         onClose={() => setWhyOpen(false)}
         content={whyContent}
-        venn={step.feedback.venn}
       />
 
       {!solved && (

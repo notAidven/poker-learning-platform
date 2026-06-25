@@ -1,14 +1,11 @@
 import { useEffect, useRef } from 'react'
-import type { VennDiagramConfig } from '../../types/lesson'
 import { MathContent } from './MathContent'
-import { VennDiagram } from './VennDiagram'
 
 type WhyExplanationModalProps = {
   open: boolean
   onClose: () => void
   title?: string
   content: string
-  venn?: VennDiagramConfig
 }
 
 export function WhyExplanationModal({
@@ -16,7 +13,6 @@ export function WhyExplanationModal({
   onClose,
   title = 'Why?',
   content,
-  venn,
 }: WhyExplanationModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -97,11 +93,6 @@ export function WhyExplanationModal({
         </div>
 
         <div id="why-modal-desc" className="mt-4 space-y-5">
-          {venn && (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-4">
-              <VennDiagram config={venn} />
-            </div>
-          )}
           <MathContent className="text-sm">{content}</MathContent>
         </div>
 
