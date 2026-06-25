@@ -69,8 +69,8 @@ The player just left of the button posts the **small blind (SB)**. The next play
         incorrect: `Re-read the best 5-card hand at each street, since the same hole cards can make a stronger hand as new community cards arrive.`,
         hints: [
           'Combine your 2 hole cards with the community cards and find the best 5.',
-          'The turn pairs the Kings on the board, so together with your Aces that is two pair.',
-          'A third Ace on the river gives three Aces plus the pair of Kings: a full house.',
+          'The turn pairs the Kings on the board, on top of your pair of Aces.',
+          'A third Ace on the river gives you three Aces alongside the paired Kings.',
         ],
         why: `Your hand is always the strongest 5-card combination of your 2 hole cards and the community cards **right now**. As cards are added you re-evaluate: pair → two pair → full house here. Your hole cards never changed, the board did.`,
       },
@@ -97,7 +97,7 @@ The player just left of the button posts the **small blind (SB)**. The next play
         incorrect: `A flush needs **five** cards of one suit. Four hearts is only a draw; your made hand stays the pair until a fifth heart lands.`,
         hints: [
           'Count the hearts: four is a draw, five is a flush.',
-          'On the flop and turn your best made hand is just the pair of Kings.',
+          'On the flop and turn, four hearts is only a draw, so your best made hand is what you hold apart from it.',
           'The river is a heart, so now you have five of them.',
         ],
         why: `A **draw** is an unfinished hand. With four hearts you have a *flush draw*, but your best **made** hand is still the pair. Only when the fifth heart arrives do you actually hold a flush. Never count a draw as a made hand.`,
@@ -153,8 +153,8 @@ The player just left of the button posts the **small blind (SB)**. The next play
         incorrect: `Post-flop, action starts with the first active player left of the button (often the small blind); the **button acts last**.`,
         hints: [
           'Post-flop order is different from pre-flop.',
-          'Action begins to the left of the button and ends on the button.',
-          'The button is the dealer position, and it always acts last after the flop.',
+          'Action begins to the left of the button and moves clockwise around the table.',
+          'The button is the dealer position; acting later means seeing more before you decide.',
         ],
         why: `Acting later is an information advantage: you watch what opponents do before you decide, so you can value-bet, bluff, or take a free card more effectively. The button acts last on the flop, turn, and river: the best seat at the table.`,
       },
@@ -177,7 +177,7 @@ The player just left of the button posts the **small blind (SB)**. The next play
         hints: [
           'Heads-up means exactly two players.',
           'The usual "small blind = left of the button" rule changes when only two play.',
-          'The button takes the small blind and acts first before the flop.',
+          'Apply the heads-up flip to work out which seat posts the small blind and leads pre-flop.',
         ],
         why: `With two players there is no room for the normal seat order, so the button posts the small blind, acts first pre-flop, and still acts last on every later street. This matters because one-on-one (heads-up) play shows up in later lessons.`,
       },
@@ -233,7 +233,7 @@ If instead **all opponents fold, leaving one player**, the hand ends right away.
         incorrect: `When there's a river bet, the **last aggressor** (last to bet or raise) shows first; the caller can then show or muck.`,
         hints: [
           'Think about who put in the last aggressive action.',
-          'The bettor or raiser has to back up their bet by showing first.',
+          'The player who forced the action is the one expected to prove their hand.',
           'If nobody bet the river, the first player left of the button shows first.',
         ],
         why: `Showing the last aggressor's hand first keeps things orderly: the player who forced the action proves their hand, and the caller can reveal a winner or muck a loser. A checked-around river uses position instead: the first active player left of the button shows.`,
@@ -257,7 +257,7 @@ If instead **all opponents fold, leaving one player**, the hand ends right away.
         hints: [
           'A showdown compares the hands of the remaining players.',
           'If only one player is left, there is nothing to compare.',
-          'The last player standing wins the pot without showing.',
+          'A showdown needs at least two players left to compare hands.',
         ],
         why: `You can win two ways: hold the best hand at showdown, **or** be the last player left when everyone else folds. In the second case there is no showdown and you keep your cards hidden. (Folding "to the button" pre-flop does not auto-win, since the blinds still act.)`,
       },

@@ -62,7 +62,7 @@ The ladder below runs from the strongest hand down to the weakest. Start with th
         hints: [
           'Look at the suit of each card.',
           'All five cards are hearts.',
-          'Five of one suit, not in a row, is a flush.',
+          'Recall what five cards of one suit, not in a row, are called.',
         ],
         why: 'A **flush** is any five cards of a single suit. These hearts (A-K-9-5-2) are not consecutive, so they make a plain flush rather than a straight flush.',
       },
@@ -85,7 +85,7 @@ The ladder below runs from the strongest hand down to the weakest. Start with th
         hints: [
           'Count how many of each rank you see.',
           'Three Kings and two Sevens.',
-          'Three of a kind + a pair = full house.',
+          'Recall what three of a kind plus a pair is called.',
         ],
         why: 'It is tempting to stop at "three Kings" and call this three of a kind, but the extra **pair** of Sevens upgrades it to a **full house**, which ranks higher. The shape is always **3 + 2**.',
       },
@@ -177,7 +177,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
         incorrect: 'A flush needs **five cards of the same suit**. Tap the five hearts.',
         hints: [
           'A flush is five of one suit.',
-          'There are exactly five hearts in this pool.',
+          'Only one suit appears five times in this pool.',
           'Suit is what matters here, not the ranks.',
         ],
         why: 'A flush is defined purely by **suit**: any five cards of the same suit. The five hearts here (A-K-9-5-2) are not consecutive, so they make a plain flush.',
@@ -202,7 +202,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
         hints: [
           'The pair is identical, so look past it.',
           'Compare the highest card that is not part of the pair.',
-          'A King kicker beats a Queen kicker.',
+          'The hand with the higher side card wins.',
         ],
         why: 'When the pair ties, the highest **kicker** decides, then the next card, and so on. Here A-A-**K**-Q-8 beats A-A-**Q**-J-9 because K > Q. This is why kickers matter: A-A-K beats A-A-Q.',
       },
@@ -228,7 +228,7 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
         hints: [
           "Name each hand's category first.",
           'Five of one suit is a flush; five in a row is a straight.',
-          'Flush > straight > two pair.',
+          'Once each hand is named, rank them by the category ladder.',
         ],
         why: 'Category decides first. The diamonds make a **flush**, above the 9-high **straight**, above **two pair** (Kings and Sevens). Only compare kickers when two hands share the same category.',
       },
@@ -249,8 +249,8 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
         incorrect: 'There is a flush hiding here: five hearts. A flush beats the two pair of Kings and Fours.',
         hints: [
           'Look for five cards of one suit.',
-          'Count the hearts: A-K-Q-9-4.',
-          'A flush outranks two pair, so take the hearts.',
+          'Count how many cards of each suit are among the seven.',
+          'A flush outranks two pair, so favor the five cards of one suit.',
         ],
         why: 'Your hand is the best **five of seven**. The two pair (K-K and 4-4) is tempting, but the five hearts form a **flush**, which ranks higher. Always scan all seven cards for the strongest five-card combination.',
       },

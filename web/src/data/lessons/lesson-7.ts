@@ -59,7 +59,7 @@ This is the same break-even as **pot odds**, just measured in chips instead of a
         hints: [
           'You win 100 chips 30% of the time, and lose 20 chips the other 70%.',
           'EV $= 0.30 \\times 100 - 0.70 \\times 20$.',
-          '$0.30 \\times 100 = 30$ and $0.70 \\times 20 = 14$, so EV $= 30 - 14$.',
+          'Work out each part, then subtract the loss side from the win side.',
         ],
         why: 'The chips you can win are the 100 already in the pot; the chips you risk are the 20 call.\n\n$$\\text{EV} = 0.30 \\times 100 - 0.70 \\times 20 = +16$$\n\nA positive EV means a profitable call, and it matches pot odds: a 20-into-100 call needs only $\\frac{20}{120} \\approx 16.7\\%$, and 30% clears that.',
       },
@@ -89,7 +89,7 @@ This is the same break-even as **pot odds**, just measured in chips instead of a
         hints: [
           'You win 100 chips 15% of the time, and lose 20 chips 85% of the time.',
           'EV $= 0.15 \\times 100 - 0.85 \\times 20$.',
-          '$0.15 \\times 100 = 15$ and $0.85 \\times 20 = 17$, so EV $= 15 - 17$.',
+          'Work out each part, then subtract; a negative result means a losing call.',
         ],
         why: 'You win the 100 only 15% of the time and lose your 20 call the other 85%:\n\n$$\\text{EV} = 0.15 \\times 100 - 0.85 \\times 20 = -2$$\n\nThe call loses 2 chips on average, so **fold**. In pot-odds terms you needed ~16.7%, and 15% falls short.',
       },
@@ -119,7 +119,7 @@ This is the same break-even as **pot odds**, just measured in chips instead of a
         hints: [
           'You win 100 chips 25% of the time, and lose 20 chips 75% of the time.',
           'EV $= 0.25 \\times 100 - 0.75 \\times 20$.',
-          '$25 - 15 = 10$.',
+          'Work out each part, then subtract to find the EV.',
         ],
         why: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = +10$. Comfortably positive, because 25% is well above the ~16.7% break-even this price needs.',
       },
@@ -159,7 +159,7 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
           'A strong draw with no bet yet is the classic **semibluff**: betting wins two ways (a fold now, or your flush later). Bet.',
         hints: [
           'No bet faces you, so your choices are check or bet.',
-          'You have a strong draw, and betting can win the pot two ways.',
+          'A strong draw can win two ways: opponents folding now, or the draw completing later.',
           'Betting a draw like this is called a semibluff.',
         ],
         why: 'A **semibluff** bet has **fold equity** (opponents may fold now) **plus** your ~35% flush equity if called: two ways to win. That combination makes betting the draw profitable, where betting pure air would not.',
@@ -191,7 +191,7 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
         hints: [
           'A bluff only works if the opponent can fold.',
           'This opponent never folds, so betting has no fold equity.',
-          'Ace-high is too weak to bet for value, so check.',
+          'Ace-high is too weak to bet for value, and against someone who never folds a bluff cannot work either.',
         ],
         why: 'Betting wins two ways only when fold equity exists. Against a player who **never folds**, the "they fold" path is gone, and Ace-high is too weak to value bet. So a bet has no way to profit. **Check** and keep your showdown chance.',
       },

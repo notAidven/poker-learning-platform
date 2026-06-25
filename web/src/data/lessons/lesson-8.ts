@@ -56,7 +56,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
         hints: [
           'No bet faces you, so it is check or bet.',
           'You have a huge hand and worse hands can call.',
-          'When worse hands can pay you off, bet for value.',
+          'When worse hands can pay you off, there is value to collect.',
         ],
         why: 'A **value bet** wants worse hands to call. With top set and many worse hands (a King, a pair, a draw) able to continue, betting earns chips every time they call. Checking wins only the small pot already there.',
       },
@@ -118,7 +118,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
         hints: [
           'A value bet only profits if worse hands call.',
           'On A-K-9, what worse hand would call a bet from you?',
-          'Worse hands fold and better hands call, so check.',
+          'Worse hands fold and better hands call, so a value bet earns nothing here.',
         ],
         why: 'The value test fails here: a pair of Fives on A-K-9 is called only by **better** hands (any Ace, King, Nine, or bigger pair) while worse hands fold. With no worse hands to pay you off, a value bet loses on average, so **check**.',
       },
@@ -157,7 +157,7 @@ A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up o
       feedback: {
         correct: 'Half of a 60-chip pot is 30, the everyday default value size.',
         incorrect: 'Half-pot is the middle option: half of the 60 already in the middle (30).',
-        hints: ['The pot is 60.', 'Half of the pot is the middle option.', 'Half-pot is the default value size.'],
+        hints: ['The pot is 60.', 'Half-pot means half of the chips already in the middle.', 'Half-pot is the default value size.'],
         why: '**Half-pot** is the reliable default: into 60 you bet 30. It gets called by worse hands and charges draws, without over-committing.',
       },
     },
@@ -186,7 +186,7 @@ A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up o
         hints: [
           'Wet boards are full of draws you want to charge.',
           'Bigger bets make draws pay more.',
-          'Pick the largest of the three (¾ pot).',
+          'The wetter the board, the larger you size to charge the draws.',
         ],
         why: 'On a soaked 9-8-7 board, a **large (¾-pot)** bet makes straight and flush draws pay a bad price and builds the pot with your strong hand. Small on dry boards, **big on wet boards**.',
       },
@@ -215,8 +215,8 @@ A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up o
         incorrect: 'On a dry, disconnected board a small bet is enough. Pick the smallest option (about ⅓ pot).',
         hints: [
           'Dry boards have few draws and few hands that can call.',
-          'A small bet does the job, so pick the smallest option.',
-          'About ⅓ of 60 is 20.',
+          'Here a small bet is enough to do the job.',
+          'A small bet keeps your risk low while still getting thin value.',
         ],
         why: 'On a **dry, disconnected** board there is little for opponents to call with, so a **small (⅓-pot)** bet gets thin value and keeps your risk low. Size to the board: small here, big on wet boards.',
       },

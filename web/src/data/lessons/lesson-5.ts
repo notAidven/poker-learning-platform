@@ -48,7 +48,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
         hints: [
           'A flush needs five cards of one suit.',
           'You can see four hearts: two in your hand, two on the board.',
-          '$13 - 4 = 9$.',
+          'A suit holds 13 cards; subtract the ones you can already see.',
         ],
         why: 'A flush draw is always **9 outs**: a suit has 13 cards; with 2 in your hand and 2 on the board you have seen 4, leaving $13 - 4 = 9$ unseen cards that complete the flush.',
       },
@@ -74,7 +74,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
         hints: [
           'You already have four in a row: 9-8-7-6.',
           'A card at either end completes the straight.',
-          'Four 10s on top + four 5s on the bottom $= 8$.',
+          'Count the cards that complete each end, then add the two ends together.',
         ],
         why: 'An **open-ended** straight draw (four in a row, open at both ends) has **8 outs**: four cards complete each end.',
       },
@@ -98,8 +98,8 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
         incorrect: 'A gutshot is missing one middle rank. Only that one rank completes it, so count how many of it remain.',
         hints: [
           'You have 9-8-7 and a 5. What single rank is missing in the middle?',
-          'Only a 6 makes 9-8-7-6-5.',
-          'There are four 6s in the deck.',
+          'Only the one missing middle rank completes the straight.',
+          'Count how many cards of that one rank remain.',
         ],
         why: 'A **gutshot** (inside) straight draw needs one specific middle rank, so it has just **4 outs**, half of the open-ended draw\'s 8. Same two cards in your hand; one different board card turns 8 outs into 4.',
       },
@@ -139,8 +139,8 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
           'On the **flop**, two cards are coming, so use the Rule of **4**: $9 \\times 4 \\approx 36\\%$ (about 35% after the big-draw correction).',
         hints: [
           'Two cards to come on the flop means multiply by **4**.',
-          '$9 \\times 4 = 36$.',
-          'For 9+ outs, subtract $(\\text{outs} - 8)$: $36 - 1 = 35\\%$.',
+          'With 9 or more outs, the Rule of 4 runs a little high.',
+          'For 9+ outs, subtract $(\\text{outs} - 8)$ from the Rule-of-4 estimate.',
         ],
         why: 'On the flop two cards are coming, so Rule of 4: $9 \\times 4 = 36\\%$. That slightly overestimates, so the big-draw correction gives $36 - 1 = 35\\%$, matching the exact $1 - \\frac{38}{47}\\cdot\\frac{37}{46} \\approx 35\\%$.',
       },
@@ -167,8 +167,8 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
           'On the **turn**, only the river is left, so use the Rule of **2**: $9 \\times 2 = 18\\%$ (exact $\\frac{9}{46} \\approx 19.6\\%$).',
         hints: [
           'One card to come on the turn means multiply by **2**.',
-          '$9 \\times 2 = 18$.',
-          'Exactly $\\frac{9}{46} \\approx 19.6\\%$. After the turn, 46 unseen cards remain.',
+          'Apply that Rule of 2 to your nine outs.',
+          'For the exact figure, divide your outs by the unseen cards left after the turn.',
         ],
         why: 'Only the river is left, so Rule of 2: $9 \\times 2 = 18\\%$. The exact one-card chance is $\\frac{9}{46} \\approx 19.6\\%$. Same draw, much less equity once a street has passed, because you have one shot instead of two.',
       },
@@ -192,7 +192,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
         incorrect: 'On the **flop** use the Rule of **4**: $8 \\times 4 = 32\\%$ (exact $\\approx 31.5\\%$).',
         hints: [
           'Two cards to come on the flop means multiply by **4**.',
-          '$8 \\times 4 = 32$.',
+          'Apply the Rule of 4 to your eight outs.',
           'No big-draw correction is needed below 9 outs.',
         ],
         why: 'An open-ended draw is **8 outs**; on the flop the Rule of 4 gives $8 \\times 4 = 32\\%$ (exact $\\approx 31.5\\%$). The $-(\\text{outs}-8)$ correction only kicks in above 8 outs, so 8 needs none.',

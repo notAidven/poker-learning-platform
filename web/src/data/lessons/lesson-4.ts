@@ -55,7 +55,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
         hints: [
           'Is there a bet to you? No, so your choices are check or bet.',
           'You hold the near-nuts; you want chips in the pot.',
-          'Betting for value builds the pot you are very likely to win.',
+          'With the best hand by far, you profit most by building the pot, not protecting it.',
         ],
         why: 'Top set on 7-2 has almost no way to lose here. Checking gives a free card and wins only what is already in the middle. **Betting for value** charges worse hands (a pair, a draw) to continue, growing the pot you will usually win.',
       },
@@ -86,7 +86,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
         hints: [
           'A bet faces you, so you can call, raise, or fold.',
           'Three Kings is almost certainly the best hand here.',
-          'When you are far ahead, raise to put more chips in while you can.',
+          'When you are far ahead, you want even more in the pot than simply matching the bet would add.',
         ],
         why: 'Top set on K-9-4 is a huge favorite. Just calling lets the villain see cheap cards. **Raising for value** swells the pot you will usually win. (The minimum legal raise is the current bet plus the last raise increment, not simply "double it.")',
       },
@@ -118,7 +118,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
         hints: [
           'A bet faces you: call, raise, or fold.',
           'You have a flush draw, strong but not a made hand yet.',
-          'Calling keeps you in cheaply to try to hit; it is too good to fold and too unmade to raise big.',
+          'A strong draw is worth continuing for a small price, but it has not made anything yet to commit big with.',
         ],
         why: 'A **call** simply matches the bet to stay in. With a strong draw and a small price, calling lets you continue toward your flush without bloating the pot. Folding gives up a great draw, and raising risks chips with a hand that still has to improve. (Exactly *when* a draw is worth the price is the pot-odds math coming up in The Math.)',
       },
@@ -218,8 +218,8 @@ For now, just get comfortable that a bet has a size. **Which** fraction to choos
         incorrect: 'Half-pot means half of the chips already in the middle: 40 into 80.',
         hints: [
           'The pot is 80 chips.',
-          'Half of the pot is the middle option.',
-          'Half of 80 is 40.',
+          'Half-pot means half of the chips already in the middle.',
+          'To size it, split the pot in two.',
         ],
         why: 'A bet is sized as a **fraction of the pot**, so into an 80 pot a half-pot bet is 40. This is just the mechanic of entering a size. **Which** fraction to pick, and why (for value, for bluffs, for board texture), is the whole of Lesson 8.',
       },
