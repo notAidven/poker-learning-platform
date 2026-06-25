@@ -20,6 +20,13 @@ export type ProblemStepBase = {
   id: string
   prompt: string
   feedback: ProblemFeedback
+  /**
+   * Show the collapsible scratchpad Calculator alongside this problem (set on the
+   * math lessons, 5-8). It is a helper TOOL only: it never reads or writes the
+   * answer and has no effect on grading. Defaults to off, so non-math lessons stay
+   * uncluttered.
+   */
+  showCalculator?: boolean
 }
 
 /** Reduced fraction for P(ω) = num/den */
@@ -365,6 +372,14 @@ export type OutsOddsConfig = {
   betToCall?: number
   /** Render a CardDeck draw-tally below to build empirical feel for the equity. */
   empiricalTieIn?: boolean
+  /**
+   * Let the learner answer the ratio sub-questions as a fraction instead of a whole
+   * percent. Applies to `potOdds` (call / (pot + call)) and, on the turn, `equity`
+   * (outs / cards left). The fraction is graded by converting it to a percent and
+   * comparing against the same expected value + tolerance as the percent input, so it
+   * is purely an additional accepted input form, never a change to the correct value.
+   */
+  allowFractionAnswer?: boolean
   helperText?: string
 }
 

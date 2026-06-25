@@ -32,6 +32,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p1',
       prompt:
         'You flop top set (three Kings) on K-8-3 and no one has bet. Plenty of worse hands (a King, a pair, a draw) can call. What is the best action?',
@@ -62,6 +63,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p2',
       prompt:
         'You hold top pair, good kicker (A-J on J-8-3) and no one has bet. Many worse hands (a weaker Jack, a pair of 8s, a draw) would call a bet. What is the best action?',
@@ -92,6 +94,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p3',
       prompt:
         'You hold pocket Fives (a weak pair) on A-K-9 and no one has bet. You are thinking of a value bet. Would worse hands call? What is the best action?',
@@ -134,6 +137,7 @@ A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up o
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p4',
       prompt:
         'Top pair on a K-7-2 board, and you want the everyday default value bet, half the pot. The pot is 60. Which sizing is half the pot?',
@@ -159,6 +163,7 @@ A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up o
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p5',
       prompt:
         'Overpair (two Aces) on a wet 9-8-7 board full of draws. You want to charge those draws. The pot is 80. Which is the large, draw-charging bet?',
@@ -188,6 +193,7 @@ A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up o
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p6',
       prompt:
         'Top pair on a very dry, disconnected Q-8-3 rainbow board where little can call, so a small bet does the job. The pot is 60. Which is the small, ⅓-pot bet?',

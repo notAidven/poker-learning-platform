@@ -16,6 +16,7 @@ import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { NumericAnswerInput } from './NumericAnswerInput'
 import { countMatches, hasValidCountInput, percentMatches } from './numericAnswer'
+import { fractionPercentMatches, hasValidFractionInput } from './fractionAnswer'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 
 type OutsOddsProps = InteractionProps & {
@@ -145,6 +146,147 @@ function OutChip({ id }: { id: CardId }) {
   )
 }
 
+/** How the learner is entering a ratio answer: a whole percent, or a fraction. */
+type AnswerFormat = 'percent' | 'fraction'
+
+/** Segmented Percent / Fraction switch for the ratio sub-questions. */
+function FormatToggle({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: AnswerFormat
+  onChange: (next: AnswerFormat) => void
+  disabled?: boolean
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Answer format"
+      className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5"
+    >
+      {(['percent', 'fraction'] as const).map((fmt) => {
+        const active = value === fmt
+        return (
+          <button
+            key={fmt}
+            type="button"
+            disabled={disabled}
+            aria-pressed={active}
+            onClick={() => onChange(fmt)}
+            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed ${
+              active ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {fmt === 'percent' ? 'Percent' : 'Fraction'}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * A single ratio sub-question that can be answered as a whole percent OR as a fraction.
+ * Mirrors the styling of `NumericAnswerInput` / `FractionAnswerInput`; the parent owns all
+ * state and grading, so this stays purely presentational.
+ */
+function PercentOrFractionField({
+  id,
+  label,
+  format,
+  onFormatChange,
+  percentValue,
+  onPercentChange,
+  numerator,
+  denominator,
+  onNumeratorChange,
+  onDenominatorChange,
+  numeratorPlaceholder,
+  denominatorPlaceholder,
+  fractionHint,
+  disabled = false,
+}: {
+  id: string
+  label: string
+  format: AnswerFormat
+  onFormatChange: (next: AnswerFormat) => void
+  percentValue: string
+  onPercentChange: (value: string) => void
+  numerator: string
+  denominator: string
+  onNumeratorChange: (value: string) => void
+  onDenominatorChange: (value: string) => void
+  numeratorPlaceholder: string
+  denominatorPlaceholder: string
+  fractionHint: string
+  disabled?: boolean
+}) {
+  const inputClass =
+    'w-full rounded-xl border border-slate-200 px-4 py-3 text-lg font-bold tabular-nums text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50'
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <label
+          htmlFor={format === 'percent' ? id : `${id}-num`}
+          className="text-sm font-semibold text-slate-800"
+        >
+          {label}
+        </label>
+        <FormatToggle value={format} onChange={onFormatChange} disabled={disabled} />
+      </div>
+      {format === 'percent' ? (
+        <>
+          <input
+            id={id}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={percentValue}
+            onChange={(e) => onPercentChange(e.target.value)}
+            disabled={disabled}
+            placeholder="Enter a whole percent"
+            className={inputClass}
+          />
+          <p className="mt-2 text-xs text-slate-500">Enter a whole percent, or switch to Fraction.</p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <input
+              id={`${id}-num`}
+              type="text"
+              inputMode="numeric"
+              value={numerator}
+              onChange={(e) => onNumeratorChange(e.target.value)}
+              disabled={disabled}
+              placeholder={numeratorPlaceholder}
+              aria-label="Numerator"
+              className={inputClass}
+            />
+            <span className="text-2xl font-bold text-slate-400" aria-hidden="true">
+              /
+            </span>
+            <input
+              id={`${id}-den`}
+              type="text"
+              inputMode="numeric"
+              value={denominator}
+              onChange={(e) => onDenominatorChange(e.target.value)}
+              disabled={disabled}
+              placeholder={denominatorPlaceholder}
+              aria-label="Denominator"
+              className={inputClass}
+            />
+          </div>
+          <p className="mt-2 text-xs text-slate-500">{fractionHint}</p>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function OutsOdds({
   config,
   answer,
@@ -194,6 +336,15 @@ export function OutsOdds({
   const [potOddsInput, setPotOddsInput] = useState(
     initialSolved && requiredEquity != null ? String(Math.round(requiredEquity)) : '',
   )
+  // The ratio sub-questions (potOdds, and equity on the turn) can also be answered as a
+  // fraction when config.allowFractionAnswer is set. Percent stays the default format, so a
+  // revisited/solved step still seeds and shows exactly as before.
+  const [equityFormat, setEquityFormat] = useState<AnswerFormat>('percent')
+  const [equityNum, setEquityNum] = useState('')
+  const [equityDen, setEquityDen] = useState('')
+  const [potOddsFormat, setPotOddsFormat] = useState<AnswerFormat>('percent')
+  const [potOddsNum, setPotOddsNum] = useState('')
+  const [potOddsDen, setPotOddsDen] = useState('')
   const [decisionChoice, setDecisionChoice] = useState<'call' | 'fold' | null>(
     initialSolved ? expectedDecision : null,
   )
@@ -217,17 +368,30 @@ export function OutsOdds({
     return asks.includes(a)
   }
 
+  // Fraction entry is opt-in per question and only offered where the answer is genuinely a
+  // ratio: pot odds (call / (pot + call)) always, and equity (outs / cards left) only on the
+  // turn, where one card to come makes it a clean single fraction.
+  const allowFraction = config.allowFractionAnswer === true
+  const fractionPotOdds = allowFraction && asked('potOdds')
+  const fractionEquity = allowFraction && asked('equity') && config.street === 'turn'
+  const equityAsFraction = fractionEquity && equityFormat === 'fraction'
+  const potOddsAsFraction = fractionPotOdds && potOddsFormat === 'fraction'
+
   function outsOk() {
     return !asked('outs') || countMatches(outsInput, expectedOuts)
   }
   function equityOk() {
     if (!asked('equity')) return true
     const tol = answer.equityTolerance ?? DEFAULT_EQUITY_TOLERANCE
+    if (equityAsFraction) return fractionPercentMatches(equityNum, equityDen, equityCenter, tol)
     return percentMatches(equityInput, equityCenter, tol)
   }
   function potOddsOk() {
     if (!asked('potOdds')) return true
     if (requiredEquity == null) return true
+    if (potOddsAsFraction) {
+      return fractionPercentMatches(potOddsNum, potOddsDen, requiredEquity, POT_ODDS_TOLERANCE)
+    }
     return percentMatches(potOddsInput, requiredEquity, POT_ODDS_TOLERANCE)
   }
   function decisionOk() {
@@ -235,8 +399,14 @@ export function OutsOdds({
   }
 
   const outsReady = !asked('outs') || hasValidCountInput(outsInput)
-  const equityReady = !asked('equity') || hasValidCountInput(equityInput)
-  const potOddsReady = !asked('potOdds') || hasValidCountInput(potOddsInput)
+  const equityReady =
+    !asked('equity') ||
+    (equityAsFraction ? hasValidFractionInput(equityNum, equityDen) : hasValidCountInput(equityInput))
+  const potOddsReady =
+    !asked('potOdds') ||
+    (potOddsAsFraction
+      ? hasValidFractionInput(potOddsNum, potOddsDen)
+      : hasValidCountInput(potOddsInput))
   const decisionReady = !asked('decision') || decisionChoice != null
   const canSubmit = outsReady && equityReady && potOddsReady && decisionReady && !locked
 
@@ -257,7 +427,11 @@ export function OutsOdds({
     setSolved(false)
     setOutsInput('')
     setEquityInput('')
+    setEquityNum('')
+    setEquityDen('')
     setPotOddsInput('')
+    setPotOddsNum('')
+    setPotOddsDen('')
     setDecisionChoice(null)
     setTrials(0)
     setHits(0)
@@ -368,6 +542,27 @@ export function OutsOdds({
             )
           }
           if (a === 'equity') {
+            if (fractionEquity) {
+              return (
+                <PercentOrFractionField
+                  key="equity"
+                  id="outs-odds-equity"
+                  label="Estimate your equity (Rule of 2 & 4)."
+                  format={equityFormat}
+                  onFormatChange={setEquityFormat}
+                  percentValue={equityInput}
+                  onPercentChange={setEquityInput}
+                  numerator={equityNum}
+                  denominator={equityDen}
+                  onNumeratorChange={setEquityNum}
+                  onDenominatorChange={setEquityDen}
+                  numeratorPlaceholder="outs"
+                  denominatorPlaceholder="cards left"
+                  fractionHint="On the turn, equity is outs / cards left, e.g. 9/46."
+                  disabled={locked}
+                />
+              )
+            }
             return (
               <NumericAnswerInput
                 key="equity"
@@ -380,6 +575,27 @@ export function OutsOdds({
             )
           }
           if (a === 'potOdds') {
+            if (fractionPotOdds) {
+              return (
+                <PercentOrFractionField
+                  key="potOdds"
+                  id="outs-odds-pot-odds"
+                  label="What equity do you need to call?"
+                  format={potOddsFormat}
+                  onFormatChange={setPotOddsFormat}
+                  percentValue={potOddsInput}
+                  onPercentChange={setPotOddsInput}
+                  numerator={potOddsNum}
+                  denominator={potOddsDen}
+                  onNumeratorChange={setPotOddsNum}
+                  onDenominatorChange={setPotOddsDen}
+                  numeratorPlaceholder="call"
+                  denominatorPlaceholder="pot + call"
+                  fractionHint="Pot odds are call / (pot + call), e.g. 20/120 or 1/6."
+                  disabled={locked}
+                />
+              )
+            }
             return (
               <NumericAnswerInput
                 key="potOdds"

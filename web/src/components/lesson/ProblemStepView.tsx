@@ -3,6 +3,7 @@ import type { ProblemStep } from '../../types/lesson'
 import { MathContent } from './MathContent'
 import { WhyExplanationModal } from './WhyExplanationModal'
 import { InteractionRenderer } from './InteractionRenderer'
+import { Calculator } from './interactions/Calculator'
 
 type ProblemStepViewProps = {
   step: ProblemStep
@@ -66,6 +67,8 @@ export function ProblemStepView({
   return (
     <div className="space-y-5">
       <MathContent className="text-base font-medium text-slate-900">{step.prompt}</MathContent>
+
+      {step.showCalculator && <Calculator />}
 
       <InteractionRenderer
         step={step}

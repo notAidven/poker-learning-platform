@@ -28,6 +28,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p1',
       prompt: 'It is the turn. The pot is \\$100 and it costs you \\$20 to call (a small, quarter-pot bet). What is the minimum equity you need to call profitably?',
       interaction: 'outs-odds',
@@ -39,6 +40,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
         ask: ['potOdds'],
         pot: 100,
         betToCall: 20,
+        allowFractionAnswer: true,
       },
       answer: { potOddsPercent: 17 },
       feedback: {
@@ -56,6 +58,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p2',
       prompt: 'Same turn, bigger bet: the pot is \\$90 and it costs \\$30 to call (a half-pot bet). What equity do you need now?',
       interaction: 'outs-odds',
@@ -67,6 +70,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
         ask: ['potOdds'],
         pot: 90,
         betToCall: 30,
+        allowFractionAnswer: true,
       },
       answer: { potOddsPercent: 25 },
       feedback: {
@@ -82,6 +86,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p3',
       prompt: 'Now a pot-sized bet: the pot is \\$120 and it costs \\$60 to call. What equity do you need?',
       interaction: 'outs-odds',
@@ -93,6 +98,7 @@ The pot here already includes the bet you face. The bigger the bet relative to t
         ask: ['potOdds'],
         pot: 120,
         betToCall: 60,
+        allowFractionAnswer: true,
       },
       answer: { potOddsPercent: 33 },
       feedback: {
@@ -119,6 +125,7 @@ That single comparison is the whole decision.`,
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p4',
       prompt: 'Turn, 9-out flush draw (equity about 18–20%). The pot is \\$100 and it is \\$20 to call. Call or fold?',
       interaction: 'outs-odds',
@@ -146,6 +153,7 @@ That single comparison is the whole decision.`,
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p5',
       prompt: 'Same 9-out flush draw on the turn, but a bigger bet: the pot is \\$150 and it costs \\$50 to call. Call or fold?',
       interaction: 'outs-odds',
@@ -173,6 +181,7 @@ That single comparison is the whole decision.`,
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p6',
       prompt: 'Put it all together. You hold a flush draw on the turn. The pot is \\$120 and it is \\$20 to call. Find your outs, the price, then decide.',
       interaction: 'outs-odds',
@@ -184,6 +193,7 @@ That single comparison is the whole decision.`,
         ask: ['outs', 'potOdds', 'decision'],
         pot: 120,
         betToCall: 20,
+        allowFractionAnswer: true,
       },
       answer: { outs: 9, potOddsPercent: 14, decision: 'call' },
       feedback: {

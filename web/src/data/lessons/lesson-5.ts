@@ -30,6 +30,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p1',
       prompt: 'You hold two hearts and two more land on the flop, a flush draw. How many cards complete your flush?',
       interaction: 'outs-odds',
@@ -54,6 +55,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p2',
       prompt: 'Your 9-8 sits on a 7-6-2 flop, giving you 9-8-7-6, an open-ended straight draw. How many cards complete the straight?',
       interaction: 'outs-odds',
@@ -79,6 +81,7 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p3',
       prompt: 'Same 9-8, but now the flop is 7-5-2: you hold 9-8-7 and 5, an inside (gutshot) straight draw missing the 6. How many cards complete the straight?',
       interaction: 'outs-odds',
@@ -115,6 +118,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p4',
       prompt: 'Back to your flush draw: 9 outs on the flop, two cards still to come. Estimate your chance to complete the flush by the river.',
       interaction: 'outs-odds',
@@ -143,6 +147,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p5',
       prompt: 'A blank hits the turn. You still hold the 9-out flush draw, but now only the river is left. Estimate your equity now.',
       interaction: 'outs-odds',
@@ -152,6 +157,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
         drawLabel: 'a flush',
         street: 'turn',
         ask: ['equity'],
+        allowFractionAnswer: true,
       },
       answer: { equityPercent: 18, equityTolerance: 3 },
       feedback: {
@@ -169,6 +175,7 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p6',
       prompt: 'Back to the open-ended straight draw (8 outs) on the flop, two cards to come. Estimate your equity by the river.',
       interaction: 'outs-odds',

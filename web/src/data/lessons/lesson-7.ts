@@ -35,6 +35,7 @@ This is the same break-even as **pot odds**, just measured in chips instead of a
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p1',
       prompt:
         'Suppose you have **30% equity**. The pot already holds 100 chips and it costs you 20 to call. What is the EV of calling, in chips?',
@@ -65,6 +66,7 @@ This is the same break-even as **pot odds**, just measured in chips instead of a
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p2',
       prompt:
         'Now suppose your equity is only **15%**. The pot holds 100 chips and it costs 20 to call. What is the EV of calling, in chips? (Use a negative number if it loses.)',
@@ -94,6 +96,7 @@ This is the same break-even as **pot odds**, just measured in chips instead of a
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p3',
       prompt:
         'With **25% equity**, the pot holds 100 chips and it costs 20 to call. What is the EV of calling, in chips?',
@@ -133,6 +136,7 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p4',
       prompt:
         'You have a flush draw (no made hand yet) on the flop and no one has bet. Betting can win two ways. What is the best action?',
@@ -163,6 +167,7 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
     },
     {
       type: 'problem',
+      showCalculator: true,
       id: 'p5',
       prompt:
         'River. You hold Ace-high with no pair, and you know this opponent **never folds**. There is no bet yet. What is the best action?',
