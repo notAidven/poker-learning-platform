@@ -5,6 +5,7 @@ const skillCheckLoaders: Record<string, () => Promise<SkillCheckDefinition>> = {
   '2': () => import('./skillChecks/skill-check-2').then((m) => m.skillCheck2),
   '3': () => import('./skillChecks/skill-check-3').then((m) => m.skillCheck3),
   '4': () => import('./skillChecks/skill-check-4').then((m) => m.skillCheck4),
+  preflop: () => import('./skillChecks/skill-check-preflop').then((m) => m.skillCheckPreflop),
   '5': () => import('./skillChecks/skill-check-5').then((m) => m.skillCheck5),
   '6': () => import('./skillChecks/skill-check-6').then((m) => m.skillCheck6),
   '7': () => import('./skillChecks/skill-check-7').then((m) => m.skillCheck7),

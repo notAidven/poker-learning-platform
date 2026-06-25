@@ -55,9 +55,10 @@ function testNextLessonPath() {
 }
 
 // P1 #5: sequential unlock (mirrors isLessonUnlocked in lib/lessonProgress.ts).
-// Now an 8-lesson path (Foundations → Playing a Hand → The Math).
+// Now a 9-lesson path: a Preflop lesson sits in Playing a Hand, between Betting
+// Basics ('4') and the Math section, so it unlocks after '4' and gates '5'.
 function testSequentialUnlock() {
-  const lessons = ['1', '2', '3', '4', '5', '6', '7', '8'].map((id) => ({ id }))
+  const lessons = ['1', '2', '3', '4', 'preflop', '5', '6', '7', '8'].map((id) => ({ id }))
 
   function isLessonUnlocked(lessonId, completedIds) {
     const index = lessons.findIndex((l) => l.id === lessonId)
@@ -66,22 +67,26 @@ function testSequentialUnlock() {
   }
 
   assert.equal(isLessonUnlocked('1', []), true) // lesson 1 always unlocked
-  assert.equal(isLessonUnlocked('5', ['1', '2', '3']), false) // L4 not done → L5 locked
-  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4']), true) // L4 done → L5 (Math) open
-  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', '5', '6']), false) // L7 not done → L8 locked
-  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', '5', '6', '7']), true) // L7 done → L8 open
+  assert.equal(isLessonUnlocked('preflop', ['1', '2', '3']), false) // L4 not done → Preflop locked
+  assert.equal(isLessonUnlocked('preflop', ['1', '2', '3', '4']), true) // L4 done → Preflop opens
+  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4']), false) // Preflop not done → L5 locked
+  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4', 'preflop']), true) // Preflop done → Math opens
+  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', 'preflop', '5', '6']), false) // L7 not done
+  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', 'preflop', '5', '6', '7']), true) // L7 done → L8
   assert.equal(isLessonUnlocked('99', []), true) // unknown id → page shows "not found"
-  record('5-logic', true, 'isLessonUnlocked gates each of the 8 lessons behind the previous one')
+  record('5-logic', true, 'isLessonUnlocked gates each of the 9 lessons behind the previous one')
 }
 
-// New structure (mirrors data/lessons.ts): 8 lessons across 3 contiguous sections,
-// with the technical-theory track ("The Math") expanded to 4 dedicated lessons.
+// New structure (mirrors data/lessons.ts): 9 lessons across 3 contiguous sections.
+// Playing a Hand now holds 3 lessons (Flow, Betting Basics, and the new Preflop
+// lesson); The Math keeps its 4 dedicated lessons.
 function testSectionStructure() {
   const lessons = [
     { id: '1', section: 'foundations' },
     { id: '2', section: 'foundations' },
     { id: '3', section: 'playing' },
     { id: '4', section: 'playing' },
+    { id: 'preflop', section: 'playing' },
     { id: '5', section: 'math' },
     { id: '6', section: 'math' },
     { id: '7', section: 'math' },
@@ -89,7 +94,7 @@ function testSectionStructure() {
   ]
   const expectedOrder = ['foundations', 'playing', 'math']
 
-  assert.equal(lessons.length, 8, 'course has 8 lessons total')
+  assert.equal(lessons.length, 9, 'course has 9 lessons total')
 
   // Sections appear in the intended order.
   const order = []
@@ -103,12 +108,47 @@ function testSectionStructure() {
   }
   assert.equal(changes, expectedOrder.length - 1, 'each section is one contiguous run of lessons')
 
-  // The Math is the expanded technical track.
+  // Section sizes after inserting the preflop lesson into Playing a Hand.
   assert.equal(lessons.filter((l) => l.section === 'math').length, 4, 'The Math has 4 lessons')
   assert.equal(lessons.filter((l) => l.section === 'foundations').length, 2, 'Foundations has 2')
-  assert.equal(lessons.filter((l) => l.section === 'playing').length, 2, 'Playing a Hand has 2')
+  assert.equal(
+    lessons.filter((l) => l.section === 'playing').length,
+    3,
+    'Playing a Hand has 3 (incl. the preflop lesson)',
+  )
 
-  record('sections', true, '8 lessons in 3 contiguous sections; The Math expanded to 4 lessons')
+  record('sections', true, '9 lessons in 3 contiguous sections; Playing a Hand now has 3 lessons')
+}
+
+// Two-room Casino Floor (mirrors data/tables.ts + isTableUnlocked in
+// lib/lessonProgress.ts): exactly two rooms. Room 1 (coached) opens once every
+// lesson is complete; Room 2 (AI) opens only after Room 1 has been cleared.
+function testCasinoRooms() {
+  const rooms = [
+    { id: 'room-1', feature: 'coached', prereqId: '8' },
+    { id: 'room-2', feature: 'ai', prereqId: 'room-1' },
+  ]
+  const isTableId = (id) => rooms.some((r) => r.id === id)
+  const allLessonsComplete = (lessonsDone) => lessonsDone >= 9
+
+  function isTableUnlocked(room, lessonsDone, clearedIds) {
+    if (!allLessonsComplete(lessonsDone)) return false
+    if (!isTableId(room.prereqId)) return true // Room 1's prereq is a lesson id
+    return clearedIds.includes(room.prereqId) // Room 2 needs Room 1 cleared
+  }
+
+  const [room1, room2] = rooms
+  assert.equal(rooms.length, 2, 'the Casino Floor has exactly two rooms')
+  assert.equal(isTableUnlocked(room1, 8, []), false) // not all lessons → locked
+  assert.equal(isTableUnlocked(room1, 9, []), true) // all lessons → Room 1 opens
+  assert.equal(isTableUnlocked(room2, 9, []), false) // Room 1 not cleared → locked
+  assert.equal(isTableUnlocked(room2, 9, ['room-1']), true) // Room 1 cleared → Room 2 opens
+  assert.equal(isTableUnlocked(room2, 0, ['room-1']), false) // still needs every lesson
+  record(
+    'casino-rooms',
+    true,
+    'Two rooms: Room 1 opens after all lessons, Room 2 after Room 1 is cleared',
+  )
 }
 
 // P1 #3: skill-check pass threshold (mirrors isSkillCheckPassing in lib/gamification.ts)
@@ -393,6 +433,7 @@ testExitPreservesSession()
 testNextLessonPath()
 testSequentialUnlock()
 testSectionStructure()
+testCasinoRooms()
 testSkillCheckThreshold()
 testNextLessonPathSkillCheckPending()
 testNoHiddenRequiredFieldDeadlock()

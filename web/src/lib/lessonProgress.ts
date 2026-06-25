@@ -220,15 +220,14 @@ export function skillCheckScorePercent(stats: LessonStats): number | null {
 }
 
 // ---------------------------------------------------------------------------
-// AI casino tables (Phase 2) — a lightweight "cleared" store kept entirely OUT
-// of the lesson XP economy. A table is "cleared" the first time a hand reaches
+// Casino Floor (Phase 2) — a lightweight "cleared" store kept entirely OUT of
+// the lesson XP economy. A room is "cleared" the first time a hand reaches
 // showdown (or the hero wins one); there is no XP and no skill check.
 //
-// Unlock gating (Phase 2 refinement):
+// Unlock gating (two-room model):
 //  - The whole Casino Floor opens only once EVERY lesson is complete.
-//  - Coached tables then chain among themselves (the first only needs all
-//    lessons; later ones also need the previous coached table cleared).
-//  - AI tables additionally require at least one coached table to be cleared.
+//  - Room 1 (coached) then opens immediately (its prereq is a lesson id).
+//  - Room 2 (AI) opens only after Room 1 has been cleared (its prereq is Room 1).
 // ---------------------------------------------------------------------------
 
 const CLEARED_TABLES_KEY = 'cleared-table-ids'
@@ -240,7 +239,7 @@ export function areAllLessonsComplete(completedLessonIds: string[]): boolean {
     .every((l) => completedLessonIds.includes(l.id))
 }
 
-/** True once the learner has cleared at least one COACHED table. */
+/** True once the learner has cleared the coached room (Room 1). */
 export function hasClearedAnyCoachedTable(): boolean {
   const cleared = getClearedTableIds()
   return tables.some((t) => t.feature === 'coached' && cleared.includes(t.id))
@@ -275,22 +274,14 @@ export function markTableCleared(tableId: string): void {
 }
 
 /**
- * Whether a casino table is unlocked.
+ * Whether a casino room is unlocked (two-room model).
  *
  *  - Nothing in the casino opens until ALL lessons are complete.
- *  - COACHED tables then chain: the first only needs all lessons; a later coached
- *    table also needs its previous coached table (its `prereqId`, a table id) cleared.
- *  - AI tables need all lessons complete AND at least one coached table cleared.
+ *  - Room 1's prereq is a lesson id (so the all-lessons gate alone opens it).
+ *  - Room 2's prereq is Room 1 (a table id), so it opens once Room 1 is cleared.
  */
 export function isTableUnlocked(table: TableConfig, completedLessonIds: string[]): boolean {
   if (!areAllLessonsComplete(completedLessonIds)) return false
-
-  if (table.feature === 'ai') {
-    return hasClearedAnyCoachedTable()
-  }
-
-  // Coached: the first coached table's prereq is a lesson id (covered by the
-  // all-lessons gate); later coached tables point at the previous coached table.
   if (!isTableId(table.prereqId)) return true
   return isTableCleared(table.prereqId)
 }

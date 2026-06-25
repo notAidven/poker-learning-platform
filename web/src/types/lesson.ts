@@ -476,6 +476,50 @@ export type HandRankingLadderStep = ProblemStepBase & {
   answer: HandRankingLadderAnswer
 }
 
+// --- preflop-hand (starting-hand strength) -----------------------------------
+// A small, focused interaction for reading PREFLOP hand strength: it renders one
+// (or two) sets of hole cards as real card visuals plus an auto-derived
+// suited/offsuit tag, then asks the learner to either classify a hand's strength
+// tier ('classify') or pick the stronger of two starting hands ('pick-stronger').
+// There is no board and no engine call — grading is a pure compare against the
+// authored answer, so it is deterministic and AI-free.
+export type PreflopHandMode = 'classify' | 'pick-stronger'
+
+/** One strength tier offered as a button in 'classify' mode. */
+export type PreflopHandOption = { id: string; label: string; sub?: string }
+
+export type PreflopHandConfig = {
+  mode: PreflopHandMode
+  /** classify: the single starting hand shown. */
+  hand?: [CardId, CardId]
+  /** pick-stronger: the two hands compared. */
+  handA?: [CardId, CardId]
+  handB?: [CardId, CardId]
+  /** classify: the strength tiers to choose from (author them strongest → weakest). */
+  options?: PreflopHandOption[]
+  /** pick-stronger: also offer an "about equal" choice (default false). */
+  allowTie?: boolean
+  /** Optional one-line position / context note shown above the cards. */
+  context?: string
+  /** pick-stronger: labels under each hand (default "Hand A" / "Hand B"). */
+  labelA?: string
+  labelB?: string
+  helperText?: string
+}
+
+export type PreflopHandAnswer = {
+  /** classify: id of the correct option. */
+  optionId?: string
+  /** pick-stronger: which hand is stronger, or 'tie'. */
+  stronger?: 'a' | 'b' | 'tie'
+}
+
+export type PreflopHandStep = ProblemStepBase & {
+  interaction: 'preflop-hand'
+  config: PreflopHandConfig
+  answer: PreflopHandAnswer
+}
+
 export type ProblemStep =
   | CardDeckStep
   | CompareEventsStep
@@ -485,6 +529,7 @@ export type ProblemStep =
   | OutsOddsStep
   | BettingRoundStep
   | HandRankingLadderStep
+  | PreflopHandStep
 
 export type LessonStep = ConceptStep | ProblemStep
 

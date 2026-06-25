@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { course } from '../data/course'
-import { lessons } from '../data/lessons'
+import { lessonNumber, lessons } from '../data/lessons'
 import { hasLessonContent } from '../data/lessonContent'
 import { useAuth } from '../contexts/AuthContext'
 import { useCompletedLessons } from '../hooks/useCompletedLessons'
@@ -178,7 +178,13 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
       )}
       aria-hidden
     >
-      {done ? <CheckIcon className="h-6 w-6" /> : unlocked ? lesson.id : <LockIcon className="h-5 w-5" />}
+      {done ? (
+        <CheckIcon className="h-6 w-6" />
+      ) : unlocked ? (
+        lessonNumber(lesson.id)
+      ) : (
+        <LockIcon className="h-5 w-5" />
+      )}
     </span>
   )
 

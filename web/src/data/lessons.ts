@@ -1,4 +1,4 @@
-/** Canonical course path: 8 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
+/** Canonical course path: 9 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
 
 /** The visually-distinct sections of the learning path. */
 export type SectionId = 'foundations' | 'playing' | 'math' | 'casino'
@@ -90,6 +90,13 @@ export const lessons: LessonMeta[] = [
     primaryInteraction: 'Check, bet, call, raise, fold; sizing',
   },
   {
+    id: 'preflop',
+    title: 'Playing Preflop',
+    section: 'playing',
+    unit: 'Playing a Hand · Preflop',
+    primaryInteraction: 'Open, call, raise, fold; suited vs offsuit; hand strength',
+  },
+  {
     id: '5',
     title: 'Outs & Equity',
     section: 'math',
@@ -118,45 +125,42 @@ export const lessons: LessonMeta[] = [
     primaryInteraction: 'Value bets; size to the board',
   },
 
-  // --- Casino Floor (Phase 2 AI tables) — ids match data/tables.ts -------------
+  // --- Casino Floor (Phase 2): exactly TWO rooms — ids match data/tables.ts ----
   {
-    id: 'tbl-coached-1',
-    title: 'The Kitchen Table',
+    id: 'room-1',
+    title: 'The Coaching Room',
     section: 'casino',
-    unit: 'Casino Floor · Coached',
-    primaryInteraction: 'Play a full hand with an AI coach',
+    unit: 'Casino Floor · Room 1',
+    primaryInteraction: 'Play full hands with a coach reacting to every move',
     kind: 'ai-table',
   },
   {
-    id: 'tbl-coached-2',
-    title: 'The Card Room',
+    id: 'room-2',
+    title: 'The AI Lounge',
     section: 'casino',
-    unit: 'Casino Floor · Coached',
-    primaryInteraction: 'Coached play vs. solid opponents',
-    kind: 'ai-table',
-  },
-  {
-    id: 'tbl-coached-3',
-    title: 'The High Limit Room',
-    section: 'casino',
-    unit: 'Casino Floor · Coached',
-    primaryInteraction: 'Coached play vs. sharp opponents',
-    kind: 'ai-table',
-  },
-  {
-    id: 'tbl-ai-1',
-    title: 'Heads-Up Arena',
-    section: 'casino',
-    unit: 'Casino Floor · AI opponents',
-    primaryInteraction: 'Heads-up duel vs. an AI player',
-    kind: 'ai-table',
-  },
-  {
-    id: 'tbl-ai-2',
-    title: 'The Main Event',
-    section: 'casino',
-    unit: 'Casino Floor · AI opponents',
-    primaryInteraction: 'Four-handed table vs. AI players',
+    unit: 'Casino Floor · Room 2',
+    primaryInteraction: 'Play AI opponents with a rule-based hint bar',
     kind: 'ai-table',
   },
 ]
+
+/**
+ * 1-based position of a lesson within the interactive course (casino tables are
+ * excluded). Used by the path / home / modal so the displayed number always follows
+ * the course order, regardless of a node's string id (e.g. the inserted 'preflop'
+ * lesson shows as "5"). Returns null for non-lesson nodes (the AI tables).
+ */
+const LESSON_NUMBER_BY_ID: Record<string, number> = (() => {
+  const map: Record<string, number> = {}
+  let n = 0
+  for (const l of lessons) {
+    if (l.kind === 'ai-table') continue
+    n += 1
+    map[l.id] = n
+  }
+  return map
+})()
+
+export function lessonNumber(id: string): number | null {
+  return LESSON_NUMBER_BY_ID[id] ?? null
+}
