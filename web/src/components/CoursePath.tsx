@@ -31,8 +31,9 @@ const SECTION_GAP = 30
 /** A little tail below the last node so the final ring never clips */
 const TAIL_PAD = 28
 /** Shared box for a section banner's pill background and its text, so the two
- *  layers (drawn below and above the connector trail) line up exactly. Compact
- *  so the trail visibly enters the top and exits the bottom of each station. */
+ *  layers (BOTH drawn above the connector trail) line up exactly and occlude the
+ *  line behind the card. Compact so the trail still visibly enters the top and
+ *  exits the bottom of each station, reading as one continuous path. */
 const BANNER_BOX = 'h-[4.5rem] w-full max-w-[18rem]'
 
 /**
@@ -247,13 +248,14 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
             />
           ))}
 
-          {/* Frosted "station" pill BACKGROUND for each banner, drawn BELOW the trail.
-              The connector trail is drawn above this and the banner TEXT above the trail,
-              so the path reads as one continuous line passing through each station. */}
+          {/* Frosted "station" pill BACKGROUND for each banner, drawn ABOVE the trail so
+              the connector line is occluded BEHIND the card. The banner TEXT sits above
+              this pill, so the line passes behind the whole station while the trail stays
+              visible in the gaps above/below — the path still reads as one continuous line. */}
           {sectionLayouts.map((section) => (
             <div
               key={`banner-bg-${section.meta.id}`}
-              className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4"
+              className="pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4"
               style={{ top: section.headerTop }}
               aria-hidden
             >
@@ -263,12 +265,13 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
             </div>
           ))}
 
-          {/* Connectors — ONE continuous trail through all nodes, drawn ABOVE the banner
-              pill backgrounds so each cross-section segment is clearly visible crossing
-              its station. Same-section segments use that section's color; cross-section
-              segments blend the two section colors (a "stepping up to the next section" cue). */}
+          {/* Connectors — ONE continuous trail through all nodes, drawn BELOW the banner
+              pill cards so the line passes BEHIND each station (it visibly enters the top
+              and exits the bottom of a card, hidden only behind the card itself) while the
+              path still reads as continuous. Same-section segments use that section's color;
+              cross-section segments blend the two section colors (a "stepping up" cue). */}
           <svg
-            className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible"
+            className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
             viewBox={`0 0 ${Math.max(width, 1)} ${totalHeight}`}
             preserveAspectRatio="none"
             aria-hidden
@@ -324,8 +327,8 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
               })}
           </svg>
 
-          {/* Banner TEXT, drawn ABOVE the trail so each label stays crisp while the
-              gradient line passes behind it (the pill background is rendered below). */}
+          {/* Banner TEXT, drawn ABOVE both the trail and its pill card so each label stays
+              crisp and unmistakably on top while the connector line passes behind the card. */}
           {sectionLayouts.map((section) => (
             <SectionBannerText
               key={`banner-text-${section.meta.id}`}
@@ -405,8 +408,9 @@ function SectionBannerText({
       className="pointer-events-none absolute inset-x-0 z-30 flex justify-center px-4"
       style={style}
     >
-      {/* Text only (the frosted pill background is a separate layer below the trail),
-          so the connector line passes behind these labels and the path stays continuous. */}
+      {/* Text only (the frosted pill background is a separate layer just below this, and
+          both sit above the trail), so the connector line passes behind these labels and
+          behind the card while the path stays continuous. */}
       <div className={`${BANNER_BOX} flex flex-col items-center justify-center px-3 text-center`}>
         <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
           Section {index + 1}
