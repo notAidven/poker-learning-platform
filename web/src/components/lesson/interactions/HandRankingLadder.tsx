@@ -1,13 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState } from 'react'
 import {
   cardLabel,
   isRedSuit,
@@ -22,21 +13,19 @@ import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 
 /**
- * `hand-ranking-ladder` — a non-graded "explore the ladder" display used in
- * Lesson 2. The ten poker hand categories are listed strongest → weakest; each
- * row is a button that, on **click/tap** (toggle, just like a glossary-term
- * popover), reveals an example five-card hand drawn as real card visuals.
+ * `hand-ranking-ladder`: a non-graded "explore the ladder" display used in
+ * Lesson 2. The ten poker hand categories are listed strongest to weakest, and
+ * every row shows its example five-card hand (drawn as real card visuals) by
+ * default, so the learner can compare all ten at a glance with zero interaction.
  *
- * - Click to open, click again / click outside / Escape to close (focus returns
- *   to the row). The example is rendered as **cards** (rank + crisp inline-SVG
- *   suit), never a words-only description.
- * - The popover is portalled to <body> and clamped to the viewport so it never
- *   overflows on mobile, and its entrance animation is suppressed under
- *   `prefers-reduced-motion`.
- * - There is nothing to grade, so the step auto-completes once the learner has
- *   opened at least `answer.minExamplesRevealed` examples (default 1) — no
- *   misleading "Check answer", mirroring `board-dealer`'s observational
- *   reveal-gate.
+ * - The example hands are always visible. Clicking or pressing a row only
+ *   highlights it (handy when comparing two ranks); it is never required to see
+ *   a hand. Each card carries an accessible label, and the row's example is
+ *   announced as static content.
+ * - There is nothing to grade, and every example is shown from the start, so the
+ *   observational reveal-gate (`answer.minExamplesRevealed`) is auto-satisfied on
+ *   mount: the step completes once with no clicking and no misleading
+ *   "Check answer", mirroring `board-dealer`'s reveal-gate.
  *
  * The card visuals + suit SVGs here are intentionally self-contained (this file
  * owns them) so it never depends on `CardDeck.tsx`.
@@ -48,7 +37,7 @@ type HandRankingLadderProps = InteractionProps & {
 
 type LadderEntry = {
   category: HandCategory
-  /** Display name shown on the row + as the popover heading. */
+  /** Display name shown on the row. */
   name: string
   /** One-line descriptor shown under the name. */
   blurb: string
@@ -57,10 +46,10 @@ type LadderEntry = {
 }
 
 /**
- * The ten categories, strongest → weakest. Every `example` has been checked
+ * The ten categories, strongest to weakest. Every `example` has been checked
  * against `lib/poker/handEvaluator.evaluateFive` so the hand truly is that
- * category (e.g. the flush A♦J♦8♦5♦2♦ is not accidentally a straight flush,
- * and the straight 10♣9♦8♥7♠6♣ is not accidentally a flush).
+ * category (e.g. the flush A-J-8-5-2 of diamonds is not accidentally a straight
+ * flush, and the straight 10-9-8-7-6 is not accidentally a flush).
  */
 const LADDER: LadderEntry[] = [
   {
@@ -125,52 +114,7 @@ const LADDER: LadderEntry[] = [
   },
 ]
 
-const STYLES = `
-.hrl-popover {
-  position: fixed;
-  z-index: 60;
-  width: max-content;
-  max-width: min(320px, calc(100vw - 16px));
-  padding: 0.6rem 0.7rem;
-  border-radius: 0.85rem;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  box-shadow:
-    0 2px 6px rgba(7, 21, 15, 0.09),
-    0 18px 36px -18px rgba(12, 42, 30, 0.45);
-  animation: hrlPop 0.16s ease-out both;
-}
-.hrl-popover__arrow {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  transform: rotate(45deg);
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-}
-.hrl-popover[data-placement='top'] .hrl-popover__arrow {
-  bottom: -6px;
-  border-top: 0;
-  border-left: 0;
-}
-.hrl-popover[data-placement='bottom'] .hrl-popover__arrow {
-  top: -6px;
-  border-bottom: 0;
-  border-right: 0;
-}
-.hrl-chevron { transition: transform 0.18s ease; }
-.hrl-row[aria-expanded='true'] .hrl-chevron { transform: rotate(180deg); }
-@keyframes hrlPop {
-  from { opacity: 0; transform: translateY(2px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hrl-popover { animation: none; }
-  .hrl-chevron { transition: none; }
-}
-`
-
-/** Crisp vector suit symbol (no emoji) — colour is inherited via currentColor. */
+/** Crisp vector suit symbol (no emoji); colour is inherited via currentColor. */
 function SuitIcon({ suit, className }: { suit: CardSuit; className?: string }) {
   const common = {
     viewBox: '0 0 24 24',
@@ -210,7 +154,7 @@ function SuitIcon({ suit, className }: { suit: CardSuit; className?: string }) {
   }
 }
 
-/** A single example card face: corner rank + suit, with a centred suit pip. */
+/** A compact example card face: corner rank + suit, with a centred suit pip. */
 function ExampleCard({ id }: { id: CardId }) {
   const { rank, suit } = parseCardId(id)
   const color = isRedSuit(suit) ? 'text-rose-600' : 'text-slate-900'
@@ -218,29 +162,22 @@ function ExampleCard({ id }: { id: CardId }) {
     <span
       role="img"
       aria-label={cardLabel(id)}
-      className={`relative block h-14 w-10 shrink-0 rounded-md border border-slate-200 bg-white shadow-sm ${color}`}
+      className={`relative block h-12 w-9 shrink-0 rounded-md border border-slate-200 bg-white shadow-sm ${color}`}
     >
       <span className="absolute left-0.5 top-0.5 flex flex-col items-center leading-none">
-        <span className="text-[0.6rem] font-bold tabular-nums">{rank}</span>
+        <span className="text-[0.55rem] font-bold tabular-nums">{rank}</span>
         <SuitIcon suit={suit} className="h-1.5 w-1.5" />
       </span>
       <span className="absolute inset-0 flex items-center justify-center">
-        <SuitIcon suit={suit} className="h-4 w-4" />
+        <SuitIcon suit={suit} className="h-3.5 w-3.5" />
       </span>
       <span className="absolute bottom-0.5 right-0.5 flex rotate-180 flex-col items-center leading-none">
-        <span className="text-[0.6rem] font-bold tabular-nums">{rank}</span>
+        <span className="text-[0.55rem] font-bold tabular-nums">{rank}</span>
         <SuitIcon suit={suit} className="h-1.5 w-1.5" />
       </span>
     </span>
   )
 }
-
-type Placement = 'top' | 'bottom'
-type Coords = { top: number; left: number; placement: Placement; arrowLeft: number }
-
-const GAP = 8 // space between the row and the popover
-const MARGIN = 8 // minimum gap from the viewport edge
-const ARROW = 10 // arrow square size in px
 
 export function HandRankingLadder({
   config,
@@ -250,155 +187,35 @@ export function HandRankingLadder({
   initialSolved = false,
   allowRetry = true,
 }: HandRankingLadderProps) {
-  const minExamples = Math.max(1, answer.minExamplesRevealed ?? 1)
   const helperText =
     config.helperText ??
-    'Tap any hand to reveal an example. Higher on the ladder always beats lower.'
+    'Each rank shows an example five-card hand. Higher on the ladder always beats lower.'
 
-  const [openCategory, setOpenCategory] = useState<HandCategory | null>(null)
-  const [coords, setCoords] = useState<Coords | null>(null)
-  const [revealed, setRevealed] = useState<Set<HandCategory>>(new Set())
-  const [submitted, setSubmitted] = useState(initialSolved)
-  const [solved, setSolved] = useState(initialSolved)
+  // Every example renders by default, so the observational reveal-gate ("open at
+  // least `requiredExamples` examples") is met with zero interaction.
+  const requiredExamples = Math.max(1, answer.minExamplesRevealed ?? 1)
+  const gateSatisfied = LADDER.length >= requiredExamples
+  const autoSolved = !disabled && gateSatisfied
 
-  const buttonRefs = useRef<Map<HandCategory, HTMLButtonElement>>(new Map())
-  const popoverRef = useRef<HTMLDivElement>(null)
-  // Mirror of `revealed` (so the completion check is event-driven and never a
-  // setState-in-effect) + a one-shot guard so `onCorrect` fires exactly once.
-  const revealedRef = useRef<Set<HandCategory>>(new Set())
+  // A click only highlights a row (useful for side-by-side comparison); it is
+  // never needed to see an example.
+  const [selected, setSelected] = useState<HandCategory | null>(null)
+  const [solved, setSolved] = useState(initialSolved || autoSolved)
+  // One-shot guard so `onCorrect` fires exactly once.
   const completedRef = useRef(initialSolved)
-  const popoverId = useId()
 
-  const openEntry = useMemo(
-    () => LADDER.find((e) => e.category === openCategory) ?? null,
-    [openCategory],
-  )
-
-  const setButtonRef = useCallback(
-    (category: HandCategory) => (el: HTMLButtonElement | null) => {
-      if (el) buttonRefs.current.set(category, el)
-      else buttonRefs.current.delete(category)
-    },
-    [],
-  )
-
-  const close = useCallback(() => setOpenCategory(null), [])
-
-  // Toggle a row's example popover. Opening a new example also drives the
-  // no-input completion gate straight from this event handler (event-driven, so
-  // there is no setState-in-effect): once `minExamples` distinct examples have
-  // been opened, the step auto-completes exactly once via the one-shot guard.
-  const toggle = useCallback(
-    (category: HandCategory) => {
-      setOpenCategory((current) => (current === category ? null : category))
-
-      if (revealedRef.current.has(category)) return
-      const next = new Set(revealedRef.current)
-      next.add(category)
-      revealedRef.current = next
-      setRevealed(next)
-
-      if (!completedRef.current && !disabled && next.size >= minExamples) {
-        completedRef.current = true
-        setSubmitted(true)
-        setSolved(true)
-        onCorrect()
-      }
-    },
-    [disabled, minExamples, onCorrect],
-  )
-
-  const updatePosition = useCallback(() => {
-    if (!openCategory) return
-    const button = buttonRefs.current.get(openCategory)
-    const popover = popoverRef.current
-    if (!button || !popover) return
-
-    const rect = button.getBoundingClientRect()
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    const popWidth = popover.offsetWidth
-    const popHeight = popover.offsetHeight
-
-    // Horizontal: centre on the row, then clamp inside the viewport.
-    const center = rect.left + rect.width / 2
-    const left = Math.max(
-      MARGIN,
-      Math.min(center - popWidth / 2, viewportWidth - popWidth - MARGIN),
-    )
-
-    // Vertical: prefer dropping below the row; flip above when there isn't room.
-    const roomAbove = rect.top - GAP - MARGIN
-    const roomBelow = viewportHeight - rect.bottom - GAP - MARGIN
-    let placement: Placement
-    let top: number
-    if (popHeight <= roomBelow) {
-      placement = 'bottom'
-      top = rect.bottom + GAP
-    } else if (popHeight <= roomAbove) {
-      placement = 'top'
-      top = rect.top - popHeight - GAP
-    } else if (roomBelow >= roomAbove) {
-      placement = 'bottom'
-      top = Math.min(rect.bottom + GAP, viewportHeight - popHeight - MARGIN)
-    } else {
-      placement = 'top'
-      top = Math.max(MARGIN, rect.top - popHeight - GAP)
-    }
-
-    const arrowCenter = Math.max(ARROW, Math.min(center - left, popWidth - ARROW))
-    setCoords({ top, left, placement, arrowLeft: arrowCenter - ARROW / 2 })
-  }, [openCategory])
-
-  // Measure + place when an example opens, then keep in sync while open. The
-  // popover only renders while an example is open and useLayoutEffect runs
-  // before paint, so stale coords from a previous open are never visible.
-  useLayoutEffect(() => {
-    if (openCategory) updatePosition()
-  }, [openCategory, updatePosition])
-
+  // Auto-complete the reveal-gate on mount (or once re-enabled): there is no
+  // answer to check and all examples are already visible, so mark the step
+  // solved exactly once and let the learner proceed with the lesson's Continue.
   useEffect(() => {
-    if (!openCategory) return
-    const handle = () => updatePosition()
-    window.addEventListener('scroll', handle, true)
-    window.addEventListener('resize', handle)
-    return () => {
-      window.removeEventListener('scroll', handle, true)
-      window.removeEventListener('resize', handle)
-    }
-  }, [openCategory, updatePosition])
-
-  // Dismiss on outside pointer-down or Escape (Escape returns focus to the row).
-  useEffect(() => {
-    if (!openCategory) return
-    function onPointerDown(event: PointerEvent) {
-      const target = event.target as Node | null
-      if (!target) return
-      const button = openCategory ? buttonRefs.current.get(openCategory) : null
-      if (button?.contains(target) || popoverRef.current?.contains(target)) return
-      close()
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      const button = openCategory ? buttonRefs.current.get(openCategory) : null
-      close()
-      button?.focus()
-    }
-    document.addEventListener('pointerdown', onPointerDown, true)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [openCategory, close])
-
-  const remaining = Math.max(0, minExamples - revealed.size)
+    if (completedRef.current || disabled || !gateSatisfied) return
+    completedRef.current = true
+    setSolved(true)
+    onCorrect()
+  }, [disabled, gateSatisfied, onCorrect])
 
   return (
     <div className="space-y-4">
-      <style>{STYLES}</style>
-
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-slate-600">{helperText}</p>
         <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
@@ -406,65 +223,41 @@ export function HandRankingLadder({
         </span>
       </div>
 
-      <ol className="space-y-1.5">
+      <ol className="space-y-1.5" aria-label="Poker hands from strongest to weakest">
         {LADDER.map((entry, index) => {
-          const isOpen = openCategory === entry.category
-          const wasRevealed = revealed.has(entry.category)
+          const isSelected = selected === entry.category
           return (
             <li key={entry.category}>
               <button
-                ref={setButtonRef(entry.category)}
                 type="button"
-                className={`hrl-row flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition hover:border-brand-300 hover:bg-brand-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  isOpen ? 'border-brand-500 bg-brand-50/60' : 'border-slate-200 bg-white'
+                aria-pressed={isSelected}
+                onClick={() =>
+                  setSelected((current) => (current === entry.category ? null : entry.category))
+                }
+                className={`flex w-full flex-col gap-3 rounded-xl border px-3 py-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:flex-row sm:items-center ${
+                  isSelected
+                    ? 'border-brand-500 bg-brand-50/60 shadow-sm'
+                    : 'border-slate-200 bg-white'
                 }`}
-                aria-expanded={isOpen}
-                aria-haspopup="dialog"
-                aria-describedby={isOpen ? popoverId : undefined}
-                aria-label={`${entry.name}. ${entry.blurb}. ${
-                  isOpen ? 'Hide' : 'Show'
-                } example hand.`}
-                onClick={() => toggle(entry.category)}
               >
-                <span
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
-                    isOpen ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {index + 1}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-sm font-semibold text-slate-900">{entry.name}</span>
-                    {wasRevealed && (
-                      <span
-                        className="text-emerald-600"
-                        aria-hidden="true"
-                        title="Example viewed"
-                      >
-                        ✓
-                      </span>
-                    )}
-                  </span>
-                  <span className="block truncate text-xs text-slate-500">{entry.blurb}</span>
-                </span>
-                <span
-                  className="flex shrink-0 items-center gap-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-600"
-                  aria-hidden="true"
-                >
-                  <span className="hidden sm:inline">Example</span>
-                  <svg
-                    className="hrl-chevron h-3.5 w-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                <span className="flex min-w-0 items-center gap-3 sm:flex-1">
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+                      isSelected ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}
+                    aria-hidden="true"
                   >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-900">{entry.name}</span>
+                    <span className="block text-xs text-slate-500">{entry.blurb}</span>
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+                  {entry.example.map((card) => (
+                    <ExampleCard key={card} id={card} />
+                  ))}
                 </span>
               </button>
             </li>
@@ -472,57 +265,16 @@ export function HandRankingLadder({
         })}
       </ol>
 
-      {!solved && (
-        <p className="text-center text-xs text-slate-500" role="status" aria-live="polite">
-          {remaining > 0
-            ? `Tap ${remaining === 1 ? 'a hand' : `${remaining} hands`} to reveal example cards, then continue.`
-            : 'Explore as many as you like, then continue.'}
-        </p>
-      )}
-
       <CheckPanel
         canSubmit={false}
-        submitted={submitted}
+        submitted={solved}
         solved={solved}
         onSubmit={() => {}}
         onRetry={() => {}}
         allowRetry={allowRetry}
         hideSubmit
-        confirmation="✓ Tap any rank to compare example hands."
+        confirmation="✓ Example hands are shown for every rank."
       />
-
-      {openEntry &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            id={popoverId}
-            role="dialog"
-            aria-label={`Example of a ${openEntry.name.toLowerCase()}`}
-            className="hrl-popover"
-            data-placement={coords?.placement ?? 'bottom'}
-            style={{
-              top: coords ? `${coords.top}px` : 0,
-              left: coords ? `${coords.left}px` : 0,
-              visibility: coords ? 'visible' : 'hidden',
-            }}
-          >
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className="text-xs font-bold text-slate-900">{openEntry.name}</span>
-              <span className="text-[0.65rem] font-medium text-slate-400">Example hand</span>
-            </div>
-            <div className="flex justify-center gap-1">
-              {openEntry.example.map((card) => (
-                <ExampleCard key={card} id={card} />
-              ))}
-            </div>
-            <span
-              className="hrl-popover__arrow"
-              aria-hidden="true"
-              style={coords ? { left: `${coords.arrowLeft}px` } : undefined}
-            />
-          </div>,
-          document.body,
-        )}
     </div>
   )
 }
