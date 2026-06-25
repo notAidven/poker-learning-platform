@@ -109,14 +109,11 @@ export function CompareEvents({
   }
 
   function handleRetry() {
+    // Keep the chosen side and any entered probabilities so a wrong attempt only
+    // re-enables editing — the learner corrects just the wrong part and resubmits.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setChoice(null)
-    setNumA('')
-    setDenA('')
-    setNumB('')
-    setDenB('')
   }
 
   const probsReady =

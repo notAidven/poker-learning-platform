@@ -430,10 +430,11 @@ export function BoardDealer({
   }
 
   function handleRetry() {
+    // Keep the per-street best-hand picks and the showdown winner choice so a wrong
+    // attempt only re-enables editing — the learner fixes the wrong pick and resubmits.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setWinnerPick(null)
   }
 
   // Announce the most recently revealed street for screen readers.

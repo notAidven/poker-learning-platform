@@ -450,10 +450,10 @@ function IdentifyCategory({
   }
 
   function handleRetry() {
+    // Keep the learner's chosen category so a wrong attempt only re-enables editing.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setChoice(null)
   }
 
   return (
@@ -795,10 +795,11 @@ function CardSelectMode({
   }
 
   function handleRetry() {
+    // Keep the selected cards so the learner can swap only the wrong card(s)
+    // instead of re-picking the whole five-card hand.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setSelected([])
   }
 
   function cardStateFor(card: CardId): CardState {

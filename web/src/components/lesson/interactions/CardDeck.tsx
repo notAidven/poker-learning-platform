@@ -350,13 +350,12 @@ function SelectAllMode({
   }
 
   function handleRetry() {
+    // Retain the learner's card selection and entered values so a wrong attempt
+    // only re-enables editing — they fix the part that was wrong and resubmit
+    // instead of rebuilding the whole answer from scratch.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setSelected(new Set())
-    setCountInput('')
-    setFractionNum('')
-    setFractionDen('')
   }
 
   const manipulableReady = selected.size > 0
@@ -646,23 +645,12 @@ function DrawTallyMode({
   }
 
   function handleRetry() {
+    // Keep the accumulated draws, the locked-in prediction, and the entered count /
+    // fraction so a wrong attempt only re-enables editing. The learner fixes the
+    // wrong field and resubmits rather than re-drawing the whole sample.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setHits(0)
-    setTotal(0)
-    setRecent([])
-    setCurrent(null)
-    setFlipping(false)
-    remainingRef.current = []
-    setCountInput('')
-    setFractionNum('')
-    setFractionDen('')
-    if (predictFirst) {
-      setPredicted(false)
-      setPredictNum('')
-      setPredictDen('')
-    }
   }
 
   const empiricalValue = total > 0 ? hits / total : 0

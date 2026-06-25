@@ -514,13 +514,13 @@ export function BettingRound({
   }
 
   function handleRetry() {
+    // Keep the learner's action / bet size / EV entry so a wrong attempt only
+    // re-enables editing. The table reveal is derived feedback (hidden until the
+    // next submit), so it is cleared rather than retained.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
     setReveal(null)
-    setAction(null)
-    setSizeIdx(null)
-    setEvInput('')
   }
 
   const situationText =

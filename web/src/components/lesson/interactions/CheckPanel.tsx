@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 type CheckPanelProps = {
   canSubmit: boolean
@@ -35,10 +35,26 @@ export function CheckPanel({
   hideSubmit = false,
   confirmation,
 }: CheckPanelProps) {
+  const submitRef = useRef<HTMLButtonElement>(null)
+  const wasSubmitted = useRef(submitted)
+
+  // After a wrong attempt is retried (submitted flips true -> false) the "Try again"
+  // button unmounts and the submit button reappears. Move focus onto it so keyboard
+  // and screen-reader users land on a sensible control instead of dropping to <body>.
+  // Only fires on the retry transition, never on first mount or when there is no
+  // submit button (reveal-gate steps), so it never steals focus unexpectedly.
+  useEffect(() => {
+    if (wasSubmitted.current && !submitted && !hideSubmit) {
+      submitRef.current?.focus()
+    }
+    wasSubmitted.current = submitted
+  }, [submitted, hideSubmit])
+
   return (
     <div className="space-y-3">
       {!hideSubmit && !submitted && (
         <button
+          ref={submitRef}
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}

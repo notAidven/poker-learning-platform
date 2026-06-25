@@ -422,19 +422,12 @@ export function OutsOdds({
   }
 
   function handleRetry() {
+    // Preserve every entered value (outs, equity, pot odds, the call/fold choice)
+    // and the empirical tally so a wrong attempt only re-enables editing — the
+    // learner corrects just the wrong field and resubmits.
     onAttemptReset?.()
     setSubmitted(false)
     setSolved(false)
-    setOutsInput('')
-    setEquityInput('')
-    setEquityNum('')
-    setEquityDen('')
-    setPotOddsInput('')
-    setPotOddsNum('')
-    setPotOddsDen('')
-    setDecisionChoice(null)
-    setTrials(0)
-    setHits(0)
   }
 
   function runTrials(n: number) {
