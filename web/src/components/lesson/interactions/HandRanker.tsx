@@ -19,6 +19,24 @@ import {
   type HandCategory,
 } from '../../../types/poker'
 import { compareHands, evaluateBest, evaluateFive } from '../../../lib/poker/handEvaluator'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
@@ -93,7 +111,6 @@ const STYLES = `
 .hr-card--active { transform: translateY(-6px) scale(1.05); box-shadow: 0 11px 22px rgba(29, 78, 216, 0.3); z-index: 2; }
 .hr-card--ok { box-shadow: 0 9px 18px rgba(16, 185, 129, 0.3); }
 .hr-card--bad { opacity: 0.5; }
-.hr-row { transition: transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1); }
 .hr-reveal { animation: hr-reveal 0.28s ease backwards; }
 @keyframes hr-reveal {
   from { opacity: 0; transform: translateY(6px); }
@@ -233,48 +250,139 @@ function SelectCard({
   )
 }
 
-function MoveControls({
-  label,
-  canUp,
-  canDown,
-  disabled,
-  onUp,
-  onDown,
-}: {
-  label: string
-  canUp: boolean
-  canDown: boolean
-  disabled: boolean
-  onUp: () => void
-  onDown: () => void
-}) {
-  const btn =
-    'flex h-11 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-brand-300 hover:text-brand-600 disabled:opacity-30 disabled:hover:border-slate-200 disabled:hover:text-slate-500'
+/** Six-dot grab affordance shown on the drag handle. */
+function GripIcon({ className }: { className?: string }) {
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="5" r="1.6" />
+      <circle cx="15" cy="5" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="19" r="1.6" />
+      <circle cx="15" cy="19" r="1.6" />
+    </svg>
+  )
+}
+
+/**
+ * One reorderable row. The drag is initiated from the grip handle only, so the
+ * rest of the row stays scrollable on touch. The handle is a real <button>, so
+ * keyboard users tab to it and use space/enter + arrow keys (dnd-kit's keyboard
+ * sensor) to pick up, move, and drop, with no up/down arrow buttons needed.
+ */
+function SortableRow({
+  id,
+  handleLabel,
+  rowClassName,
+  disabled,
+  reduceMotion,
+  children,
+}: {
+  id: string
+  handleLabel: string
+  rowClassName: string
+  disabled: boolean
+  reduceMotion: boolean
+  children: React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id, disabled })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    // Skip the reflow tween for users who ask for reduced motion.
+    transition: reduceMotion ? undefined : transition,
+  }
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 rounded-xl border-2 px-3 py-2 ${rowClassName} ${
+        isDragging ? 'relative z-10 shadow-xl ring-2 ring-brand-300' : 'shadow-sm'
+      }`}
+    >
+      {children}
       <button
         type="button"
-        className={btn}
-        disabled={disabled || !canUp}
-        onClick={onUp}
-        aria-label={`Move ${label} up (stronger)`}
+        ref={setActivatorNodeRef}
+        disabled={disabled}
+        aria-label={`Drag to reorder ${handleLabel}`}
+        className={`flex h-11 w-9 shrink-0 touch-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-brand-300 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:cursor-not-allowed disabled:opacity-30 ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        {...attributes}
+        {...listeners}
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-          <path d="M6 14l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <GripIcon className="h-5 w-5" />
       </button>
-      <button
-        type="button"
-        className={btn}
-        disabled={disabled || !canDown}
-        onClick={onDown}
-        aria-label={`Move ${label} down (weaker)`}
-      >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-          <path d="M6 10l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-    </div>
+    </li>
+  )
+}
+
+/**
+ * Drag-and-drop wrapper shared by both ordering modes. Pointer + touch reordering
+ * comes from PointerSensor (an 8px activation threshold keeps taps/scrolls intact);
+ * full keyboard reordering comes from KeyboardSensor + sortableKeyboardCoordinates.
+ * `labelFor` powers human-friendly screen-reader announcements.
+ */
+function SortableList({
+  ids,
+  labelFor,
+  onReorder,
+  children,
+}: {
+  ids: string[]
+  labelFor: (id: string) => string
+  onReorder: (next: string[]) => void
+  children: React.ReactNode
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function positionOf(id: string) {
+    return ids.indexOf(id) + 1
+  }
+
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      return `Picked up ${labelFor(String(active.id))}. Use the arrow keys to move it, space or enter to drop, escape to cancel.`
+    },
+    onDragOver({ active, over }) {
+      if (!over) return undefined
+      return `${labelFor(String(active.id))} is now at position ${positionOf(String(over.id))} of ${ids.length}.`
+    },
+    onDragEnd({ active, over }) {
+      if (!over) return `${labelFor(String(active.id))} was dropped.`
+      return `${labelFor(String(active.id))} was dropped at position ${positionOf(String(over.id))} of ${ids.length}.`
+    },
+    onDragCancel({ active }) {
+      return `Reordering cancelled. ${labelFor(String(active.id))} returned to its original position.`
+    },
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = ids.indexOf(String(active.id))
+    const newIndex = ids.indexOf(String(over.id))
+    if (oldIndex === -1 || newIndex === -1) return
+    onReorder(arrayMove(ids, oldIndex, newIndex))
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+      accessibility={{ announcements }}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <ul className="space-y-2">{children}</ul>
+      </SortableContext>
+    </DndContext>
   )
 }
 
@@ -291,16 +399,7 @@ function arraysEqual<T>(a: T[], b: T[]): boolean {
 /** Reorderable list state shared by the two ordering modes. */
 function useOrder(initial: string[]) {
   const [order, setOrder] = useState<string[]>(initial)
-  function move(index: number, dir: -1 | 1) {
-    setOrder((prev) => {
-      const target = index + dir
-      if (target < 0 || target >= prev.length) return prev
-      const next = [...prev]
-      ;[next[index], next[target]] = [next[target], next[index]]
-      return next
-    })
-  }
-  return { order, setOrder, move }
+  return { order, setOrder }
 }
 
 // ===========================================================================
@@ -425,13 +524,14 @@ function OrderCategories({
   disabled = false,
   initialSolved = false,
   allowRetry = true,
-}: HandRankerProps) {
+  reduceMotion,
+}: HandRankerProps & { reduceMotion: boolean }) {
   const categories = useMemo(() => config.categories ?? [], [config.categories])
   const expected = useMemo(
     () => [...categories].sort((a, b) => HAND_CATEGORY_RANK[b] - HAND_CATEGORY_RANK[a]),
     [categories],
   )
-  const { order, move } = useOrder(initialSolved ? expected : categories)
+  const { order, setOrder } = useOrder(initialSolved ? expected : categories)
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
   const locked = disabled || submitted
@@ -457,16 +557,24 @@ function OrderCategories({
     <div className="space-y-3">
       {config.helperText && <p className="text-center text-sm text-slate-600">{config.helperText}</p>}
       <OrientationLabel text="Strongest" />
-      <ul className="space-y-2">
+      <SortableList
+        ids={order}
+        labelFor={(id) => CATEGORY_LABEL[id as HandCategory]}
+        onReorder={setOrder}
+      >
         {order.map((cat, i) => {
           const rowOk = submitted ? order[i] === expected[i] : null
           let cls = 'border-slate-200 bg-white'
           if (rowOk === true) cls = 'border-emerald-400 bg-emerald-50'
           else if (rowOk === false) cls = 'border-rose-300 bg-rose-50'
           return (
-            <li
+            <SortableRow
               key={cat}
-              className={`hr-row flex items-center gap-3 rounded-xl border-2 px-3 py-2 ${cls}`}
+              id={cat}
+              handleLabel={CATEGORY_LABEL[cat as HandCategory]}
+              rowClassName={cls}
+              disabled={locked}
+              reduceMotion={reduceMotion}
             >
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-slate-900">
@@ -476,18 +584,10 @@ function OrderCategories({
                   {CATEGORY_SHAPE[cat as HandCategory]}
                 </span>
               </div>
-              <MoveControls
-                label={CATEGORY_LABEL[cat as HandCategory]}
-                canUp={i > 0}
-                canDown={i < order.length - 1}
-                disabled={locked}
-                onUp={() => move(i, -1)}
-                onDown={() => move(i, 1)}
-              />
-            </li>
+            </SortableRow>
           )
         })}
-      </ul>
+      </SortableList>
       <OrientationLabel text="Weakest" />
 
       <CheckPanel
@@ -514,7 +614,8 @@ function OrderHands({
   disabled = false,
   initialSolved = false,
   allowRetry = true,
-}: HandRankerProps) {
+  reduceMotion,
+}: HandRankerProps & { reduceMotion: boolean }) {
   const hands = useMemo(() => config.hands ?? [], [config.hands])
   const evalById = useMemo(() => {
     const map = new Map<string, EvaluatedHand>()
@@ -523,6 +624,9 @@ function OrderHands({
     }
     return map
   }, [hands])
+  // Stable, answer-neutral handle/announcement label per hand (does not reveal
+  // the category before the learner submits).
+  const handNumber = useMemo(() => new Map(hands.map((h, i) => [h.id, i + 1])), [hands])
 
   const canonical = useMemo(
     () =>
@@ -538,7 +642,7 @@ function OrderHands({
   )
 
   const handById = useMemo(() => new Map(hands.map((h) => [h.id, h])), [hands])
-  const { order, move } = useOrder(initialSolved ? canonical : hands.map((h) => h.id))
+  const { order, setOrder } = useOrder(initialSolved ? canonical : hands.map((h) => h.id))
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
   const locked = disabled || submitted
@@ -582,7 +686,11 @@ function OrderHands({
     <div className="space-y-3">
       {config.helperText && <p className="text-center text-sm text-slate-600">{config.helperText}</p>}
       <OrientationLabel text="Strongest" />
-      <ul className="space-y-2">
+      <SortableList
+        ids={order}
+        labelFor={(id) => `hand ${handNumber.get(id) ?? 0}`}
+        onReorder={setOrder}
+      >
         {order.map((id, i) => {
           const hand = handById.get(id) as HandRankerHand
           const ok = submitted ? rowOk(i) : null
@@ -590,7 +698,14 @@ function OrderHands({
           if (ok === true) cls = 'border-emerald-400 bg-emerald-50'
           else if (ok === false) cls = 'border-rose-300 bg-rose-50'
           return (
-            <li key={id} className={`hr-row flex items-center gap-3 rounded-xl border-2 px-3 py-2 ${cls}`}>
+            <SortableRow
+              key={id}
+              id={id}
+              handleLabel={`hand ${handNumber.get(id) ?? i + 1}`}
+              rowClassName={cls}
+              disabled={locked}
+              reduceMotion={reduceMotion}
+            >
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap gap-1">
                   {hand.cards.map((card) => (
@@ -601,18 +716,10 @@ function OrderHands({
                   <span className="text-xs font-semibold text-slate-500">{evalById.get(id)!.label}</span>
                 )}
               </div>
-              <MoveControls
-                label={`hand ${i + 1}`}
-                canUp={i > 0}
-                canDown={i < order.length - 1}
-                disabled={locked}
-                onUp={() => move(i, -1)}
-                onDown={() => move(i, 1)}
-              />
-            </li>
+            </SortableRow>
           )
         })}
-      </ul>
+      </SortableList>
       <OrientationLabel text="Weakest" />
 
       <CheckPanel
@@ -884,10 +991,10 @@ export function HandRanker(props: HandRankerProps) {
       body = <IdentifyCategory {...props} reduceMotion={reduceMotion} />
       break
     case 'order-categories':
-      body = <OrderCategories {...props} />
+      body = <OrderCategories {...props} reduceMotion={reduceMotion} />
       break
     case 'order-hands':
-      body = <OrderHands {...props} />
+      body = <OrderHands {...props} reduceMotion={reduceMotion} />
       break
     case 'build-hand':
       body = <BuildHand {...props} reduceMotion={reduceMotion} />
