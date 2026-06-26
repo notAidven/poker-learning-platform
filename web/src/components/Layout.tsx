@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveStreak } from '../lib/gamification'
 import { ErrorBoundary } from './ErrorBoundary'
 import { AnimalAvatar } from './AnimalAvatar'
+import { SetPasswordBanner } from './SetPasswordBanner'
 import { buttonVariants } from './ui/Button'
 import { Footer } from './ui/Footer'
 import { Logo } from './ui/Logo'
@@ -119,6 +120,8 @@ export function Layout() {
           </nav>
         )}
       </header>
+
+      <SetPasswordBanner />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
         {/* Page-level guard: a crash in one route shows a recoverable fallback
