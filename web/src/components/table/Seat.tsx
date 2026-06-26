@@ -1,5 +1,14 @@
+import { motion } from 'motion/react'
 import type { SeatState } from '../../lib/poker/handEngine'
-import { CardBack, CardFace, ChipCount, Chip, EmptySlot } from '../lesson/interactions/cards/PlayingCardKit'
+import { DUR, EASE } from '../../lib/motion'
+import {
+  CardBack,
+  CardFace,
+  Chip,
+  ChipCount,
+  EmptySlot,
+  RevealCard,
+} from '../lesson/interactions/cards/PlayingCardKit'
 
 export type SeatRole = 'BTN' | 'SB' | 'BB' | null
 
@@ -14,7 +23,7 @@ type SeatProps = {
   revealHole: boolean
   /** Won (part of) the pot this hand. */
   winner: boolean
-  /** Play the deal-in animation on the hole cards. */
+  /** Play the deal-in / flip / glow animations (false under reduced motion). */
   animate: boolean
   /** Opponents render compact (smaller cards). */
   compact?: boolean
@@ -23,9 +32,9 @@ type SeatProps = {
 }
 
 const ROLE_TONE: Record<'BTN' | 'SB' | 'BB', string> = {
-  BTN: 'bg-white text-slate-900',
-  SB: 'bg-sky-500 text-white',
-  BB: 'bg-amber-400 text-amber-950',
+  BTN: 'bg-white text-night-900',
+  SB: 'bg-night-600 text-white',
+  BB: 'bg-gold-400 text-gold-900',
 }
 
 export function Seat({
@@ -42,11 +51,8 @@ export function Seat({
   const cardSize = compact ? 'sm' : 'md'
   const heroTone = seat.isHero ? 'gold' : 'blue'
 
-  const ring = winner
-    ? 'ring-2 ring-amber-300 shadow-[0_0_22px_-2px_rgba(252,211,77,0.7)]'
-    : active
-      ? 'ring-2 ring-white shadow-[0_0_18px_-2px_rgba(255,255,255,0.65)]'
-      : 'ring-1 ring-white/10'
+  // The resting border ring; the soft, pulsing halo is the <GlowRing> overlay.
+  const ring = winner ? 'ring-2 ring-gold-300' : active ? 'ring-2 ring-white/80' : 'ring-1 ring-white/10'
 
   // Opponents render narrow so several seats fit around the oval on a phone; the
   // hero seat (always at the bottom, with bigger cards) gets a little more room.
@@ -58,14 +64,16 @@ export function Seat({
         seat.folded ? 'opacity-50' : ''
       }`}
     >
+      {(winner || active) && <GlowRing tone={winner ? 'win' : 'active'} animate={animate} />}
+
       {talk && (
-        <div className="absolute -top-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-2xl rounded-bl-sm bg-white px-2.5 py-1 text-[0.65rem] font-semibold text-slate-700 shadow-lg">
+        <div className="absolute -top-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-2xl rounded-bl-sm bg-white px-2.5 py-1 text-[0.65rem] font-semibold text-night-800 shadow-lg">
           {talk}
         </div>
       )}
 
       {/* Name + position badge */}
-      <div className="flex max-w-full items-center gap-1.5">
+      <div className="relative flex max-w-full items-center gap-1.5">
         <span className="truncate text-xs font-bold text-white">
           {seat.isHero ? 'You' : seat.name}
         </span>
@@ -79,31 +87,27 @@ export function Seat({
       </div>
 
       {/* Hole cards */}
-      <div className="flex items-end gap-1">
-        {renderHole(seat, revealHole, cardSize, animate)}
-      </div>
+      <div className="relative flex items-end gap-1">{renderHole(seat, revealHole, cardSize, animate)}</div>
 
       {/* Stack */}
-      <div className="rounded-full bg-black/40 px-2 py-0.5 text-white">
+      <div className="relative rounded-full bg-black/40 px-2 py-0.5 text-white">
         <ChipCount value={seat.stack} tone={heroTone} />
       </div>
 
       {/* Status line: committed chips / folded / all-in / thinking */}
-      <div className="flex h-5 items-center gap-1.5 text-[0.65rem] font-semibold">
+      <div className="relative flex h-5 items-center gap-1.5 text-[0.65rem] font-semibold">
         {seat.folded ? (
-          <span className="text-slate-300">Folded</span>
+          <span className="text-night-100">Folded</span>
         ) : thinking ? (
-          <span className="inline-flex animate-pulse items-center gap-1 text-white/90">
-            Thinking…
-          </span>
+          <ThinkingDots animate={animate} />
         ) : seat.committed > 0 ? (
-          <span className="inline-flex items-center gap-1 text-amber-100">
+          <span className="inline-flex items-center gap-1 text-gold-100">
             <Chip size={12} tone="gold" />
             <span className="tabular-nums">{seat.committed.toLocaleString()}</span>
           </span>
         ) : null}
         {seat.allIn && !seat.folded && (
-          <span className="rounded bg-rose-500 px-1.5 py-0.5 text-[0.55rem] font-black uppercase text-white">
+          <span className="rounded bg-danger-500 px-1.5 py-0.5 text-[0.55rem] font-black uppercase text-white">
             All in
           </span>
         )}
@@ -112,12 +116,65 @@ export function Seat({
   )
 }
 
-function renderHole(
-  seat: SeatState,
-  revealHole: boolean,
-  size: 'sm' | 'md',
-  animate: boolean,
-) {
+/**
+ * The soft, animated halo around an active or winning seat. The active seat breathes
+ * gently (looping); a winner gets a single brass pop that then holds its glow. Under
+ * reduced motion it renders as a static halo (no looping, no pop).
+ */
+function GlowRing({ tone, animate }: { tone: 'win' | 'active'; animate: boolean }) {
+  const shadow =
+    tone === 'win'
+      ? '0 0 26px -2px rgba(212, 173, 87, 0.75)' // gold-400 halo
+      : '0 0 20px -2px rgba(255, 255, 255, 0.6)'
+  return (
+    <motion.span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 rounded-2xl"
+      style={{ boxShadow: shadow }}
+      initial={false}
+      animate={
+        !animate
+          ? { opacity: tone === 'win' ? 0.85 : 0.6, scale: 1 }
+          : tone === 'win'
+            ? { opacity: [0, 1, 0.9], scale: [0.85, 1.06, 1] }
+            : { opacity: [0.4, 0.85, 0.4], scale: [1, 1.02, 1] }
+      }
+      transition={
+        !animate
+          ? { duration: 0 }
+          : tone === 'win'
+            ? { duration: DUR.celebrate, ease: EASE.chip }
+            : { duration: 1.6, ease: EASE.standard, repeat: Infinity }
+      }
+    />
+  )
+}
+
+/** A paced "Thinking…" indicator: three brass-free dots that ripple while an AI acts. */
+function ThinkingDots({ animate }: { animate: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-white/90">
+      Thinking
+      <span className="inline-flex items-end gap-0.5">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="inline-block h-1 w-1 rounded-full bg-white/80"
+            initial={false}
+            animate={animate ? { opacity: [0.25, 1, 0.25], y: [0, -2, 0] } : { opacity: 0.8 }}
+            transition={
+              animate
+                ? { duration: 0.9, ease: EASE.standard, repeat: Infinity, delay: i * 0.15 }
+                : { duration: 0 }
+            }
+          />
+        ))}
+      </span>
+    </span>
+  )
+}
+
+function renderHole(seat: SeatState, revealHole: boolean, size: 'sm' | 'md', animate: boolean) {
   if (!seat.holeCards) {
     return (
       <>
@@ -126,10 +183,17 @@ function renderHole(
       </>
     )
   }
-  // Hero always sees their own cards; opponents stay face-down until showdown.
-  if (seat.isHero || revealHole) {
+  // The hero always sees their own cards (dealt face-up); no flip needed.
+  if (seat.isHero) {
     return seat.holeCards.map((c, i) => (
       <CardFace key={c} id={c} size={size} animate={animate} delay={i * 80} />
+    ))
+  }
+  // Opponents stay face-down until showdown, then flip back → face in 3D. The real
+  // card ids only enter the DOM at reveal time (privacy: no peeking via devtools).
+  if (revealHole) {
+    return seat.holeCards.map((c, i) => (
+      <RevealCard key={c} id={c} size={size} revealed animate={animate} delay={i * 110} />
     ))
   }
   return (
