@@ -3,7 +3,11 @@ import { isTableId, tables, type TableConfig } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
 import { auth } from './firebase'
-import { awardLessonCompletion, touchStreakForActivity } from './gamificationFirestore'
+import {
+  awardLessonCompletion,
+  touchStreakForActivity,
+  type LessonCompletionAward,
+} from './gamificationFirestore'
 import { computeLessonXp, type LessonXpBreakdown } from './gamification'
 import { loadLessonSession, clearLessonSession } from './lessonSession'
 import {
@@ -22,6 +26,7 @@ import {
 } from './progressSync'
 
 export type { LessonStats } from './lessonProgressStore'
+export type { LessonCompletionAward } from './gamificationFirestore'
 
 export function getLessonStats(lessonId: string): LessonStats {
   const map = ensureStatsCache()
@@ -78,6 +83,12 @@ export function saveLessonFinished(
 export type SkillCheckSaveResult = {
   isFirstCompletion: boolean
   xpBreakdown: LessonXpBreakdown | null
+  /**
+   * Resolves with the authoritative Firestore award (streak/level/leveledUp) for a
+   * signed-in user, or `null` for the guest/local path or a non-awarding completion.
+   * Never rejects — a failed award falls back to a queued completion write.
+   */
+  award: Promise<LessonCompletionAward | null>
 }
 
 /**
@@ -119,12 +130,14 @@ function applyLessonCompletion(
   notifyProgressUpdated(true)
 
   const uid = auth.currentUser?.uid
+  let award: Promise<LessonCompletionAward | null> = Promise.resolve(null)
   if (uid) {
     // The transaction persists the progress doc (completion + xpAwarded), so on
     // SUCCESS we intentionally do NOT also queue a separate stats write — that
     // would race with the atomic award. XP is added only on the first completion;
-    // a retake just refreshes stats and advances the streak.
-    void awardLessonCompletion(uid, lessonId, xpBreakdown?.total ?? 0, nextStats).catch(
+    // a retake just refreshes stats and advances the streak. The promise is returned
+    // so the celebration can use the authoritative award; it never rejects.
+    award = awardLessonCompletion(uid, lessonId, xpBreakdown?.total ?? 0, nextStats).catch(
       (err) => {
         // Durability: the atomic award didn't land, so the completion currently
         // lives only in local storage and the next applyRemoteProgress sync would
@@ -133,11 +146,12 @@ function applyLessonCompletion(
         // later reconcile idempotent, so this never double-awards XP.
         console.warn('Failed to award lesson completion; persisting completion as a fallback:', err)
         queueCompletionFallbackWrite(lessonId, nextStats)
+        return null
       },
     )
   }
 
-  return { isFirstCompletion, xpBreakdown }
+  return { isFirstCompletion, xpBreakdown, award }
 }
 
 export function saveSkillCheckResult(

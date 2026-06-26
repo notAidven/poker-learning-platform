@@ -1,6 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { motion, useAnimationControls } from 'motion/react'
 import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveStreak } from '../lib/gamification'
+import { EASE } from '../lib/motion'
 import { ErrorBoundary } from './ErrorBoundary'
 import { AnimalAvatar } from './AnimalAvatar'
 import { SetPasswordBanner } from './SetPasswordBanner'
@@ -9,6 +12,7 @@ import { Footer } from './ui/Footer'
 import { Logo } from './ui/Logo'
 import { cx } from './ui/cx'
 import { FlameIcon } from './icons'
+import { usePrefersReducedMotion } from './lesson/interactions/usePrefersReducedMotion'
 
 const navItems = [
   { to: '/', label: 'Home', match: (p: string) => p === '/' },
@@ -25,6 +29,52 @@ export function Layout() {
   const { user, profile, loading } = useAuth()
   const signedIn = Boolean(user && profile?.profileComplete)
   const streak = getEffectiveStreak(profile?.streak ?? 0, profile?.lastActivityDate ?? null)
+
+  const reduced = usePrefersReducedMotion()
+  const flameControls = useAnimationControls()
+  const armedRef = useRef(false)
+  const armTimer = useRef<number | undefined>(undefined)
+  const prevStreakRef = useRef<number | null>(null)
+
+  // A completion reports `streakIncreased` on the gamification event; arm a short
+  // window so the very next streak change (after the profile refresh lands) pulses
+  // the flame. This avoids firing on the initial profile load.
+  useEffect(() => {
+    function onGamificationUpdated(e: Event) {
+      const detail = (e as CustomEvent<{ streakIncreased?: boolean }>).detail
+      if (!detail?.streakIncreased) return
+      armedRef.current = true
+      window.clearTimeout(armTimer.current)
+      armTimer.current = window.setTimeout(() => {
+        armedRef.current = false
+      }, 5000)
+    }
+    window.addEventListener('gamification-updated', onGamificationUpdated)
+    return () => {
+      window.removeEventListener('gamification-updated', onGamificationUpdated)
+      window.clearTimeout(armTimer.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    const prev = prevStreakRef.current
+    prevStreakRef.current = streak
+    if (prev == null) return
+    if (streak > prev && armedRef.current && !reduced) {
+      armedRef.current = false
+      void flameControls.start(
+        {
+          scale: [1, 1.25, 1],
+          boxShadow: [
+            '0 0 0 rgba(212, 173, 87, 0)',
+            '0 0 14px rgba(212, 173, 87, 0.75)',
+            '0 0 0 rgba(212, 173, 87, 0)',
+          ],
+        },
+        { duration: 0.55, ease: EASE.chip },
+      )
+    }
+  }, [streak, reduced, flameControls])
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-ink">
@@ -63,13 +113,14 @@ export function Layout() {
             (signedIn ? (
               <div className="flex items-center gap-2">
                 {streak > 0 && (
-                  <span
+                  <motion.span
+                    animate={flameControls}
                     className="hidden items-center gap-1.5 rounded-full bg-gold-200/70 px-3 py-1.5 text-sm font-bold text-gold-600 ring-1 ring-inset ring-gold-300 sm:inline-flex"
                     title={`${streak}-day streak`}
                   >
                     <FlameIcon className="h-4 w-4" />
                     <span className="tnum">{streak}</span>
-                  </span>
+                  </motion.span>
                 )}
                 <Link
                   to="/profile"

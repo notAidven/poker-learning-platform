@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { saveSkillCheckResult } from '../../lib/lessonProgress'
+import { saveSkillCheckResult, type LessonCompletionAward } from '../../lib/lessonProgress'
 import { isSkillCheckPassing } from '../../lib/gamification'
+import { buildRewardModel, type RewardModel } from '../../lib/reward'
+import { useAuth } from '../../contexts/AuthContext'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 import { SkillCheckStepView } from './SkillCheckStepView'
+import { RewardCelebration } from '../gamification/RewardCelebration'
 import { CheckIcon, RetryIcon, StarIcon } from '../icons'
 import { Button, buttonVariants } from '../ui/Button'
 
@@ -19,15 +22,14 @@ type SkillCheckPlayerProps = {
 }
 
 export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: SkillCheckPlayerProps) {
+  const { profile } = useAuth()
   const total = skillCheck.questions.length
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answered, setAnswered] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
   const [finished, setFinished] = useState(false)
   const [passed, setPassed] = useState(false)
-  const [xpBreakdown, setXpBreakdown] = useState<{ base: number; bonus: number; total: number } | null>(
-    null,
-  )
+  const [reward, setReward] = useState<RewardModel | null>(null)
   // Bumped on each retake to force a fresh mount of the interaction widgets
   // (they lock after a single submit), so a retry starts from a clean slate.
   const [attemptKey, setAttemptKey] = useState(0)
@@ -54,9 +56,33 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
       // lesson. A failing score leaves the lesson un-completed so the learner can
       // retake the skill check directly (P1 #3).
       if (didPass) {
+        // Snapshot the pre-completion profile so the celebration meter knows where
+        // it started (the profile only refreshes after the award lands).
+        const prevTotalXp = profile?.totalXp ?? 0
+        const prevStreakStored = profile?.streak ?? 0
+        const prevLastActivityDate = profile?.lastActivityDate ?? null
         const result = saveSkillCheckResult(skillCheck.lessonId, finalCorrect, total)
         if (result.isFirstCompletion && result.xpBreakdown) {
-          setXpBreakdown(result.xpBreakdown)
+          const xpBreakdown = result.xpBreakdown
+          // Prefer the authoritative Firestore award (streak/level), but never block
+          // the celebration on it: fall back to local math for guests / slow writes.
+          void (async () => {
+            const award = await Promise.race([
+              result.award,
+              new Promise<LessonCompletionAward | null>((resolve) => {
+                setTimeout(() => resolve(null), 1200)
+              }),
+            ])
+            setReward(
+              buildRewardModel({
+                xpBreakdown,
+                prevTotalXp,
+                prevStreakStored,
+                prevLastActivityDate,
+                award,
+              }),
+            )
+          })()
         }
       }
       setPassed(didPass)
@@ -74,7 +100,7 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
     setCorrectCount(0)
     setFinished(false)
     setPassed(false)
-    setXpBreakdown(null)
+    setReward(null)
     setAttemptKey((k) => k + 1)
   }
 
@@ -133,13 +159,10 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
             </span>{' '}
             ({percent}%) on the {lessonTitle} skill check.
           </p>
-          {xpBreakdown && (
-            <p className="mt-3 rounded-2xl bg-white/80 px-4 py-3 text-sm text-slate-700">
-              <span className="font-semibold text-brand-700">+{xpBreakdown.total} XP</span>
-              {' '}
-              ({xpBreakdown.base} base
-              {xpBreakdown.bonus > 0 ? ` + ${xpBreakdown.bonus} first-try bonus` : ''})
-            </p>
+          {reward && (
+            <div className="mt-4">
+              <RewardCelebration {...reward} />
+            </div>
           )}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link to="/course" className={buttonVariants({ variant: 'primary' })}>
