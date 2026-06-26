@@ -339,7 +339,7 @@ export function BoardDealer({
 
       {config.helperText && <p className="text-center text-sm text-slate-600">{config.helperText}</p>}
 
-      <div className="pck-scene space-y-4 rounded-2xl border border-emerald-900/10 bg-gradient-to-b from-emerald-50 to-white p-4 shadow-inner">
+      <div className="pck-scene space-y-4 rounded-2xl border border-night-900/10 bg-gradient-to-b from-night-50 to-white p-4 shadow-inner">
         {opponents > 0 ? (
           <div className="flex flex-wrap items-end justify-center gap-4">
             {Array.from({ length: opponents }).map((_, i) => {
@@ -403,7 +403,7 @@ export function BoardDealer({
               {annotate && (
                 <span
                   className={`text-[0.65rem] font-semibold uppercase tracking-wide ${
-                    group.revealedHere ? 'text-emerald-700' : 'text-slate-400'
+                    group.revealedHere ? 'text-success-700' : 'text-slate-400'
                   }`}
                 >
                   {group.revealedHere && showBurns ? `Burn + ${STREET_NAME[group.street]}` : STREET_NAME[group.street]}
@@ -447,9 +447,9 @@ export function BoardDealer({
             const state = submitted ? (picks[s] === expectedByStreet[s] ? 'ok' : 'bad') : 'idle'
             const border =
               state === 'ok'
-                ? 'border-emerald-500'
+                ? 'border-success-500'
                 : state === 'bad'
-                  ? 'border-rose-400'
+                  ? 'border-danger-400'
                   : 'border-slate-200'
             return (
               <div key={s}>
@@ -476,12 +476,12 @@ export function BoardDealer({
                   ))}
                 </select>
                 {state === 'ok' && (
-                  <p className="mt-1 text-xs font-semibold text-emerald-700">
+                  <p className="mt-1 text-xs font-semibold text-success-700">
                     Correct: {CATEGORY_LABEL[expectedByStreet[s]].toLowerCase()}.
                   </p>
                 )}
                 {state === 'bad' && (
-                  <p className="mt-1 text-xs font-semibold text-rose-600">
+                  <p className="mt-1 text-xs font-semibold text-danger-600">
                     Best hand here: {CATEGORY_LABEL[expectedByStreet[s]].toLowerCase()}.
                   </p>
                 )}
@@ -503,8 +503,8 @@ export function BoardDealer({
               let cls =
                 'min-h-11 rounded-xl border-2 px-3 py-3 text-sm font-bold transition disabled:cursor-not-allowed'
               if (submitted) {
-                if (isWinningChoice) cls += ' border-emerald-500 bg-emerald-50 text-emerald-800'
-                else if (active) cls += ' border-rose-400 bg-rose-50 text-rose-700'
+                if (isWinningChoice) cls += ' border-success-500 bg-success-50 text-success-800'
+                else if (active) cls += ' border-danger-400 bg-danger-50 text-danger-700'
                 else cls += ' border-slate-200 bg-white text-slate-500 opacity-70'
               } else if (active) {
                 cls += ' border-brand-500 bg-brand-50 text-brand-800 shadow-sm'

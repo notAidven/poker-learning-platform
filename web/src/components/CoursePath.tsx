@@ -1,11 +1,22 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { motion } from 'motion/react'
 import { lessonNumber, sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { isTableCleared, isTableUnlocked } from '../lib/lessonProgress'
 import { LessonPathModal } from './LessonPathModal'
 import { CheckIcon, ChipIcon, LockIcon } from './icons'
+import { DUR, EASE } from '../lib/motion'
+import { usePrefersReducedMotion } from './lesson/interactions/usePrefersReducedMotion'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
+
+/** sessionStorage key holding the completed-node baseline from the last time the path was
+ *  shown, so a freshly-won lesson still flips when the learner returns to the (remounted)
+ *  path — without every already-done node flipping on first load. */
+const SEEN_KEY = 'suited-course-seen-completed'
+
+/** Completed nodes read as a "won hand" across every section: a success-green chip + check. */
+const COMPLETED_NODE = 'bg-success-500 text-white shadow-md ring-[5px] ring-success-200'
 
 type CoursePathProps = {
   lessons: LessonMeta[]
@@ -39,10 +50,12 @@ const TAIL_PAD = 28
 const BANNER_BOX = 'h-[4.5rem] w-full max-w-[18rem]'
 
 /**
- * Per-section visual theme. Tints map onto the real palette tokens in index.css:
- * felt-green → emerald-*, oxblood → brand-*, brass → gold-*. Class strings are
- * literal (Tailwind needs them visible) and preserve the universal status
- * affordances (check / number-or-star / lock + current pulse + badge).
+ * Per-section visual theme. Tints map onto palette tokens in index.css: foundations →
+ * success-* (felt-green), oxblood → brand-*, brass → gold-*; the casino capstone keeps a
+ * distinct violet "neon" tint (no token equivalent). Completed nodes are unified to
+ * COMPLETED_NODE so finishing reads as a "won hand" everywhere. Class strings are literal
+ * (Tailwind needs them visible) and preserve the status affordances (check / number-or-star
+ * / lock + current pulse + badge). Connector colours are CSS-var tokens for the SVG trail.
  */
 const SECTION_THEME: Record<
   SectionId,
@@ -57,16 +70,16 @@ const SECTION_THEME: Record<
   }
 > = {
   foundations: {
-    band: 'bg-emerald-50/70 ring-1 ring-inset ring-emerald-100',
-    headerRing: 'ring-emerald-200',
-    eyebrow: 'text-emerald-600',
-    title: 'text-emerald-900',
-    connector: '#10b981',
+    band: 'bg-success-50/70 ring-1 ring-inset ring-success-100',
+    headerRing: 'ring-success-200',
+    eyebrow: 'text-success-600',
+    title: 'text-success-900',
+    connector: 'var(--color-success-500)',
     node: {
-      completed: 'bg-emerald-500 text-white shadow-md ring-[5px] ring-emerald-200',
+      completed: COMPLETED_NODE,
       current:
-        'bg-emerald-600 text-white shadow-lg shadow-emerald-500/40 ring-[5px] ring-emerald-200 animate-[pulse_2.5s_ease-in-out_infinite]',
-      locked: 'bg-emerald-50 text-emerald-300 ring-[5px] ring-emerald-100',
+        'bg-success-600 text-white shadow-lg shadow-success-500/40 ring-[5px] ring-success-200 animate-[pulse_2.5s_ease-in-out_infinite]',
+      locked: 'bg-success-50 text-success-300 ring-[5px] ring-success-100',
     },
   },
   playing: {
@@ -74,9 +87,9 @@ const SECTION_THEME: Record<
     headerRing: 'ring-brand-200',
     eyebrow: 'text-brand-600',
     title: 'text-brand-900',
-    connector: '#9b2c44',
+    connector: 'var(--color-brand-600)',
     node: {
-      completed: 'bg-brand-500 text-white shadow-md ring-[5px] ring-brand-200',
+      completed: COMPLETED_NODE,
       current:
         'bg-brand-600 text-white shadow-lg shadow-brand-500/40 ring-[5px] ring-brand-200 animate-[pulse_2.5s_ease-in-out_infinite]',
       locked: 'bg-brand-50 text-brand-300 ring-[5px] ring-brand-100',
@@ -87,16 +100,16 @@ const SECTION_THEME: Record<
     headerRing: 'ring-gold-200',
     eyebrow: 'text-gold-600',
     title: 'text-gold-600',
-    connector: '#bb8f3c',
+    connector: 'var(--color-gold-500)',
     node: {
-      completed: 'bg-gold-500 text-white shadow-md ring-[5px] ring-gold-200',
+      completed: COMPLETED_NODE,
       current:
         'bg-gold-600 text-white shadow-lg shadow-gold-400/40 ring-[5px] ring-gold-200 animate-[pulse_2.5s_ease-in-out_infinite]',
       locked: 'bg-gold-200/60 text-gold-600 ring-[5px] ring-gold-200',
     },
   },
-  // Casino Floor (Phase 2 AI tables): a distinct violet "neon" tint, separate from
-  // the three learning sections so the capstone arena reads as its own place.
+  // Casino Floor (Phase 2 AI tables): a distinct violet "neon" tint with no palette
+  // token, kept as-is so the capstone arena reads as its own place.
   casino: {
     band: 'bg-violet-50/70 ring-1 ring-inset ring-violet-100',
     headerRing: 'ring-violet-200',
@@ -104,7 +117,7 @@ const SECTION_THEME: Record<
     title: 'text-violet-900',
     connector: '#8b5cf6',
     node: {
-      completed: 'bg-violet-500 text-white shadow-md ring-[5px] ring-violet-200',
+      completed: COMPLETED_NODE,
       current:
         'bg-violet-600 text-white shadow-lg shadow-violet-500/40 ring-[5px] ring-violet-200 animate-[pulse_2.5s_ease-in-out_infinite]',
       locked: 'bg-violet-50 text-violet-300 ring-[5px] ring-violet-100',
@@ -264,6 +277,33 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
   }, [])
 
   const statuses = lessons.map((lesson, i) => getLessonStatus(lesson, i, lessons, completedIds))
+  const reduced = usePrefersReducedMotion()
+
+  // Nodes finished since the path was last shown get a one-shot chip flip. The per-session
+  // baseline lives in sessionStorage, captured once at mount, so a freshly-won node still
+  // flips when the learner returns to the (remounted) path — while existing completions
+  // never flip on first load. The effect advances the baseline after each completion change.
+  const completedNodeIds = lessonLayouts
+    .filter((ll) => statuses[ll.globalIndex] === 'completed')
+    .map((ll) => ll.lesson.id)
+  const completedKey = completedNodeIds.join(',')
+  const [flipIds] = useState<Set<string>>(() => {
+    try {
+      const raw = sessionStorage.getItem(SEEN_KEY)
+      if (raw === null) return new Set()
+      const prev = new Set<string>(JSON.parse(raw) as string[])
+      return new Set(completedNodeIds.filter((id) => !prev.has(id)))
+    } catch {
+      return new Set()
+    }
+  })
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SEEN_KEY, JSON.stringify(completedKey ? completedKey.split(',') : []))
+    } catch {
+      /* ignore storage failures (e.g. private mode) */
+    }
+  }, [completedKey])
 
   return (
     <>
@@ -340,19 +380,29 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
                 const fromStatus = statuses[from.globalIndex]
                 const active = fromStatus === 'completed' || fromStatus === 'current'
                 const stroke = !active
-                  ? '#cbd5e1'
+                  ? 'var(--color-night-200)'
                   : crossSection
                     ? `url(#xsection-${from.lesson.id})`
                     : SECTION_THEME[from.section].connector
+                // The trail draws itself in top→bottom (stroke-dashoffset via pathLength).
                 return (
-                  <path
+                  <motion.path
                     key={from.lesson.id}
                     d={connectorPath(from, to, width)}
                     fill="none"
                     stroke={stroke}
                     strokeWidth={10}
                     strokeLinecap="round"
-                    opacity={active ? 1 : 0.85}
+                    initial={reduced ? false : { pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: active ? 1 : 0.85 }}
+                    transition={
+                      reduced
+                        ? { duration: 0 }
+                        : {
+                            pathLength: { delay: 0.06 * i, duration: DUR.deal, ease: EASE.deal },
+                            opacity: { delay: 0.06 * i, duration: DUR.quick, ease: EASE.standard },
+                          }
+                    }
                   />
                 )
               })}
@@ -371,7 +421,7 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
 
           {/* Lesson nodes */}
           <ol className="relative z-40 m-0 list-none p-0" style={{ height: totalHeight }}>
-            {lessonLayouts.map((ll) => {
+            {lessonLayouts.map((ll, liIndex) => {
               const index = ll.globalIndex
               const status = statuses[index]
               const center = nodeCenter(index, ll.y, width)
@@ -387,11 +437,23 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
                     transform: 'translate(-50%, -50%)',
                   }}
                 >
-                  <div className="relative flex items-center justify-center">
+                  {/* Staggered top→bottom reveal; the node center stays put (transform lives here, not on the li). */}
+                  <motion.div
+                    className="relative flex items-center justify-center"
+                    initial={reduced ? false : { opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={
+                      reduced
+                        ? { duration: 0 }
+                        : { delay: 0.08 + liIndex * 0.045, duration: DUR.base, ease: EASE.deal }
+                    }
+                  >
                     <PathNode
                       lesson={ll.lesson}
                       status={status}
                       section={ll.section}
+                      justCompleted={flipIds.has(ll.lesson.id)}
+                      reduced={reduced}
                       onSelect={() => setSelectedLesson({ lesson: ll.lesson, status })}
                     />
 
@@ -401,7 +463,7 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
                       side={labelOnRight ? 'right' : 'left'}
                       width={width > 0 ? labelWidthFor(index, width) : undefined}
                     />
-                  </div>
+                  </motion.div>
                 </li>
               )
             })}
@@ -447,7 +509,7 @@ function SectionBannerText({
         <h2 className={`mt-0.5 font-display text-[15px] font-bold leading-tight ${theme.title}`}>
           {section.title}
         </h2>
-        <p className="mt-0.5 line-clamp-2 max-w-[15rem] text-[11px] leading-snug text-slate-500">
+        <p className="mt-0.5 line-clamp-2 max-w-[15rem] text-[11px] leading-snug text-night-600">
           {section.subtitle}
         </p>
       </div>
@@ -474,7 +536,7 @@ function LessonSideLabel({
   return (
     <p
       className={`pointer-events-none absolute top-1/2 line-clamp-4 -translate-y-1/2 text-xs font-semibold leading-snug sm:text-sm ${position} ${
-        status === 'locked' ? 'text-slate-400' : 'text-slate-800'
+        status === 'locked' ? 'text-night-400' : 'text-night-800'
       }`}
       style={{ width, maxWidth: width }}
     >
@@ -487,11 +549,15 @@ function PathNode({
   lesson,
   status,
   section,
+  justCompleted,
+  reduced,
   onSelect,
 }: {
   lesson: LessonMeta
   status: LessonStatus
   section: SectionId
+  justCompleted: boolean
+  reduced: boolean
   onSelect: () => void
 }) {
   const shell = [
@@ -516,6 +582,9 @@ function PathNode({
     )
 
   const badgeText = isTable ? 'Play' : number === 1 ? 'Start' : 'Up next'
+  // A freshly-won node flips face-up like a chip being raked in; otherwise it sits still
+  // (initial=false) so hover/active scale on the inner shell keeps working.
+  const flip = justCompleted && !reduced
 
   return (
     <button
@@ -524,14 +593,22 @@ function PathNode({
       className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-4"
       aria-label={isTable ? `Table: ${lesson.title}` : `Lesson ${number}: ${lesson.title}`}
     >
-      <div className={shell}>
-        {content}
-        {status === 'current' && (
-          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow">
-            {badgeText}
-          </span>
-        )}
-      </div>
+      <motion.div
+        className="relative"
+        style={{ transformPerspective: 700 }}
+        initial={flip ? { rotateY: -180, scale: 0.6, opacity: 0 } : false}
+        animate={{ rotateY: 0, scale: 1, opacity: 1 }}
+        transition={flip ? { duration: DUR.deal, ease: EASE.chip, delay: 0.18 } : { duration: 0 }}
+      >
+        <div className={shell}>
+          {content}
+          {status === 'current' && (
+            <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold-400 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-night-900 shadow">
+              {badgeText}
+            </span>
+          )}
+        </div>
+      </motion.div>
     </button>
   )
 }

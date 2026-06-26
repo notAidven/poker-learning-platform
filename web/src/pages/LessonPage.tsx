@@ -114,7 +114,7 @@ export function LessonPage() {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-xl font-bold">{meta.title}</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-night-700">
           Interactive content for this lesson is coming soon.
         </p>
         <Link to="/course" className="mt-4 inline-block text-brand-600">
@@ -126,7 +126,7 @@ export function LessonPage() {
 
   if (contentLoading || !content) {
     return (
-      <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-500" aria-live="polite">
+      <div className="mx-auto max-w-lg p-8 text-center text-sm text-night-600" aria-live="polite">
         Loading lesson…
       </div>
     )
@@ -145,7 +145,7 @@ export function LessonPage() {
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
             Lesson {lessonNumber(meta.id)}
           </p>
-          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{meta.title}</h1>
+          <h1 className="text-xl font-bold text-ink sm:text-2xl">{meta.title}</h1>
         </div>
 
         <LessonPlayer

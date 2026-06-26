@@ -43,7 +43,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         ref={closeRef}
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+        className="absolute right-4 top-4 rounded-lg p-1 text-night-400 hover:bg-night-100 hover:text-night-600"
         aria-label="Close"
       >
         <CloseIcon />
@@ -52,10 +52,10 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
       <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
         {isTable ? 'Casino table' : `Lesson ${lessonNumber(lesson.id)}`}
       </p>
-      <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-slate-900">
+      <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-ink">
         {lesson.title}
       </h2>
-      <p className="mt-1 text-sm text-slate-500">{lesson.unit}</p>
+      <p className="mt-1 text-sm text-night-600">{lesson.unit}</p>
 
       <div className="mt-5">
         {isTable ? (
@@ -86,7 +86,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
 
 function LockedBody() {
   return (
-    <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+    <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
       Complete the previous lesson and its skill check to unlock this one.
     </p>
   )
@@ -113,19 +113,19 @@ function TableBody({
           ? 'Finish all lessons to open the Casino Floor.'
           : 'Clear the previous coached table to unlock this one.'
     return (
-      <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{lockedMessage}</p>
+      <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">{lockedMessage}</p>
     )
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-night-700">
         {table?.feature === 'coached'
           ? 'Play full hands against rule-based opponents while an AI coach talks you through every decision.'
           : 'Take a seat against AI opponents. The always-on strategy hint has your back on every street.'}
       </p>
       {cleared && (
-        <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+        <p className="rounded-2xl bg-success-50 px-4 py-3 text-sm font-semibold text-success-700">
           Table cleared — pull up a chair any time.
         </p>
       )}
@@ -192,7 +192,7 @@ function CompletedBody({
 function SkillCheckPendingBody({ lessonId, onClose }: { lessonId: string; onClose: () => void }) {
   return (
     <div className="space-y-4">
-      <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <p className="rounded-2xl bg-gold-100 px-4 py-3 text-sm text-gold-900">
         Lesson complete! Take the 3-question skill check to finish and unlock the next lesson.
       </p>
       <Link
@@ -219,7 +219,7 @@ function StartBody({
 }) {
   if (!hasContent) {
     return (
-      <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
         Interactive content for this lesson is coming soon.
       </p>
     )
@@ -227,7 +227,7 @@ function StartBody({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-night-700">
         {inProgress
           ? 'Pick up where you left off, then finish with a short skill check.'
           : 'Work through interactive problems, then prove it with 3 no-hint questions.'}
@@ -245,9 +245,9 @@ function StartBody({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 px-3 py-3 text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
+    <div className="rounded-2xl bg-night-50 px-3 py-3 text-center">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-night-600">{label}</p>
+      <p className="mt-1 text-lg font-bold text-ink">{value}</p>
     </div>
   )
 }

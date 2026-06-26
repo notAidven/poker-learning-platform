@@ -107,8 +107,8 @@ export function CompareEvents({
     const base =
       'relative flex-1 rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed'
     if (submitted) {
-      if (isCorrectSide) return `${base} border-emerald-500 bg-emerald-50`
-      if (active) return `${base} border-rose-400 bg-rose-50`
+      if (isCorrectSide) return `${base} border-success-500 bg-success-50`
+      if (active) return `${base} border-danger-400 bg-danger-50`
       return `${base} border-slate-200 bg-white opacity-70`
     }
     if (active) return `${base} border-brand-500 bg-brand-50 shadow-sm`
@@ -146,7 +146,7 @@ export function CompareEvents({
         <div className="mb-1 flex items-baseline justify-between text-sm">
           <span className="font-semibold text-slate-700">{label}</span>
           <span
-            className={`font-bold tabular-nums ${highlight ? 'text-emerald-700' : 'text-slate-500'}`}
+            className={`font-bold tabular-nums ${highlight ? 'text-success-700' : 'text-slate-500'}`}
           >
             {disp.fractionText} ≈ {disp.percentText}
           </span>
@@ -155,7 +155,7 @@ export function CompareEvents({
           <div
             className={`cmp-bar h-full rounded-full ${
               highlight
-                ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+                ? 'bg-gradient-to-r from-success-400 to-success-600'
                 : 'bg-gradient-to-r from-slate-300 to-slate-400'
             }`}
             style={{ width: `${disp.value * 100}%` }}
@@ -213,9 +213,9 @@ export function CompareEvents({
           aria-pressed={choice === 'equal'}
           className={`min-h-11 w-full rounded-xl border-2 px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed ${
             submitted && equalLikely
-              ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+              ? 'border-success-500 bg-success-50 text-success-800'
               : submitted && choice === 'equal'
-                ? 'border-rose-400 bg-rose-50 text-rose-700'
+                ? 'border-danger-400 bg-danger-50 text-danger-700'
                 : choice === 'equal'
                   ? 'border-brand-500 bg-brand-50 text-brand-800'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-brand-300'

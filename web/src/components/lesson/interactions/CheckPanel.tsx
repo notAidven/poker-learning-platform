@@ -1,4 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { motion } from 'motion/react'
+import { DUR, EASE } from '../../../lib/motion'
+import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 
 type CheckPanelProps = {
   canSubmit: boolean
@@ -35,6 +38,7 @@ export function CheckPanel({
   hideSubmit = false,
   confirmation,
 }: CheckPanelProps) {
+  const reduced = usePrefersReducedMotion()
   const submitRef = useRef<HTMLButtonElement>(null)
   const wasSubmitted = useRef(submitted)
 
@@ -65,7 +69,7 @@ export function CheckPanel({
       )}
       {confirmation && solved && (
         <p
-          className="text-center text-sm font-semibold text-emerald-700"
+          className="text-center text-sm font-semibold text-success-700"
           role="status"
           aria-live="polite"
         >
@@ -73,13 +77,16 @@ export function CheckPanel({
         </p>
       )}
       {!hideSubmit && submitted && !solved && allowRetry && (
-        <button
+        <motion.button
           type="button"
           onClick={onRetry}
-          className="min-h-11 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="min-h-11 w-full rounded-xl border border-night-200 px-4 py-3 text-sm font-semibold text-night-700 hover:bg-night-50"
+          initial={reduced ? false : { x: 0 }}
+          animate={reduced ? undefined : { x: [0, -5, 5, -4, 4, -2, 2, 0] }}
+          transition={reduced ? undefined : { duration: DUR.base * 1.4, ease: EASE.standard }}
         >
           Try again
-        </button>
+        </motion.button>
       )}
     </div>
   )

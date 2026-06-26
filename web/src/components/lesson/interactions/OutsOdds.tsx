@@ -98,7 +98,7 @@ function OutChip({ id }: { id: CardId }) {
   const color = isRedSuit(suit) ? 'text-rose-600' : 'text-slate-900'
   return (
     <span
-      className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2 text-sm font-bold tabular-nums shadow-sm"
+      className="inline-flex h-7 items-center gap-1 rounded-lg border border-success-200 bg-white px-2 text-sm font-bold tabular-nums shadow-sm"
       aria-label={cardLabel(id)}
     >
       <span className={color}>{rank}</span>
@@ -422,8 +422,8 @@ export function OutsOdds({
     const base =
       'min-h-11 flex-1 rounded-xl border-2 px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed'
     if (submitted) {
-      if (expectedDecision === side) return `${base} border-emerald-500 bg-emerald-50 text-emerald-800`
-      if (active) return `${base} border-rose-400 bg-rose-50 text-rose-700`
+      if (expectedDecision === side) return `${base} border-success-500 bg-success-50 text-success-800`
+      if (active) return `${base} border-danger-400 bg-danger-50 text-danger-700`
       return `${base} border-slate-200 bg-white text-slate-500 opacity-70`
     }
     if (active) return `${base} border-brand-500 bg-brand-50 text-brand-800 shadow-sm`
@@ -481,8 +481,8 @@ export function OutsOdds({
                   disabled={locked}
                 />
                 {showOutsReveal && (
-                  <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2">
-                    <p className="mb-1 text-xs font-semibold text-emerald-700">
+                  <div className="mt-2 rounded-xl border border-success-100 bg-success-50/60 px-3 py-2">
+                    <p className="mb-1 text-xs font-semibold text-success-700">
                       Your {outCards.length} outs:
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -638,7 +638,7 @@ export function OutsOdds({
                 }}
               />
               <span
-                className="absolute top-0 h-full border-l-2 border-dashed border-emerald-600"
+                className="absolute top-0 h-full border-l-2 border-dashed border-success-600"
                 style={{ left: `${Math.min(100, theoreticalPct)}%` }}
                 aria-hidden="true"
               />
