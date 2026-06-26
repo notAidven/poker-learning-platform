@@ -25,6 +25,7 @@ import {
 import { getTable } from '../../data/tables'
 import {
   boardThreatOf,
+  buildDeepCoachContext,
   buildLLMContext,
   coachResultReaction,
   composeCoachReaction,
@@ -328,6 +329,9 @@ describe('coach reaction (Room 1, rule-based, AI off)', () => {
       street: 'flop',
       madeLabel: null,
       madeCategory: null,
+      madeFromHole: null,
+      boardMadeLabel: null,
+      boardMadeCategory: null,
       drawName: null,
       outs: null,
       equityPct: null,
@@ -386,6 +390,7 @@ describe('result-aware end-of-hand reflection (Room 1, rule-based, AI off)', () 
       heroCategory: null,
       heroLabel: null,
       heroStrong: false,
+      heroPlayedBoard: false,
       villainCategory: null,
       villainLabel: null,
       boardThreat: null,
@@ -667,6 +672,83 @@ describe('result-aware end-of-hand reflection (Room 1, rule-based, AI off)', () 
       seats: base.seats.map((s) => (s.isHero ? { ...s, folded: true } : s)),
     }
     expect(coachResultReaction(heroFolded, 0)).toBe('')
+  })
+})
+
+describe('board reading (Room 1 coach) — do not present a shared board hand as the hero\'s', () => {
+  function analysis(partial: Partial<SpotAnalysis>): SpotAnalysis {
+    return {
+      street: 'river',
+      madeLabel: null,
+      madeCategory: null,
+      madeFromHole: null,
+      boardMadeLabel: null,
+      boardMadeCategory: null,
+      drawName: null,
+      outs: null,
+      equityPct: null,
+      potOddsPct: null,
+      pricedIn: null,
+      facingBet: false,
+      bigBet: false,
+      facts: [],
+      tip: '',
+      ...partial,
+    }
+  }
+
+  it('the in-the-moment reaction does not call a board pair the hero plays a good call', () => {
+    const shared = analysis({
+      madeLabel: 'Pair of Threes',
+      madeCategory: 'pair',
+      madeFromHole: false,
+      boardMadeLabel: 'Pair of Threes',
+      facingBet: true,
+      potOddsPct: 30,
+    })
+    const text = composeCoachReaction('call', 'call', shared).toLowerCase()
+    expect(text).toContain('on the board')
+    expect(text).toContain('high-card')
+    expect(text).not.toContain('good call')
+  })
+
+  it('still affirms a pair the hero actually made with a hole card', () => {
+    const real = analysis({ madeLabel: 'Pair of Kings', madeCategory: 'pair', madeFromHole: true })
+    const text = composeCoachReaction('call', 'call', real).toLowerCase()
+    expect(text).toContain('good call')
+    expect(text).not.toContain('on the board')
+  })
+
+  it('the end-of-hand recap names a shared board hand instead of mourning it', () => {
+    const text = composeCoachResultReaction({
+      reachedShowdown: true,
+      heroWon: false,
+      bigPot: true,
+      heroCategory: 'pair',
+      heroLabel: 'Pair of Threes',
+      heroStrong: false,
+      heroPlayedBoard: true,
+      villainCategory: 'pair',
+      villainLabel: 'Pair of Aces',
+      boardThreat: 'board-pair',
+      pricedIn: false,
+      heroHadDraw: false,
+      passiveThenAggressive: false,
+    }).toLowerCase()
+    expect(text).toContain('on the board')
+    expect(text).toContain('shared by everyone')
+    expect(text).not.toContain('good call')
+  })
+
+  it('buildDeepCoachContext captures the whole table (seats, personas, stacks, position)', () => {
+    const hand = createInitialHand(COACHED_CFG, 77, 'You')
+    const ctx = buildDeepCoachContext(hand, 0, (id) => (id === 'opp-0' ? 'a calling station' : undefined))
+    expect(ctx.seats).toHaveLength(3)
+    expect(ctx.seats[0].isHero).toBe(true)
+    expect(ctx.seats.find((s) => s.name === 'A')?.persona).toBe('a calling station')
+    expect(ctx.bigBlind).toBe(10)
+    expect(['ip', 'oop']).toContain(ctx.position)
+    expect(ctx.seats.every((s) => s.inHand)).toBe(true)
   })
 })
 

@@ -24,6 +24,7 @@ import { CoachPanel } from './CoachPanel'
 import { HintBar } from './HintBar'
 import {
   buildCoachContext,
+  buildDeepCoachContext,
   buildHintContext,
   coachReactionFor,
   coachResultReaction,
@@ -231,6 +232,13 @@ export function PokerTable({
         : null,
     [config.support, isHeroTurn, hand, heroIndex, heroSeat?.holeCards],
   )
+  const deepCoachContext = useMemo(
+    () =>
+      config.support === 'coach' && isHeroTurn && heroSeat?.holeCards
+        ? buildDeepCoachContext(hand, heroIndex, personaForSeat)
+        : null,
+    [config.support, isHeroTurn, hand, heroIndex, heroSeat?.holeCards, personaForSeat],
+  )
   const hintContext = useMemo(
     () =>
       config.support === 'hints' && isHeroTurn && heroSeat?.holeCards
@@ -403,7 +411,9 @@ export function PokerTable({
           {config.support === 'coach' ? (
             <CoachPanel
               context={coachContext}
+              deepContext={deepCoachContext}
               turnKey={turnKey}
+              handKey={handIndex}
               active={isHeroTurn}
               reaction={liveReaction}
               resultReflection={liveRecap}

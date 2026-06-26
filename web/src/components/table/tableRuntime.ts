@@ -26,10 +26,15 @@ import {
   type PotResult,
   type SeatState,
 } from '../../lib/poker/handEngine'
-import { compareHands, evaluateHoldem, rankValue } from '../../lib/poker/handEvaluator'
+import {
+  compareHands,
+  evaluateHoldem,
+  holeCardsImproveBoard,
+  rankValue,
+} from '../../lib/poker/handEvaluator'
 import { decideAI, type AIDecisionInput, type AITier } from '../../lib/poker/opponentAI'
 import { decideWithLLM, type LLMOpponentContext, type OppDecision } from '../../lib/ai/llmOpponent'
-import type { CoachContext } from '../../lib/ai/coach'
+import type { CoachContext, DeepCoachContext } from '../../lib/ai/coach'
 import { analyzeSpot, type HintContext, type SpotAnalysis } from '../../lib/poker/hints'
 import type { TableConfig, TableFeature } from '../../data/tables'
 import type { SeatRole } from './Seat'
@@ -214,6 +219,33 @@ export function buildCoachContext(state: HandState, heroIndex: number): CoachCon
     heroStack: seat.stack,
     opponentsInHand: liveOpponents(state, heroIndex),
     legalActions: legalActions(state),
+  }
+}
+
+/**
+ * A richer, table-wide coach context for the "Ask the coach for more" deep read:
+ * the per-spot facts plus every seat (persona, stack, chips in, still in or folded)
+ * and the hero's position. `personaOf` maps a seat id to its persona string.
+ */
+export function buildDeepCoachContext(
+  state: HandState,
+  heroIndex: number,
+  personaOf: (seatId: string) => string | undefined,
+): DeepCoachContext {
+  const base = buildCoachContext(state, heroIndex)
+  const seats = state.seats.map((s) => ({
+    name: s.name,
+    isHero: s.isHero,
+    persona: s.isHero ? undefined : personaOf(s.id),
+    stack: s.stack,
+    committed: s.totalCommitted,
+    inHand: !s.folded,
+  }))
+  return {
+    ...base,
+    position: positionFor(state, heroIndex),
+    bigBlind: state.bb,
+    seats,
   }
 }
 
@@ -445,18 +477,48 @@ export function coachReactionFor(
   return composeCoachReaction(action, rec.action, analysis)
 }
 
+/**
+ * Reaction for the case where the hero's made hand is entirely on the board (a
+ * shared board pair / "playing the board"), with no draw of their own. The coach
+ * must NOT present that shared hand as the hero's asset.
+ */
+function composeBoardSharedReaction(hero: BettingAction, a: SpotAnalysis): string {
+  const shared = a.boardMadeLabel ? lowerFirst(a.boardMadeLabel) : 'made hand'
+  const note = `that ${shared} is on the board, so everyone shares it and it is not your hand`
+  switch (hero) {
+    case 'fold':
+      return `Good fold. ${upperFirst(note)}, so there was nothing of your own to keep going with.`
+    case 'check':
+      return `Smart check. ${upperFirst(note)}, so keep the pot small until your hole cards actually connect.`
+    case 'call':
+      return `Careful here. ${upperFirst(note)}. Your hole cards have not connected, so you effectively have high-card strength; make sure the price is right before paying off a bet.`
+    case 'bet':
+    case 'raise':
+      return `${upperFirst(note)}. Betting this is a bluff and not value, since your hole cards have not improved on the board, so only do it with a clear plan.`
+    default:
+      return `${upperFirst(note)}, so treat it as a weak holding until your hole cards connect.`
+  }
+}
+
 /** Pure formatter for the coach reaction (exported for tests). */
 export function composeCoachReaction(
   hero: BettingAction,
   rec: BettingAction,
   a: SpotAnalysis,
 ): string {
-  const strong = a.madeCategory ? STRONG_MADE.has(a.madeCategory) : false
-  const handBit = a.madeLabel
-    ? `your ${lowerFirst(a.madeLabel)}`
-    : a.drawName
-      ? `your ${a.drawName}`
-      : 'this hand'
+  // Playing the board (a shared board hand, no draw of the hero's own): correct the
+  // read instead of treating the board's hand as the hero's.
+  if (a.madeLabel != null && a.madeFromHole === false && !a.drawName) {
+    return composeBoardSharedReaction(hero, a)
+  }
+
+  const strong = a.madeCategory ? STRONG_MADE.has(a.madeCategory) && a.madeFromHole !== false : false
+  const handBit =
+    a.madeLabel && a.madeFromHole !== false
+      ? `your ${lowerFirst(a.madeLabel)}`
+      : a.drawName
+        ? `your ${a.drawName}`
+        : 'this hand'
   const odds = a.potOddsPct
 
   switch (hero) {
@@ -540,8 +602,10 @@ export type HandResultRead = {
   /** Hero's final hand category + label (null when it cannot be read). */
   heroCategory: HandCategory | null
   heroLabel: string | null
-  /** Hero's final hand is two pair or better. */
+  /** Hero's final hand is two pair or better AND made with the hero's hole cards. */
   heroStrong: boolean
+  /** The hero's made hand was entirely on the board (they were playing the board). */
+  heroPlayedBoard: boolean
   /** At showdown: the hand that beat the hero (best non-hero shown hand). */
   villainCategory: HandCategory | null
   villainLabel: string | null
@@ -685,16 +749,20 @@ export function coachResultReaction(finalState: HandState, heroIndex: number): s
 
   let heroCategory: HandCategory | null = null
   let heroLabel: string | null = null
+  let heroMadeFromHole = true
   if (hero.holeCards && board.length >= 3) {
     try {
       const e = evaluateHoldem(hero.holeCards, board)
       heroCategory = e.category
       heroLabel = e.label
+      heroMadeFromHole = holeCardsImproveBoard(hero.holeCards, board)
     } catch {
       // Leave null and fall back to generic wording.
     }
   }
-  const heroStrong = heroCategory ? STRONG_MADE.has(heroCategory) : false
+  // A shared board hand (the hero "played the board") is not the hero's strength.
+  const heroStrong = heroCategory ? STRONG_MADE.has(heroCategory) && heroMadeFromHole : false
+  const heroPlayedBoard = heroCategory != null && !heroMadeFromHole
 
   const villain = summary.reachedShowdown ? bestVillainAtShowdown(finalState, hero.id) : null
   let villainCategory: HandCategory | null = null
@@ -724,6 +792,7 @@ export function coachResultReaction(finalState: HandState, heroIndex: number): s
     heroCategory,
     heroLabel,
     heroStrong,
+    heroPlayedBoard,
     villainCategory,
     villainLabel,
     boardThreat,
@@ -761,6 +830,12 @@ export function composeCoachResultReaction(r: HandResultRead): string {
   }
 
   // --- Hero lost at showdown -------------------------------------------------
+  // Playing the board: the made hand was shared, never the hero's, so name that
+  // plainly rather than mourning a hand they did not really have.
+  if (r.heroPlayedBoard && !r.pricedIn) {
+    return `Key read: ${heroHand} was on the board, shared by everyone, so it was not your hand. Your hole cards did not improve on it, so you could only win by beating that shared hand; against a big bet there, folding is usually the play.`
+  }
+
   // A loose call into a danger board is a real leak to gently correct. Note it is
   // the danger signals + a weak hand that make it a leak, NOT the loss by itself.
   if (!r.heroStrong && r.boardThreat && villainStrong && !r.pricedIn) {

@@ -315,3 +315,111 @@ export function countOuts(
 
   return { outs, count: outs.length }
 }
+
+// ---------------------------------------------------------------------------
+// "Playing the board" — does the hero's made hand belong to them, or the board?
+//
+// A board pair (or any made hand that sits entirely on the community cards) is
+// shared by every player, so it is NOT the hero's asset. These helpers compare
+// the hero's best hand to the board's OWN best hand so the coach never presents a
+// shared board hand as if the hole cards made it.
+// ---------------------------------------------------------------------------
+
+/** The board's own best made hand, considering only the community cards. */
+export type BoardOwnHand = { category: HandCategory; tiebreak: RankValue[]; label: string }
+
+/**
+ * Evaluate the board ALONE. With five community cards this is the real best hand
+ * (`evaluateBest(board)`); with three or four cards only rank-multiplicity hands
+ * are possible (a five-card straight or flush needs five cards), so we read the
+ * pair/two-pair/trips/quads structure off the rank counts. Returns null for an
+ * empty board.
+ */
+export function evaluateBoardOnly(board: CardId[]): BoardOwnHand | null {
+  if (board.length >= 5) {
+    const e = evaluateBest(board)
+    return { category: e.category, tiebreak: e.tiebreak, label: e.label }
+  }
+  if (board.length === 0) return null
+
+  const countByValue = new Map<RankValue, number>()
+  for (const card of board) {
+    const v = rankValue(card)
+    countByValue.set(v, (countByValue.get(v) ?? 0) + 1)
+  }
+  const groups = [...countByValue.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || b.value - a.value)
+  const top = groups[0]
+  if (!top) return null
+
+  let category: HandCategory
+  let tiebreak: RankValue[]
+  if (top.count >= 4) {
+    category = 'quads'
+    tiebreak = [top.value]
+  } else if (top.count === 3) {
+    category = 'trips'
+    tiebreak = [top.value]
+  } else if (top.count === 2 && groups[1]?.count === 2) {
+    category = 'two-pair'
+    tiebreak = [top.value, groups[1].value]
+  } else if (top.count === 2) {
+    category = 'pair'
+    tiebreak = [top.value]
+  } else {
+    category = 'high-card'
+    tiebreak = [top.value]
+  }
+  return { category, tiebreak, label: buildLabel(category, tiebreak) }
+}
+
+/** How many leading tiebreak ranks actually DEFINE a category (the rest are kickers). */
+function definingRankCount(category: HandCategory): number {
+  switch (category) {
+    case 'full-house':
+    case 'two-pair':
+      return 2
+    case 'flush':
+      return 5
+    default:
+      return 1
+  }
+}
+
+/**
+ * Whether the hero's hole cards improve on the board's own hand. With a full board
+ * a `false` result is the classic "playing the board". Crucially, a kicker alone
+ * does NOT count: if the hero's made hand is the same category and same DEFINING
+ * ranks as the board (e.g. a board pair of threes that the hole cards did not make,
+ * even with an ace kicker), this returns false because the made hand is the board's.
+ */
+export function holeCardsImproveBoard(hole: [CardId, CardId], board: CardId[]): boolean {
+  const known = [...hole, ...board]
+  if (known.length < 5) return true
+  const heroBest = evaluateBest(known)
+  const boardHand = evaluateBoardOnly(board)
+  if (!boardHand) return true
+
+  const heroRank = HAND_CATEGORY_RANK[heroBest.category]
+  const boardRank = HAND_CATEGORY_RANK[boardHand.category]
+  if (heroRank !== boardRank) return heroRank > boardRank
+
+  const heroDefining = heroBest.tiebreak.slice(0, definingRankCount(heroBest.category))
+  const boardDefining = boardHand.tiebreak.slice(0, definingRankCount(boardHand.category))
+  const n = Math.max(heroDefining.length, boardDefining.length)
+  for (let i = 0; i < n; i++) {
+    const a = heroDefining[i] ?? 0
+    const b = boardDefining[i] ?? 0
+    if (a !== b) return a > b
+  }
+  return false
+}
+
+/**
+ * Strict "playing the board": there are five community cards and the hero's hole
+ * cards do not improve on the board's own five-card hand.
+ */
+export function isPlayingTheBoard(hole: [CardId, CardId], board: CardId[]): boolean {
+  return board.length >= 5 && !holeCardsImproveBoard(hole, board)
+}

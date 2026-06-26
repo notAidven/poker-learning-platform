@@ -9,7 +9,13 @@
  */
 import { parseCardId, type CardId } from '../../types/lesson'
 import { HAND_CATEGORY_RANK, type HandCategory, type PokerStreet } from '../../types/poker'
-import { countOuts, evaluateBest, rankValue } from './handEvaluator'
+import {
+  countOuts,
+  evaluateBest,
+  evaluateBoardOnly,
+  holeCardsImproveBoard,
+  rankValue,
+} from './handEvaluator'
 
 export type HintContext = {
   hole: [CardId, CardId]
@@ -29,6 +35,16 @@ export type SpotAnalysis = {
   /** Best made hand label once >= 5 cards are known (e.g. "Two pair, Kings and Sevens"). */
   madeLabel: string | null
   madeCategory: HandCategory | null
+  /**
+   * Whether the hero's HOLE CARDS make the current made hand. `false` means the made
+   * hand is entirely on the board (a shared board pair / "playing the board"), so it
+   * is not the hero's own asset. Null preflop or when there is no made hand.
+   */
+  madeFromHole: boolean | null
+  /** The board's OWN best hand label (e.g. "Pair of Threes"), for board-reading copy. */
+  boardMadeLabel: string | null
+  /** The board's OWN best hand category (so copy can tell a shared pair from a shared straight). */
+  boardMadeCategory: HandCategory | null
   /** Primary draw name when a clean flush/straight draw exists. */
   drawName: string | null
   /** Clean outs for the primary draw (flush/straight), if any. */
@@ -80,6 +96,9 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
     street,
     madeLabel: null,
     madeCategory: null,
+    madeFromHole: null,
+    boardMadeLabel: null,
+    boardMadeCategory: null,
     drawName: null,
     outs: null,
     equityPct: null,
@@ -109,6 +128,12 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
       const made = evaluateBest(known)
       analysis.madeLabel = made.label
       analysis.madeCategory = made.category
+      // Does the made hand belong to the hero, or is it sitting on the board? A
+      // shared board hand (e.g. a board pair) is no one's asset in particular.
+      analysis.madeFromHole = holeCardsImproveBoard(hole, board)
+      const boardOwn = evaluateBoardOnly(board)
+      analysis.boardMadeLabel = boardOwn?.label ?? null
+      analysis.boardMadeCategory = boardOwn?.category ?? null
       const madeRank = HAND_CATEGORY_RANK[made.category]
 
       // Clean outs toward the two classic draws — only when not already there.
@@ -212,7 +237,13 @@ function startingHandCode(hole: [CardId, CardId]): string {
 
 function postflopFacts(a: SpotAnalysis, ctx: HintContext): string[] {
   const facts = [`Hole: ${ctx.hole.join(', ')}`, `Board: ${ctx.board.join(' ') || '(none)'}`]
-  if (a.madeLabel) facts.push(`Best hand now: ${a.madeLabel}`)
+  if (a.madeLabel) {
+    facts.push(
+      a.madeFromHole === false
+        ? `Best 5 cards: ${a.madeLabel}, but it is entirely on the board (your hole cards do not improve it) - you are playing the board, so this hand is shared by everyone`
+        : `Best hand now: ${a.madeLabel} (made with your hole cards)`,
+    )
+  }
   if (a.drawName && a.outs != null) {
     const eq = a.equityPct != null ? `, ~${a.equityPct}% by the river` : ''
     facts.push(`Draw: ${a.drawName}, ${a.outs} outs${eq}`)
@@ -239,9 +270,24 @@ function postflopTip(a: SpotAnalysis, ctx: HintContext): string {
   }
 
   const madeRank = a.madeCategory ? HAND_CATEGORY_RANK[a.madeCategory] : PAIR_RANK
-  const strong = madeRank >= TWO_PAIR_RANK
   const hasDraw = a.drawName != null && a.outs != null && a.equityPct != null
   const sunk = a.bigBet ? ` Remember, the chips already in the pot aren't yours.` : ''
+
+  // Playing the board: the made hand is on the community cards, shared by everyone,
+  // so it is not the hero's asset. Coach the true strength (unless a live draw is
+  // the real reason to continue, in which case fall through to the draw advice).
+  if (a.madeFromHole === false && !hasDraw) {
+    const shared = a.boardMadeLabel ? lowerFirst(a.boardMadeLabel) : 'made hand'
+    const boardStrong = a.boardMadeCategory ? HAND_CATEGORY_RANK[a.boardMadeCategory] >= TWO_PAIR_RANK : false
+    return clampSentence(
+      boardStrong
+        ? `The ${shared} is on the board and shared by everyone, so you only win if your hole cards beat it.`
+        : `Your hole cards haven't connected; the ${shared} is on the board, shared by everyone, so play it as a weak hand.`,
+    )
+  }
+
+  // A shared board hand is never the hero's value, so do not treat it as strong.
+  const strong = madeRank >= TWO_PAIR_RANK && a.madeFromHole !== false
 
   if (a.facingBet) {
     if (hasDraw && !strong) {

@@ -3,8 +3,11 @@ import {
   compareHands,
   countOuts,
   evaluateBest,
+  evaluateBoardOnly,
   evaluateFive,
   evaluateHoldem,
+  holeCardsImproveBoard,
+  isPlayingTheBoard,
   rankValue,
 } from './handEvaluator'
 import type { CardId } from '../../types/lesson'
@@ -188,5 +191,48 @@ describe('countOuts (Lesson 4 draws)', () => {
     const { outs, count } = countOuts(['AS', 'KS'], ['QS', '7S', '2D'], 'flush')
     expect(outs).toHaveLength(count)
     expect(outs.every((c) => c.endsWith('S'))).toBe(true)
+  })
+})
+
+describe('evaluateBoardOnly — the board\'s own hand', () => {
+  it('reads a paired flop board as a pair (no five-card hand needed)', () => {
+    const bo = evaluateBoardOnly(['3H', '3D', '9C'])
+    expect(bo?.category).toBe('pair')
+    expect(bo?.label).toBe('Pair of Threes')
+  })
+
+  it('reads a full five-card board with the real evaluator', () => {
+    const bo = evaluateBoardOnly(['3H', '3D', 'KC', '9S', '5D'])
+    expect(bo?.category).toBe('pair')
+    expect(bo?.label).toBe('Pair of Threes')
+  })
+
+  it('reads an unpaired board as high-card', () => {
+    expect(evaluateBoardOnly(['KS', '9D', '2C'])?.category).toBe('high-card')
+    expect(evaluateBoardOnly([])).toBeNull()
+  })
+})
+
+describe('holeCardsImproveBoard / isPlayingTheBoard', () => {
+  it('a board pair the hole cards did not make does NOT count as improving (playing the board)', () => {
+    // 3s are on the board; the hero holds unconnected blanks.
+    expect(holeCardsImproveBoard(['7C', '2D'], ['3H', '3D', '9C'])).toBe(false)
+    // Even an ace KICKER does not make the board pair the hero's own hand.
+    expect(holeCardsImproveBoard(['AC', '4D'], ['3H', '3D', 'KC', '9S', '5D'])).toBe(false)
+  })
+
+  it('a hole card that makes a real pair (or better) DOES improve on the board', () => {
+    // Hero pairs the 9 -> two pair (nines and threes) using a hole card.
+    expect(holeCardsImproveBoard(['9D', '7H'], ['3H', '3D', '9C'])).toBe(true)
+    // Hero pairs the top card -> a real pair of Kings.
+    expect(holeCardsImproveBoard(['KD', '7C'], ['KS', '9D', '2C'])).toBe(true)
+  })
+
+  it('detects strict playing-the-board on a five-card straight board', () => {
+    const straightBoard: CardId[] = ['9S', '8D', '7C', '6H', '5S']
+    expect(isPlayingTheBoard(['2C', '3D'], straightBoard)).toBe(true) // hero adds nothing
+    expect(isPlayingTheBoard(['10D', '4C'], straightBoard)).toBe(false) // hero makes the higher straight
+    // Only meaningful with a full board.
+    expect(isPlayingTheBoard(['7C', '2D'], ['3H', '3D', '9C'])).toBe(false)
   })
 })
