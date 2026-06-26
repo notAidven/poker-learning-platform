@@ -64,7 +64,6 @@ export function LessonPlayer({
   const [solvedStepIds, setSolvedStepIds] = useState<Set<string>>(
     () => new Set(initial.solvedStepIds),
   )
-  const [firstTryCorrect, setFirstTryCorrect] = useState<Record<string, boolean>>({})
   const [problemAttempts, setProblemAttempts] = useState<Record<string, number>>(
     () => ({ ...initial.problemAttempts }),
   )
@@ -119,13 +118,6 @@ export function LessonPlayer({
     }))
   }, [])
 
-  const handleFirstSubmit = useCallback((stepId: string, correct: boolean) => {
-    setFirstTryCorrect((prev) => {
-      if (stepId in prev) return prev
-      return { ...prev, [stepId]: correct }
-    })
-  }, [])
-
   const canContinue = step && (isConceptStep(step) || problemReady)
 
   const finishLesson = useCallback(() => {
@@ -143,8 +135,14 @@ export function LessonPlayer({
       return
     }
 
-    const tracked = problemSteps.filter((p) => p.id in firstTryCorrect)
-    const correctOnFirstTry = tracked.filter((p) => firstTryCorrect[p.id]).length
+    // Resume-safe accuracy: derive "first try correct" from the PERSISTED
+    // problemAttempts (the same source XP uses), not the in-memory firstTryCorrect,
+    // which resets to {} on resume and would undercount problems solved before the
+    // learner left. Every solved problem records ≥1 attempt; a single attempt means
+    // it was right on the first submit, while >1 means at least one retry.
+    const correctOnFirstTry = problemSteps.filter(
+      (p) => (problemAttempts[p.id] ?? 1) <= 1,
+    ).length
     const lessonAccuracy =
       problemSteps.length > 0
         ? Math.round((correctOnFirstTry / problemSteps.length) * 100)
@@ -168,7 +166,6 @@ export function LessonPlayer({
     navigate('/course')
   }, [
     allowNavigation,
-    firstTryCorrect,
     isCompletedReview,
     lesson.id,
     navigate,
@@ -221,7 +218,6 @@ export function LessonPlayer({
             step={step}
             alreadySolved={solvedStepIds.has(step.id)}
             onSolved={() => handleStepSolved(step.id)}
-            onFirstSubmit={(correct) => handleFirstSubmit(step.id, correct)}
             onAttemptSubmit={() => handleAttemptSubmit(step.id)}
           />
         )}

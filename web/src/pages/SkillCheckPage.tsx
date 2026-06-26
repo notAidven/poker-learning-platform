@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { ExitLessonModal } from '../components/ExitLessonModal'
 import { SkillCheckPlayer } from '../components/lesson/SkillCheckPlayer'
 import { hasSkillCheck, loadSkillCheck } from '../data/skillCheckContent'
-import { lessons } from '../data/lessons'
+import { lessonNumber, lessons } from '../data/lessons'
 import type { SkillCheckDefinition } from '../types/skillCheck'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
 import { useCompletedLessons } from '../hooks/useCompletedLessons'
@@ -112,7 +112,7 @@ export function SkillCheckPage() {
             ← Course path
           </Link>
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
-            Lesson {meta.id} · Skill check
+            Lesson {lessonNumber(meta.id)} · Skill check
           </p>
           <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{meta.title}</h1>
           <p className="mt-1 text-sm text-slate-600">

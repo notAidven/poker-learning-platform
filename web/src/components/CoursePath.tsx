@@ -3,7 +3,7 @@ import { lessonNumber, sections, type LessonMeta, type SectionId, type SectionMe
 import { getTable } from '../data/tables'
 import { isTableCleared, isTableUnlocked } from '../lib/lessonProgress'
 import { LessonPathModal } from './LessonPathModal'
-import { CheckIcon, ChipIcon, LockIcon, StarIcon } from './icons'
+import { CheckIcon, ChipIcon, LockIcon } from './icons'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 
@@ -375,7 +375,6 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
               const index = ll.globalIndex
               const status = statuses[index]
               const center = nodeCenter(index, ll.y, width)
-              const isLast = index === lessons.length - 1
               const labelOnRight = offsetFor(index, width) >= 0
 
               return (
@@ -393,7 +392,6 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
                       lesson={ll.lesson}
                       status={status}
                       section={ll.section}
-                      isLast={isLast}
                       onSelect={() => setSelectedLesson({ lesson: ll.lesson, status })}
                     />
 
@@ -489,13 +487,11 @@ function PathNode({
   lesson,
   status,
   section,
-  isLast,
   onSelect,
 }: {
   lesson: LessonMeta
   status: LessonStatus
   section: SectionId
-  isLast: boolean
   onSelect: () => void
 }) {
   const shell = [
@@ -515,8 +511,6 @@ function PathNode({
       <LockIcon className="h-6 w-6" />
     ) : isTable ? (
       <ChipIcon className="h-9 w-9" strokeWidth={2.25} />
-    ) : isLast ? (
-      <StarIcon className="h-8 w-8" />
     ) : (
       <span className="text-2xl font-bold">{number}</span>
     )
