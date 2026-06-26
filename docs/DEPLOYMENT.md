@@ -154,8 +154,18 @@ npx wrangler deploy
 Notes:
 
 - The Worker (`suited-ai-proxy`, see `wrangler.toml`) uses only standard `fetch` + Web Crypto.
-  It declares a single binding — the `OPENAI_API_KEY` **secret** — and no Durable Objects, KV,
-  D1, or other resources, so there is nothing extra to provision before `wrangler deploy`.
+  It declares two bindings — the `OPENAI_API_KEY` **secret** and a **Durable Object**
+  (`RATE_LIMITER`, the `RateLimiterDO` class) used for per-uid rate limiting. The Durable Object is
+  **SQLite-backed** (the only free-tier storage backend) and is **created automatically** on
+  `wrangler deploy` by the `[[migrations]]` entry in `wrangler.toml` — there is **no namespace to
+  create** and nothing to paste back into config. No KV, D1, or other resources are needed.
+- **Cost & abuse controls ship with the deploy** (they are code/config, not account setup): a
+  server-side **model allow-list** (`ALLOWED_MODELS` in `src/openai.ts`, default `gpt-4o-mini` —
+  any other model is rejected with `400`), **per-uid rate limits** (a per-minute burst guard,
+  default `30`, plus a daily cap, default `400`, in `src/rateLimit.ts`; over-limit requests get a
+  `429` with `Retry-After`), and **tight input/output caps** (`MAX_MESSAGES` `12`,
+  `MAX_CONTENT_CHARS` `8,000`, `MAX_OUTPUT_TOKENS` `2,048`). To change any of these, edit the
+  source / `wrangler.toml` and redeploy. See [`worker/README.md`](../worker/README.md) for details.
 - `OPENAI_API_KEY` is a deploy-time secret. To rotate it, run `npx wrangler secret put
   OPENAI_API_KEY` again; to inspect or remove, use `npx wrangler secret list` /
   `npx wrangler secret delete OPENAI_API_KEY`.
@@ -204,7 +214,9 @@ fallback rather than erroring.
 - **Rules** — confirm username login still works and a `list` on `usernames` is denied.
 - **Worker** — hit `/health` (above). Then, signed in, open a Room 2 table; with
   `openai-proxy` configured the LLM opponents/coach use the model, and with it off they fall back
-  cleanly. The Worker returns `401` for missing/invalid Firebase ID tokens.
+  cleanly. The Worker returns `401` for missing/invalid Firebase ID tokens, `400` for an off-list
+  `model`, and `429` once a uid exceeds its per-minute or daily rate limit (the client soft-fails
+  to rule-based on any non-2xx).
 
 ## Rollback
 
@@ -226,6 +238,10 @@ fallback rather than erroring.
   proxy only when you want live model output.
 - **Keep the key server-side.** Prefer the `openai-proxy` Worker over the browser-side `openai`
   provider for production, so the OpenAI key is never shipped in the client bundle.
+- **Bounded AI cost.** The Worker's server-side model allow-list and per-uid rate limits (see
+  [step 4](#4-deploy-the-ai-worker-optional) and [`worker/README.md`](../worker/README.md)) cap how
+  much any one account can spend. The rate-limiter's Durable Object is SQLite-backed, so it stays
+  on the free Workers plan with nothing to provision.
 - **Optional App Check.** Set `VITE_RECAPTCHA_SITE_KEY` to enable Firebase App Check (reCAPTCHA
   Enterprise); it's wrapped in try/catch so a missing key never breaks startup.
 
@@ -239,4 +255,6 @@ fallback rather than erroring.
 | AI features always use the rule-based fallback | Expected when no provider is configured. For the proxy, ensure the user is signed in, `VITE_LLM_PROVIDER=openai-proxy` and `VITE_AI_PROXY_URL` are set, and the app was **rebuilt** (Vite inlines env at build time). |
 | Worker returns `401` | Missing/expired Firebase ID token, or a `PROJECT_ID` mismatch in `worker/src/index.ts`. |
 | Worker returns `503` | `OPENAI_API_KEY` secret not set — run `npx wrangler secret put OPENAI_API_KEY`. |
+| Worker returns `429` | Per-uid rate limit hit (per-minute burst or daily cap); the client soft-fails to rule-based. Tune `RATE_LIMITS` in `worker/src/rateLimit.ts` and redeploy. |
+| Worker returns `400` "model is not supported" | The requested model isn't in `ALLOWED_MODELS` (`worker/src/openai.ts`); add it and redeploy, or use the default `gpt-4o-mini`. |
 | Browser CORS error calling the Worker | The site's origin isn't in `ALLOWED_ORIGINS` in `worker/src/index.ts`; add it and redeploy the Worker. |

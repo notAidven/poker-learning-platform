@@ -142,7 +142,10 @@ Suited is a single-page React app with two pure, framework-free engines and a pl
   nothing configured, the app behaves exactly as the rule-based experience.
 - **Secure OpenAI proxy** — the `openai-proxy` provider calls the Cloudflare **Worker** in
   `worker/`. The OpenAI API key lives **only** in a Worker secret and is **never** shipped to the
-  browser; the Worker verifies the caller's Firebase ID token before proxying to OpenAI.
+  browser; the Worker verifies the caller's Firebase ID token, enforces a **server-side model
+  allow-list** and **per-uid rate limits** (a per-minute burst guard + daily cap, backed by a
+  SQLite Durable Object that `wrangler deploy` creates automatically), and applies tight input
+  caps before proxying to OpenAI.
 - **Firebase** — Authentication (Google + email/password), Cloud Firestore (per-user profile,
   gamification, and lesson progress), and Hosting for the built SPA.
 
@@ -198,8 +201,8 @@ For the deep dive, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 │       └── pages/             # Home, Course, Lesson, SkillCheck, Table, Profile, auth
 └── worker/                    # Cloudflare Worker: secure OpenAI proxy
     ├── README.md
-    ├── wrangler.toml
-    └── src/                   # index.ts, firebaseAuth.ts, openai.ts
+    ├── wrangler.toml          # Worker config + RateLimiterDO Durable Object binding/migration
+    └── src/                   # index.ts, firebaseAuth.ts, openai.ts, rateLimit.ts, rateLimiterDO.ts
 ```
 
 ## Local development

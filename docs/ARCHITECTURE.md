@@ -274,15 +274,29 @@ plan (Cloud Functions require Blaze; this project moved to a Worker to stay on t
   `Cache-Control`), match the `kid`, slice the SPKI out of the certificate's DER, verify the
   signature, and check claims (`aud`/`iss` = project id, `exp` not expired, plus light
   `iat`/`auth_time`/`sub` checks). Anything off → `401`.
-- **Secret** — `OPENAI_API_KEY` is set with `wrangler secret put` and is never committed, logged,
-  or echoed. The Worker config (`wrangler.toml`) enables observability and declares no other
-  bindings.
+- **Cost & abuse controls** — beyond auth/CORS (which gate *who* may call), the Worker bounds *how
+  much* it can cost: a server-side **model allow-list** (`ALLOWED_MODELS` in `src/openai.ts`,
+  default `gpt-4o-mini`; any other model → `400`), **per-uid rate limiting** backed by a **Durable
+  Object** (`RATE_LIMITER` → the `RateLimiterDO` class, addressed `idFromName(uid)` so each user
+  gets an isolated, strongly-consistent counter), and **tight input/output caps** (`MAX_MESSAGES`
+  `12`, `MAX_CONTENT_CHARS` `8,000`, `MAX_OUTPUT_TOKENS` `2,048`). The limiter enforces a
+  per-minute burst guard (default `30`) and a daily cap (default `400`) using the pure, unit-tested
+  `src/rateLimit.ts`; over-limit requests get a `429` + `Retry-After`, and if the limiter itself is
+  unavailable the Worker **fails open** (allows the request) so a limiter hiccup can never take the
+  proxy down.
+- **Secret + bindings** — `OPENAI_API_KEY` is set with `wrangler secret put` and is never
+  committed, logged, or echoed. The Worker config (`wrangler.toml`) enables observability and
+  declares the `RATE_LIMITER` Durable Object binding. The Durable Object is **SQLite-backed** (the
+  only free-tier storage backend) and is **created automatically** on `wrangler deploy` via the
+  `[[migrations]]` entry — there is no namespace to provision. A DO is used over KV because a
+  per-request counter needs strong consistency and isn't bounded by KV's free-tier daily write cap.
 
 ```mermaid
 sequenceDiagram
     participant B as Browser (openai-proxy provider)
     participant W as Cloudflare Worker (suited-ai-proxy)
     participant G as Google securetoken certs
+    participant R as RateLimiterDO (per-uid Durable Object)
     participant O as OpenAI API
 
     B->>B: get current user's Firebase ID token
@@ -290,9 +304,15 @@ sequenceDiagram
     W->>G: fetch public certs (cached)
     W->>W: verify RS256 signature + claims
     alt token valid
-        W->>O: Chat Completions (Authorization: Bearer OPENAI_API_KEY [secret])
-        O-->>W: completion
-        W-->>B: { text, model, finishReason }
+        W->>R: check(now) for this uid
+        alt within per-minute + daily limits (and model on allow-list)
+            W->>O: Chat Completions (Authorization: Bearer OPENAI_API_KEY [secret])
+            O-->>W: completion
+            W-->>B: { text, model, finishReason }
+        else over limit
+            R-->>W: blocked
+            W-->>B: 429 + Retry-After  (browser soft-fails → rule-based)
+        end
     else invalid / missing
         W-->>B: 401  (browser soft-fails → rule-based)
     end
