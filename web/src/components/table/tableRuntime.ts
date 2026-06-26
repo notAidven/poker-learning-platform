@@ -368,15 +368,29 @@ export function createNextHand(prev: HandState, config: TableRuntimeConfig): Han
   const survivors = prev.seats.filter((s) => s.stack > 0)
   if (survivors.length < 2) return null
 
-  const prevButtonId = prev.seats[prev.buttonIndex]?.id
   const seats = survivors.map((s) => ({
     id: s.id,
     name: s.name,
     isHero: s.isHero,
     stack: s.stack,
   }))
-  const prevButtonSeat = seats.findIndex((s) => s.id === prevButtonId)
-  const buttonIndex = ((prevButtonSeat >= 0 ? prevButtonSeat : 0) + 1) % seats.length
+
+  // Advance the button one seat clockwise from the OLD button position, skipping any
+  // busted seats. We walk the PREVIOUS seat ordering (not the compacted survivor
+  // list) so the button/blinds stay correct even when the previous button player
+  // busted — finding the old button id in the compacted list would return -1 and
+  // wrongly fall back to seat 0, misplacing the button and blinds.
+  const n = prev.seats.length
+  let nextButtonId = seats[0].id
+  for (let step = 1; step <= n; step++) {
+    const seat = prev.seats[(prev.buttonIndex + step) % n]
+    if (seat.stack > 0) {
+      nextButtonId = seat.id
+      break
+    }
+  }
+  const foundIndex = seats.findIndex((s) => s.id === nextButtonId)
+  const buttonIndex = foundIndex >= 0 ? foundIndex : 0
   const seed = (prev.seed + 0x9e3779b9) >>> 0
 
   return createHand({
@@ -678,7 +692,10 @@ export function readHeroContinue(
       pot: 0,
       toCall: 0,
     })
-    const liveDraw = a.drawName === 'flush draw' || a.drawName === 'open-ended straight draw'
+    const liveDraw =
+      a.drawName === 'flush draw' ||
+      a.drawName === 'open-ended straight draw' ||
+      a.drawName === 'flush draw + straight draw'
     if (liveDraw && a.outs != null && a.outs >= 8) heroHadDraw = true
   }
   return { heroHadDraw, pricedIn: heroHadDraw }

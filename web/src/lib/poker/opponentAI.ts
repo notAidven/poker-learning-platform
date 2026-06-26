@@ -119,6 +119,17 @@ function straightDrawOuts(cards: CardId[]): number {
   return Math.min(fillers, 2) * 4
 }
 
+/**
+ * A premium starting hand worth re-raising preflop (matches the app's PREMIUM set in
+ * `lib/poker/hints`): QQ+ or A-K. Used to nudge the TAG AI off a passive flat-call.
+ */
+function isPremiumPreflop(hole: [CardId, CardId]): boolean {
+  const a = rankValue(hole[0])
+  const b = rankValue(hole[1])
+  if (a === b) return a >= 12 // QQ, KK, AA
+  return Math.max(a, b) === 14 && Math.min(a, b) === 13 // A-K (suited or offsuit)
+}
+
 function preflopStrength(hole: [CardId, CardId]): number {
   const a = rankValue(hole[0])
   const b = rankValue(hole[1])
@@ -290,6 +301,10 @@ function decideTag(input: AIDecisionInput, params: TagParams): AIDecision {
     // Raise the strongest hands for value (sometimes), otherwise call and realise equity.
     if (s.hasTripsPlus && has(input, 'raise') && input.rng() > 0.35) {
       return { action: 'raise', amount: raiseTo(input, params.betSize), reason: 'Raised for value' }
+    }
+    // Preflop, re-raise premium holdings (QQ+/AK) for value rather than flat-calling.
+    if (input.board.length < 3 && has(input, 'raise') && isPremiumPreflop(input.hole)) {
+      return { action: 'raise', amount: raiseTo(input, params.betSize), reason: 'Re-raised a premium hand preflop' }
     }
     if (has(input, 'call')) {
       const reason = s.hasDraw

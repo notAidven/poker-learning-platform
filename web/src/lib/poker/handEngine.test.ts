@@ -105,6 +105,46 @@ function showdownState(
   }
 }
 
+/**
+ * Build a fresh flop betting round with fully-controlled stacks (no dealing). Seat
+ * 0 is first to act (the button sits on the last seat, so action starts at button+1).
+ */
+function flopBettingState(
+  stacks: number[],
+  holes: [CardId, CardId][],
+  board: CardId[],
+): HandState {
+  const names = ['A', 'B', 'C', 'D', 'E']
+  return {
+    seats: stacks.map((stack, idx) => ({
+      id: names[idx],
+      name: names[idx],
+      isHero: false,
+      stack,
+      committed: 0,
+      totalCommitted: 0,
+      holeCards: holes[idx],
+      folded: false,
+      allIn: false,
+      hasActed: false,
+    })),
+    buttonIndex: stacks.length - 1,
+    sb: 1,
+    bb: 2,
+    phase: 'flop',
+    board,
+    deck: ['3C', '4D', '5H', '6S', '8C', '8D'],
+    burns: [],
+    pot: 0,
+    currentBet: 0,
+    minRaise: 2,
+    toActIndex: 0,
+    lastAggressorIndex: null,
+    seed: 0,
+    log: [],
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Blinds
 // ---------------------------------------------------------------------------
@@ -238,6 +278,89 @@ describe('street progression', () => {
     state = applyAction(state, { action: 'call' }) // BB calls 8
     expect(state.toActIndex).toBe(0) // back to the button — action was re-opened
     expect(seatById(state, 'btn').hasActed).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Short all-in raises must NOT re-open the betting (only full raises do)
+// ---------------------------------------------------------------------------
+
+describe('short all-in does not re-open the action', () => {
+  // A bets 20, B calls 20, C jams all-in for 25 — that is only a 5-chip raise over
+  // the 20 bet, far short of a full (20) min-raise. Players who already acted (A, B)
+  // are NOT re-opened: they may only call or fold, never re-raise.
+  it('offers a player who already acted only fold/call against a short all-in', () => {
+    let state = flopBettingState(
+      [100, 100, 25],
+      [
+        ['AS', 'KS'],
+        ['AD', 'KD'],
+        ['QH', 'JH'],
+      ],
+      ['2C', '7D', '9S'],
+    )
+
+    state = applyAction(state, { action: 'bet', amount: 20 }) // A bets 20
+    expect(state.currentBet).toBe(20)
+    expect(state.minRaise).toBe(20)
+
+    state = applyAction(state, { action: 'call' }) // B calls 20
+    expect(state.toActIndex).toBe(2) // C to act
+
+    state = applyAction(state, { action: 'raise', amount: 25 }) // C jams short all-in
+    expect(seatById(state, 'C').allIn).toBe(true)
+    expect(state.currentBet).toBe(25)
+    expect(state.minRaise).toBe(20) // a short all-in does NOT bump the minimum raise
+
+    // Action comes back to A, who already acted. The short all-in did not re-open it.
+    expect(state.toActIndex).toBe(0)
+    expect(seatById(state, 'A').hasActed).toBe(true) // not cleared by the short all-in
+    const aKinds = legalActions(state).map((x) => x.action)
+    expect(aKinds).toContain('fold')
+    expect(aKinds).toContain('call')
+    expect(aKinds).not.toContain('raise') // the illegal re-raise is no longer offered
+    expect(toCallFor(state, 0)).toBe(5) // only owes the extra 5
+
+    // B, who also already acted, likewise may only call or fold.
+    state = applyAction(state, { action: 'call' }) // A calls the extra 5
+    expect(state.toActIndex).toBe(1)
+    const bKinds = legalActions(state).map((x) => x.action)
+    expect(bKinds).not.toContain('raise')
+    expect(bKinds).toContain('call')
+  })
+
+  // A player who has NOT yet acted still has full rights when a short all-in lands
+  // in front of them — they may raise (the restriction is only for seats that acted).
+  it('still lets a yet-to-act player raise over a short all-in', () => {
+    let state = flopBettingState(
+      [100, 100, 25, 100],
+      [
+        ['AS', 'KS'],
+        ['AD', 'KD'],
+        ['QH', 'JH'],
+        ['QS', 'JS'],
+      ],
+      ['2C', '7D', '9S'],
+    )
+
+    state = applyAction(state, { action: 'bet', amount: 20 }) // A bets 20
+    state = applyAction(state, { action: 'call' }) // B calls 20
+    state = applyAction(state, { action: 'raise', amount: 25 }) // C jams short all-in
+
+    // D has not acted yet, so the action is still open to them: raise is legal.
+    expect(state.toActIndex).toBe(3)
+    expect(seatById(state, 'D').hasActed).toBe(false)
+    const dActions = legalActions(state)
+    const dRaise = dActions.find((x) => x.action === 'raise')
+    expect(dRaise).toBeDefined()
+    // Min re-raise is over the last FULL bet level: currentBet (25) + minRaise (20).
+    expect(dRaise!.min).toBe(45)
+
+    // And a full raise by D re-opens the action for A and B again.
+    state = applyAction(state, { action: 'raise', amount: 60 }) // D full-raises to 60
+    expect(state.minRaise).toBe(35) // 60 - 25
+    expect(seatById(state, 'A').hasActed).toBe(false)
+    expect(legalActions(state).map((x) => x.action)).toContain('raise')
   })
 })
 

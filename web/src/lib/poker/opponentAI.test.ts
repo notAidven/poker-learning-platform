@@ -249,6 +249,79 @@ describe('Tier 2 — pot odds', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Preflop premium re-raising (Tier 2 / Tier 3 TAG)
+// ---------------------------------------------------------------------------
+
+describe('preflop — premiums re-raise instead of only calling', () => {
+  const premiums: [CardId, CardId][] = [
+    ['AS', 'AD'],
+    ['KS', 'KD'],
+    ['QS', 'QH'],
+    ['AS', 'KD'],
+  ]
+
+  it('re-raises QQ+/AK facing a preflop bet (both TAG tiers)', () => {
+    for (const tier of [2, 3] as AITier[]) {
+      for (const hole of premiums) {
+        const d = decideAI(
+          makeInput({
+            tier,
+            hole,
+            board: [],
+            street: 'preflop',
+            legalActions: FACING_BET,
+            pot: 30,
+            toCall: 10,
+            opponents: 1,
+            position: 'ip',
+            rng: () => 0.99, // suppress any rng-gated value-raise; the re-raise is deterministic
+          }),
+        )
+        expect(d.action).toBe('raise')
+        expectLegal(d, FACING_BET)
+      }
+    }
+  })
+
+  it('still flat-calls a strong-but-not-premium hand (JJ) facing a preflop bet', () => {
+    const d = decideAI(
+      makeInput({
+        tier: 3,
+        hole: ['JS', 'JD'],
+        board: [],
+        street: 'preflop',
+        legalActions: FACING_BET,
+        pot: 30,
+        toCall: 10,
+        opponents: 1,
+        position: 'ip',
+        rng: () => 0.99,
+      }),
+    )
+    expect(d.action).toBe('call')
+  })
+
+  it('does not auto re-raise a premium postflop (the nudge is preflop only)', () => {
+    // AK on a brick flop with no pair/draw is just ace-high; it should not raise here.
+    const d = decideAI(
+      makeInput({
+        tier: 3,
+        hole: ['AS', 'KD'],
+        board: ['9H', '5C', '2S'],
+        street: 'flop',
+        legalActions: FACING_BET,
+        pot: 100,
+        toCall: 60,
+        opponents: 1,
+        position: 'ip',
+        rng: () => 0.99,
+      }),
+    )
+    expect(d.action).not.toBe('raise')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Tier 3 — multiway, position-aware
 // ---------------------------------------------------------------------------
 
