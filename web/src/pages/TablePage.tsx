@@ -6,8 +6,8 @@ import { Chip } from '../components/lesson/interactions/cards/PlayingCardKit'
 import { buttonVariants } from '../components/ui/Button'
 import { getTable } from '../data/tables'
 import { useAuth } from '../contexts/AuthContext'
-import { useCompletedLessons } from '../hooks/useCompletedLessons'
-import { areAllLessonsComplete, isTableUnlocked, markTableCleared } from '../lib/lessonProgress'
+import { useProgress } from '../lib/progress'
+import { areAllLessonsComplete, isTableUnlocked, markTableCleared } from '../lib/casinoProgress'
 import { STARTING_BANKROLL, grantBankroll, rebuy, setBankroll, useBankroll } from '../lib/bankroll'
 
 /**
@@ -18,7 +18,7 @@ import { STARTING_BANKROLL, grantBankroll, rebuy, setBankroll, useBankroll } fro
  */
 export function TablePage() {
   const { id = '' } = useParams()
-  const { completedIds } = useCompletedLessons()
+  const { completedIds } = useProgress()
   const { user, profile } = useAuth()
   const { chips: bankroll, granted } = useBankroll()
 

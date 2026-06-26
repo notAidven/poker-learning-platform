@@ -97,7 +97,8 @@ rule-based read and the LLM opponents fall back to a deterministic tier-3 strate
 ### Accounts & profile
 
 - **Sign in with Google or email/password**, with **username-based login**.
-- First-run **profile setup** (unique username + animal avatar).
+- First-run **profile setup** (unique username + a poker-themed avatar — suits, chip, cards,
+  dealer button, ace; the stored field is still named `profileAnimal` for back-compat).
 - **Account settings**: change email (verify-before-update), change/Set password,
   link email-password to a Google account, and rename your username.
 

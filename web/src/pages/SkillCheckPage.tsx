@@ -6,14 +6,13 @@ import { hasSkillCheck, loadSkillCheck } from '../data/skillCheckContent'
 import { lessonNumber, lessons } from '../data/lessons'
 import type { SkillCheckDefinition } from '../types/skillCheck'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
-import { useCompletedLessons } from '../hooks/useCompletedLessons'
-import { getLessonStats, isLessonUnlocked } from '../lib/lessonProgress'
+import { useProgress } from '../lib/progress'
 
 export function SkillCheckPage() {
   const { lessonId = '' } = useParams()
   const meta = lessons.find((l) => l.id === lessonId)
-  const stats = getLessonStats(lessonId)
-  const { completedIds } = useCompletedLessons()
+  const { getStats, isLessonUnlocked } = useProgress()
+  const stats = getStats(lessonId)
   const [skillCheck, setSkillCheck] = useState<SkillCheckDefinition | undefined>()
   const [skillCheckLoading, setSkillCheckLoading] = useState(() => hasSkillCheck(lessonId))
   const [skillCheckActive, setSkillCheckActive] = useState(false)
@@ -59,7 +58,7 @@ export function SkillCheckPage() {
 
   // Sequential unlock on direct URLs (P1 #5): can't open a skill check whose
   // lesson is still locked.
-  if (!isLessonUnlocked(lessonId, completedIds)) {
+  if (!isLessonUnlocked(lessonId)) {
     return <Navigate to="/course" replace />
   }
 

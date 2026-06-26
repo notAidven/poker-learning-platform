@@ -1,10 +1,19 @@
 # Design Doc: Sectioned Learning Path + Expanded Math Track
 
-**Status:** Implemented on branch `poker-sections` (forked from `poker-revamp`). Behind-the-scenes only — not deployed.
-**Scope:** Reorganize the existing 5-lesson "Suited" path into **3 visually-distinct sections**, **expand the technical-theory track into 4 dedicated Math lessons** (8 lessons total), and give the Duolingo-style vertical path a per-section visual treatment (section banner, tinted nodes, soft background band).
+**Status:** Implemented and shipped (originated on branch `poker-sections`, forked from `poker-revamp`). Later extended with a 9th lesson (Playing Preflop) and the Casino Floor — see the update note below.
+**Scope:** Reorganize the existing 5-lesson "Suited" path into **3 visually-distinct sections**, **expand the technical-theory track into 4 dedicated Math lessons** (8 lessons at the time of this doc; **9 today** after Playing Preflop was inserted), and give the Duolingo-style vertical path a per-section visual treatment (section banner, tinted nodes, soft background band).
 **Non-goals:** No new interactions, no AI/opponent-AI, no real-money framing. Reuses the existing lesson engine, skill-check flow, gamification, and the `outs-odds` / `betting-round` / `card-deck` / `compare-events` widgets unchanged.
 
 > The poker math in this doc is sourced from `docs/poker-research/03-poker-math.md` and `docs/poker-course-design.md` §3 (the verified source of truth): flush draw = 9 outs, OESD = 8, gutshot = 4; Rule of 4 (flop) / 2 (turn); required equity = `call / (pot + call)`; `EV = p·won − (1−p)·call`.
+
+> **Update — current shipped path (9 lessons + casino).** This doc describes the original
+> **8-lesson** sectioning. A 9th lesson, **Playing Preflop** (string id `preflop`), was later
+> inserted into **Playing a Hand**, and a **Casino Floor** (two play-money AI tables) was added
+> after the three learning sections. The canonical path now lives in `web/src/data/lessons.ts`
+> + `web/src/data/course.ts`: **9 lessons across 3 sections, then the casino floor.** Because the
+> `preflop` id is inserted at display position 5, `lessonNumber()` shows it as **L5** and the four
+> Math lessons (string ids `5`–`8`) display as **L6–L9**. The tables below are updated to the
+> shipped display order; §3's "id" column still refers to the unchanged string ids.
 
 ---
 
@@ -13,8 +22,8 @@
 | # | Section | id | Tint (theme token) | Lessons |
 | --- | --- | --- | --- | --- |
 | 1 | **Foundations** | `foundations` | felt-green (`emerald-*`) | L1 Poker & the Deck, L2 Hand Rankings |
-| 2 | **Playing a Hand** | `playing` | oxblood / red (`brand-*`) | L3 Flow of a Hand, L4 Betting Basics |
-| 3 | **The Math** | `math` | brass / gold (`gold-*`) | L5 Outs & Equity, L6 Pot Odds, L7 Expected Value, L8 Bet Sizing & Value Betting |
+| 2 | **Playing a Hand** | `playing` | oxblood / red (`brand-*`) | L3 Flow of a Hand, L4 Betting Basics, L5 Playing Preflop |
+| 3 | **The Math** | `math` | brass / gold (`gold-*`) | L6 Outs & Equity, L7 Pot Odds, L8 Expected Value, L9 Bet Sizing & Value Betting |
 
 Section colors map onto the existing theme tokens defined in `web/src/index.css` `@theme` (no new palette invented):
 - **felt-green** → Tailwind default `emerald-*` (the light, legible green; `night-*` is reserved for the dark felt surfaces).
@@ -25,18 +34,21 @@ The concrete per-section class strings live in `CoursePath.tsx`'s `SECTION_THEME
 
 ---
 
-## 2. The eight lessons (scope + interactions)
+## 2. The lessons (scope + interactions)
+
+Shipped display order (`lessonNumber()`); the inserted **Playing Preflop** lesson carries the string id `preflop`.
 
 | L | Title | Section | One-line scope | Interactions |
 | --- | --- | --- | --- | --- |
 | 1 | Poker & the Deck | Foundations | 52-card deck, hole + community, best 5 of 7 (**unchanged**) | `card-deck`, `board-dealer`, `hand-ranker` |
 | 2 | Hand Rankings | Foundations | the 10 categories, rarer = stronger, kickers (**unchanged**) | `hand-ranking-ladder`, `hand-ranker`, `compare-events` |
 | 3 | Flow of a Hand | Playing a Hand | blinds, button, the four streets, position, showdown (**unchanged**) | `board-dealer`, `compare-events` |
-| 4 | **Betting Basics** | Playing a Hand | the five actions (check/bet/call/raise/fold), opening/closing a round, sizing to the board — **EV math removed** (moved to L7) | `betting-round` |
-| 5 | **Outs & Equity** | The Math | count outs (flush 9 / OESD 8 / gutshot 4), Rule of 2 & 4, outs → equity % | `outs-odds` (outs + equity asks) |
-| 6 | **Pot Odds** | The Math | required equity = call/(pot+call), bigger bet = worse price, compare equity → call/fold | `outs-odds` (potOdds + decision asks) |
-| 7 | **Expected Value (EV)** | The Math | EV of a call (`p·won − (1−p)·call`), EV ↔ pot odds, intro to **fold equity** | `betting-round` (ev-of-call + choose-action) |
-| 8 | **Bet Sizing & Value Betting** | The Math | value vs bluff, thin value, sizing small/half/large to the board | `betting-round` (choose-action + choose-size) |
+| 4 | **Betting Basics** | Playing a Hand | the five actions (check/bet/call/raise/fold), opening/closing a round, sizing to the board — **EV math removed** (moved to L8) | `betting-round` |
+| 5 | **Playing Preflop** | Playing a Hand | string id `preflop`; open/call/raise/fold preflop, suited vs offsuit, starting-hand strength (**added after this doc**) | `preflop-hand`, `betting-round` |
+| 6 | **Outs & Equity** | The Math | count outs (flush 9 / OESD 8 / gutshot 4), Rule of 2 & 4, outs → equity % | `outs-odds` (outs + equity asks) |
+| 7 | **Pot Odds** | The Math | required equity = call/(pot+call), bigger bet = worse price, compare equity → call/fold | `outs-odds` (potOdds + decision asks) |
+| 8 | **Expected Value (EV)** | The Math | EV of a call (`p·won − (1−p)·call`), EV ↔ pot odds, intro to **fold equity** | `betting-round` (ev-of-call + choose-action) |
+| 9 | **Bet Sizing & Value Betting** | The Math | value vs bluff, thin value, sizing small/half/large to the board | `betting-round` (choose-action + choose-size) |
 
 Each lesson keeps the house style: one idea per concept step, no two concepts in a row, ~75%+ interactive, every new term defined before use (bold terms auto-link to the existing `glossary.ts` popover), and prompts never reveal the answer.
 
@@ -51,7 +63,7 @@ Each lesson ships a matching **3-question skill check** (no hints / no "Why?", p
 
 ## 3. Id remap (clean swap — no migration code)
 
-Old lesson-4 ("Outs, Odds & Pot Odds") splits into the new L5 + L6, and old lesson-5 ("Betting") becomes the new L4 with its EV beats relocated to L7. Content is re-homed across ids; exported names always match the loader (`lesson-6.ts` exports `lesson6`, etc.).
+Old lesson-4 ("Outs, Odds & Pot Odds") splits into the new ids 5 + 6, and old lesson-5 ("Betting") becomes the new id 4 with its EV beats relocated to id 7. Content is re-homed across ids; exported names always match the loader (`lesson-6.ts` exports `lesson6`, etc.). The "New id" column below is the **string id** (file/loader key), not the displayed lesson number — after Playing Preflop was inserted, string ids `5`–`8` display as L6–L9 (see the update note at the top).
 
 | New id | New title | Section | Source of content |
 | --- | --- | --- | --- |
@@ -63,6 +75,7 @@ Old lesson-4 ("Outs, Odds & Pot Odds") splits into the new L5 + L6, and old less
 | 6 | Pot Odds | The Math | old **lesson-4** — pot-odds + call/fold-decision half |
 | 7 | Expected Value (EV) | The Math | **new** (seeded by old lesson-5's EV-of-a-call beats) |
 | 8 | Bet Sizing & Value Betting | The Math | **new** |
+| `preflop` | Playing Preflop | Playing a Hand | **added after this remap** — string id `preflop`, inserted at display **L5** (so string ids 5–8 now display as L6–L9) |
 
 **Progress-data note:** lesson progress / XP / streaks are keyed by lesson id. Because this is a new, undeployed structure, the id remap is a clean break — a learner who previously "completed lesson 4 (Outs/Odds)" would now read as "completed lesson 4 (Betting Basics)". No migration code is added (out of scope; fresh structure). Flagged here for the reviewer.
 
@@ -82,5 +95,5 @@ Old lesson-4 ("Outs, Odds & Pot Odds") splits into the new L5 + L6, and old less
 
 **New content:** `lessons/lesson-6.ts`, `lesson-7.ts`, `lesson-8.ts`; `skillChecks/skill-check-6.ts`, `skill-check-7.ts`, `skill-check-8.ts`; this doc.
 **Rewritten content:** `lessons/lesson-4.ts` (→ Betting Basics), `lesson-5.ts` (→ Outs & Equity); `skillChecks/skill-check-4.ts`, `skill-check-5.ts`.
-**Wiring / data:** `data/lessons.ts` (sections + meta), `data/lessonContent.ts` + `data/skillCheckContent.ts` (register ids 6–8), `data/course.ts` (branding "8 lessons"), `components/CoursePath.tsx`, `components/LessonPathModal.tsx`, `components/ui/AuthLayout.tsx` (copy), `scripts/mvp-logic-check.mjs` (assertions).
+**Wiring / data:** `data/lessons.ts` (sections + meta), `data/lessonContent.ts` + `data/skillCheckContent.ts` (register ids 6–8), `data/course.ts` (branding — now "9 lessons"), `components/CoursePath.tsx`, `components/LessonPathModal.tsx`, `components/ui/AuthLayout.tsx` (copy), `scripts/mvp-logic-check.mjs` (assertions).
 **Unchanged:** the lesson/skill-check engine, all interaction widgets, the hand evaluator, gamification/progress, routing, auth.

@@ -4,15 +4,8 @@ import { lessonNumber, type LessonMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
-import { useCompletedLessons } from '../hooks/useCompletedLessons'
-import {
-  areAllLessonsComplete,
-  getLessonStats,
-  isLessonInProgress,
-  isTableCleared,
-  skillCheckScorePercent,
-  type LessonStats,
-} from '../lib/lessonProgress'
+import { useProgress, skillCheckScorePercent, type LessonStats } from '../lib/progress'
+import { areAllLessonsComplete, isTableCleared } from '../lib/casinoProgress'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 
@@ -25,7 +18,8 @@ type LessonPathModalProps = {
 
 export function LessonPathModal({ lesson, status, open, onClose }: LessonPathModalProps) {
   const isTable = lesson.kind === 'ai-table'
-  const stats = getLessonStats(lesson.id)
+  const { getStats, isLessonInProgress } = useProgress()
+  const stats = getStats(lesson.id)
   const inProgress = isLessonInProgress(lesson.id, 100)
   const hasContent = hasLessonContent(lesson.id)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -154,7 +148,7 @@ function TableBody({
 }) {
   const table = getTable(lesson.id)
   const cleared = isTableCleared(lesson.id)
-  const { completedIds } = useCompletedLessons()
+  const { completedIds } = useProgress()
 
   if (status === 'locked') {
     const lockedMessage =

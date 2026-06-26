@@ -1,18 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  clearLessonSession,
-  loadLessonSession,
-  saveLessonSession,
-} from '../../lib/lessonSession'
-import {
-  completeLessonWithoutSkillCheck,
-  getLessonStats,
-  markLessonAttempted,
-  onLessonSessionCleared,
-  recordReviewActivity,
-  saveLessonFinished,
-} from '../../lib/lessonProgress'
+import { useProgressStore } from '../../lib/progress/ProgressContext'
 import { hasSkillCheck } from '../../data/skillCheckContent'
 import type { LessonDefinition } from '../../types/lesson'
 import { isConceptStep, isProblemStep } from '../../types/lesson'
@@ -35,6 +23,7 @@ export function LessonPlayer({
   allowNavigation,
 }: LessonPlayerProps) {
   const navigate = useNavigate()
+  const store = useProgressStore()
   const [showLessonCompleteModal, setShowLessonCompleteModal] = useState(false)
   const problemSteps = useMemo(
     () => lesson.steps.filter(isProblemStep),
@@ -44,8 +33,8 @@ export function LessonPlayer({
   // Opening an already-completed lesson is a review: each review is a fresh run, so
   // start at step 0 with nothing solved and ignore any persisted session.
   const isCompletedReview = useMemo(
-    () => getLessonStats(lesson.id).completed,
-    [lesson.id],
+    () => store.getStats(lesson.id).completed,
+    [store, lesson.id],
   )
 
   const initial = useMemo(
@@ -56,8 +45,8 @@ export function LessonPlayer({
             solvedStepIds: [] as string[],
             problemAttempts: {} as Record<string, number>,
           }
-        : loadLessonSession(lesson.id, lesson.steps.length),
-    [isCompletedReview, lesson.id, lesson.steps.length],
+        : store.loadSession(lesson.id, lesson.steps.length),
+    [store, isCompletedReview, lesson.id, lesson.steps.length],
   )
 
   const [stepIndex, setStepIndex] = useState(initial.stepIndex)
@@ -78,25 +67,25 @@ export function LessonPlayer({
   }, [step, solvedStepIds])
 
   useEffect(() => {
-    markLessonAttempted(lesson.id)
-  }, [lesson.id])
+    store.markLessonAttempted(lesson.id)
+  }, [store, lesson.id])
 
   useEffect(() => {
     // Clear any stale session so a review starts cleanly from step 0.
     if (isCompletedReview) {
-      clearLessonSession(lesson.id)
+      store.clearSession(lesson.id)
     }
-  }, [isCompletedReview, lesson.id])
+  }, [store, isCompletedReview, lesson.id])
 
   useEffect(() => {
     // Don't persist a review run — completed lessons always restart from step 0.
     if (isCompletedReview) return
-    saveLessonSession(lesson.id, {
+    store.saveSession(lesson.id, {
       stepIndex,
       solvedStepIds: [...solvedStepIds],
       problemAttempts,
     })
-  }, [isCompletedReview, lesson.id, stepIndex, solvedStepIds, problemAttempts])
+  }, [store, isCompletedReview, lesson.id, stepIndex, solvedStepIds, problemAttempts])
 
   useEffect(() => {
     onProgressChange?.({ stepIndex, solvedCount: solvedStepIds.size })
@@ -126,9 +115,9 @@ export function LessonPlayer({
     // completed review is a qualifying daily activity, so credit the streak
     // (no XP) to keep it alive once all lessons are done (P1 #4).
     if (isCompletedReview) {
-      clearLessonSession(lesson.id)
-      onLessonSessionCleared(lesson.id)
-      recordReviewActivity()
+      store.clearSession(lesson.id)
+      store.onLessonSessionCleared(lesson.id)
+      store.recordReviewActivity()
       onLessonFinished?.()
       allowNavigation?.()
       navigate('/course')
@@ -148,9 +137,9 @@ export function LessonPlayer({
         ? Math.round((correctOnFirstTry / problemSteps.length) * 100)
         : 100
 
-    saveLessonFinished(lesson.id, lessonAccuracy, problemAttempts, problemSteps.map((p) => p.id))
-    clearLessonSession(lesson.id)
-    onLessonSessionCleared(lesson.id)
+    store.saveLessonFinished(lesson.id, lessonAccuracy, problemAttempts, problemSteps.map((p) => p.id))
+    store.clearSession(lesson.id)
+    store.onLessonSessionCleared(lesson.id)
     onLessonFinished?.()
 
     if (hasSkillCheck(lesson.id)) {
@@ -161,7 +150,7 @@ export function LessonPlayer({
     // No skill check for this lesson → finishing the body completes it and
     // awards XP directly (latent-safety / item #12). All 6 current lessons have
     // skill checks, so this path is a guard for future content.
-    completeLessonWithoutSkillCheck(lesson.id)
+    store.completeLessonWithoutSkillCheck(lesson.id)
     allowNavigation?.()
     navigate('/course')
   }, [
@@ -172,6 +161,7 @@ export function LessonPlayer({
     onLessonFinished,
     problemAttempts,
     problemSteps,
+    store,
   ])
 
   const dismissLessonCompleteModal = useCallback(() => {

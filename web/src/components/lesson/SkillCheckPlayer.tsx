@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { saveSkillCheckResult } from '../../lib/lessonProgress'
+import { useProgressStore } from '../../lib/progress/ProgressContext'
 import { isSkillCheckPassing } from '../../lib/gamification'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 import { SkillCheckStepView } from './SkillCheckStepView'
@@ -18,6 +18,7 @@ type SkillCheckPlayerProps = {
 }
 
 export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: SkillCheckPlayerProps) {
+  const store = useProgressStore()
   const total = skillCheck.questions.length
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answered, setAnswered] = useState(false)
@@ -53,7 +54,7 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
       // lesson. A failing score leaves the lesson un-completed so the learner can
       // retake the skill check directly (P1 #3).
       if (didPass) {
-        const result = saveSkillCheckResult(skillCheck.lessonId, finalCorrect, total)
+        const result = store.saveSkillCheckResult(skillCheck.lessonId, finalCorrect, total)
         if (result.isFirstCompletion && result.xpBreakdown) {
           setXpBreakdown(result.xpBreakdown)
         }

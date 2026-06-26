@@ -3,9 +3,8 @@ import { course } from '../data/course'
 import { lessonNumber, lessons } from '../data/lessons'
 import { hasLessonContent } from '../data/lessonContent'
 import { useAuth } from '../contexts/AuthContext'
-import { useCompletedLessons } from '../hooks/useCompletedLessons'
+import { useProgress } from '../lib/progress'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
-import { getNextLessonPath } from '../lib/lessonProgress'
 import { Badge } from '../components/ui/Badge'
 import { buttonVariants } from '../components/ui/Button'
 import { NightPanel } from '../components/ui/NightPanel'
@@ -22,8 +21,8 @@ import {
 
 export function HomePage() {
   const { profile } = useAuth()
-  const { completedIds } = useCompletedLessons()
-  const continueTo = getNextLessonPath(completedIds)
+  const { completedIds, getNextLessonPath } = useProgress()
+  const continueTo = getNextLessonPath()
 
   const totalXp = profile?.totalXp ?? 0
   const levelProgress = getLevelProgress(totalXp)

@@ -47,7 +47,8 @@ web/src
 ├── lib/
 │   ├── poker/       # handEngine, handEvaluator, opponentAI, hints, rng (pure, tested)
 │   ├── ai/          # aiClient + providers/ (pluggable LLM layer)
-│   ├── gamification.ts, bankroll.ts, lessonProgress*.ts, userProfile.ts, …
+│   ├── progress/    # ProgressStore + ProgressBackend seam (Firestore / in-memory adapters)
+│   ├── gamification.ts, bankroll.ts, casinoProgress.ts, userProfile.ts, …
 │   └── firebase.ts  # Firebase app, auth, Firestore, Gemini model, optional App Check
 ├── contexts/        # AuthContext
 └── pages/           # Home, Course, Lesson, SkillCheck, Table, Profile, Login, SignUp, ProfileSetup
@@ -112,24 +113,42 @@ never disagree with the casino about what beats what.
 per-problem submit counts, and persists an in-progress **session** so a mid-lesson exit resumes
 where you left off. `SkillCheckPlayer` runs the gating quiz.
 
-Progress is layered:
+Progress is layered behind a single deep module and a remote seam:
 
-- **Lesson progress** (`web/src/lib/lessonProgress*.ts`) records `attempted`, `lessonFinished`,
-  `completed`, accuracy, skill-check score, pending attempts, and the XP breakdown for a lesson.
-  Firestore is the source of truth for signed-in users; everything is mirrored to `localStorage`
-  (session saves are debounced) so signed-out play still works and survives reloads. On sign-in,
-  `progressSync` reconciles local → remote once if the account has no remote progress yet.
+- **ProgressStore** (`web/src/lib/progress/ProgressStore.ts`) is the instantiable module that owns
+  the **lesson progress aggregate** — per-lesson stats (`attempted`, `lessonFinished`, `completed`,
+  accuracy, skill-check score, pending attempts, XP breakdown) plus the in-progress **session**.
+  Reads are **synchronous** from an intrinsic, **offline-first** `localStorage` cache (write-through;
+  session writes debounced ~400ms), so signed-out play works and survives reloads; React binds via
+  `subscribe`/`getSnapshot` (the `useProgress` hook over `useSyncExternalStore`, with a cross-tab
+  `storage` listener). There are **no module-level singletons** — the one app-wide store is created
+  by `ProgressProvider`, and it is the **single source of truth** for completion (the old
+  denormalized `completed-lesson-ids` list is gone). This replaces the former
+  `lessonProgress*` / `progressSync` / `lessonSession` split.
+- **ProgressBackend** (`web/src/lib/progress/`) is the seam in front of remote persistence —
+  `loadAll · writeLesson · completeLesson · touchStreak · clear`. **FirestoreProgressBackend** is the
+  production adapter (`users/{uid}` + the `lessonProgress` subcollection, including the completion
+  transaction); **InMemoryProgressBackend** is the test adapter reproducing the same contract
+  (including idempotent completion), so the completion/streak/H1 paths are unit-testable. Local
+  storage is *not* an adapter — it is the store's intrinsic cache.
 - **Gamification** (`web/src/lib/gamification.ts`) is pure math:
   - `computeLessonXp(attempts, problemIds)` → `100` base + `max(0, 50 − extraAttempts × 10)` bonus.
   - `levelFromTotalXp` / `xpToNextLevel(level) = 100 + (level − 1) × 25`.
   - `computeStreakAfterCompletion` / `getEffectiveStreak` track a daily streak in **Central
     American Time** (`America/Guatemala`, UTC−6).
   - Pass policy: `isSkillCheckPassing(correct, total)` requires **≥ 2/3**.
-- **Award path** — completing a lesson + passing its skill check runs a single Firestore
-  transaction (`awardLessonCompletion`) that marks the lesson `completed`, sets an `xpAwarded`
-  idempotency flag, adds XP only on first completion, and advances the streak at most once per
-  day. Review-only activity advances the streak without re-awarding XP. A `gamification-updated`
-  event refreshes the profile UI.
+- **Completion award** — completing a lesson + passing its skill check is one atomic, idempotent
+  operation (`ProgressStore.completeLesson` → `backend.completeLesson`): a single Firestore
+  transaction marks the lesson `completed`, sets an `xpAwarded` idempotency flag, adds XP only on
+  first completion, and advances the streak at most once per CAT day. Idempotency is anchored on the
+  **persisted** `xpAwarded`/`completed` flags (not in-memory state), so re-completions, double-taps,
+  and multiple devices never double-award. Review-only activity (`recordReviewActivity` →
+  `touchStreak`) advances the streak without re-awarding XP. A `gamification-updated` event refreshes
+  the profile UI.
+- **H1 reset** (`ProgressStore.resetLocalUserState`, invoked from `AuthContext`) — on sign-out or
+  account switch, wipes all per-user **local** state (progress + casino table-clears + bankroll) so a
+  shared device never leaks one account's data into the next. (The backend's remote `clear` completes
+  the contract but is intentionally not called by the auth seam.)
 - **Unlock gating** — lessons unlock sequentially; the Casino Floor unlocks only after the whole
   course is complete (and Room 2 only after Room 1).
 

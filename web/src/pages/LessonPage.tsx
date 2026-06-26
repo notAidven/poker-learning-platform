@@ -6,9 +6,7 @@ import { hasLessonContent, loadLesson } from '../data/lessonContent'
 import { lessonNumber, lessons } from '../data/lessons'
 import type { LessonDefinition } from '../types/lesson'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
-import { useCompletedLessons } from '../hooks/useCompletedLessons'
-import { getLessonStats, isLessonUnlocked } from '../lib/lessonProgress'
-import { loadLessonSession } from '../lib/lessonSession'
+import { useProgress, useProgressStore } from '../lib/progress'
 
 type LessonProgressState = {
   stepIndex: number
@@ -18,8 +16,9 @@ type LessonProgressState = {
 export function LessonPage() {
   const { lessonId = '' } = useParams()
   const meta = lessons.find((l) => l.id === lessonId)
-  const stats = getLessonStats(lessonId)
-  const { completedIds } = useCompletedLessons()
+  const store = useProgressStore()
+  const { getStats, isLessonUnlocked } = useProgress()
+  const stats = getStats(lessonId)
   const [content, setContent] = useState<LessonDefinition | undefined>()
   const [contentLoading, setContentLoading] = useState(() => hasLessonContent(lessonId))
 
@@ -46,8 +45,8 @@ export function LessonPage() {
 
   const stepCount = content?.steps.length ?? 1
   const savedSession = useMemo(
-    () => loadLessonSession(lessonId, stepCount),
-    [lessonId, stepCount],
+    () => store.loadSession(lessonId, stepCount),
+    [store, lessonId, stepCount],
   )
 
   // A completed lesson opened here is a "review": it always restarts from step 0,
@@ -106,7 +105,7 @@ export function LessonPage() {
 
   // Sequential unlock on direct URLs (P1 #5): redirect to the course path if the
   // prior lesson hasn't been completed yet.
-  if (!isLessonUnlocked(lessonId, completedIds)) {
+  if (!isLessonUnlocked(lessonId)) {
     return <Navigate to="/course" replace />
   }
 

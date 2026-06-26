@@ -9,7 +9,7 @@ import {
   areAllLessonsComplete,
   hasClearedAnyCoachedTable,
   isTableUnlocked,
-} from './lessonProgress'
+} from './casinoProgress'
 import { lessons } from '../data/lessons'
 import { getTable } from '../data/tables'
 

@@ -1,12 +1,15 @@
 # Suited — Texas Hold'em Poker (Web App)
 
 React + Vite + Tailwind + Firebase frontend for **Suited**, a learn-by-doing Texas
-Hold'em poker course (five interactive lessons: the deck, hand rankings, the streets,
-odds & pot odds, and betting). Play-money only — no real wagering.
+Hold'em poker course: **nine interactive lessons across three sections** (Foundations →
+Playing a Hand → The Math) plus a play-money **Casino Floor** of two tables. Play-money
+only — no real wagering.
 
-> **Note:** The shipped course is **5 lessons with no AI**. An earlier Lesson 6 capstone
-> ("play a full hand") and its rule-based opponent were removed and archived on the
-> local-only `poker-with-lesson6` branch; Lesson 5 uses a scripted, deterministic opponent.
+> **Scope of this file.** The root [`README.md`](../README.md) is the canonical product +
+> architecture overview (the nine lessons, the Casino Floor, the AI layer, the Cloudflare
+> Worker). This file is the web-app **setup** reference: env vars, local dev, Google sign-in,
+> and the progress/gamification schema. **AI is built but opt-in** — every AI feature degrades
+> to deterministic rule-based logic when no provider is configured.
 
 ## Setup
 
@@ -92,7 +95,7 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
    npx -y firebase-tools@latest deploy --only firestore:rules
    ```
 
-   These rules carry the C1 (`usernames` `get`/`list` split + hardened `create`), M1 (user-doc field whitelist + immutable `email`/`username`), and M2 fixes. See `docs/security-fixes.md`. After deploying, confirm username login still works and a `list` on `usernames` is denied.
+   These rules carry the C1 (`usernames` `get`/`list` split + hardened `create`), M1 (user-doc field whitelist + identity-field constraints on `email`/`username`), M2, and M3 fixes. See `docs/security-fixes.md`. After deploying, confirm username login still works and a `list` on `usernames` is denied.
 
 2. **Add the production domain to Firebase Auth.** The current config is **localhost-only**, so Google/email auth will fail from prod until you add the live domain:
    - [Authentication → Settings → Authorized domains](https://console.firebase.google.com/project/brilliant-alpha-clone-54be9/authentication/settings) → **Add domain** → your production domain (e.g. `app.example.com` and/or the `*.web.app` / `*.firebaseapp.com` hosting domains).
@@ -107,7 +110,7 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
 3. **Manually verify XP + streak against Firestore with a real account.** Automated tests run with the **E2E auth bypass** (`VITE_E2E_BYPASS_AUTH=true`), which performs **no Firestore writes**, so XP/streak are never exercised in CI. Sign in with a real account and confirm in the [Firestore console](https://console.firebase.google.com/project/brilliant-alpha-clone-54be9/firestore):
    - Completing a lesson + passing its skill check (≥ 2/3) bumps `users/{uid}.totalXp`/`level` once and sets `lessonProgress/{lessonId}.xpAwarded = true`.
    - Re-passing the same skill check (or finishing a review) does **not** add XP again, but **does** advance `streak`/`lastActivityDate` once per day (CAT).
-   - `streak` resets after a missed day and is maintainable after all 5 lessons are done.
+   - `streak` resets after a missed day and is maintainable after all 9 lessons are done.
 
 4. **Recommended:** enable **Firebase App Check** and consider the future server-side `resolveUsername` Cloud Function to fully hide emails (Blaze plan) — see `docs/security-fixes.md`.
 
@@ -115,8 +118,12 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
 
 ## Phase 1 build stages
 
-1. **Stage 1** — Project scaffold, responsive Brilliant-style shell, Firebase wiring, routing, 5-lesson course data
-2. **Stage 2** — Auth + profile setup (email, Google, username, animal avatar)
+> Historical Phase 1 build log. The course has since grown to **9 lessons across 3 sections**
+> plus a **Casino Floor** with opt-in AI (see the root [`README.md`](../README.md)). The
+> **progress / gamification schema** below is kept current.
+
+1. **Stage 1** — Project scaffold, responsive Brilliant-style shell, Firebase wiring, routing, initial course data
+2. **Stage 2** — Auth + profile setup (email, Google, username, avatar)
 3. **Stage 3** — JSON lesson model + renderer + interactive Lessons 1–3
 4. **Stage 4** — Firestore progress persistence + lesson unlock logic ✅
 
@@ -131,12 +138,13 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
    | `skillCheckCorrect` | number \| null | Skill check score |
    | `skillCheckTotal` | number \| null | Skill check question count |
    | `pendingProblemAttempts` | object \| null | Submit counts per problem step (saved at lesson finish) |
+   | `pendingProblemStepIds` | array \| null | Problem step ids captured at lesson finish (XP calc without loading lesson content) |
    | `lastLessonXpBreakdown` | object \| null | `{ base, bonus }` from last first-time completion |
    | `xpAwarded` | boolean | Set `true` in the completion transaction; guards XP idempotency (never double-award) |
    | `session` | object? | `{ stepIndex, solvedStepIds, problemAttempts? }` while in progress |
    | `updatedAt` | timestamp | Server time on last write |
 
-   **Sync:** On sign-in, Firestore is the source of truth. If the user has no remote progress yet, local `localStorage` data is uploaded once. All writes go to Firestore (session saves debounced ~400ms) and mirror to `localStorage` for offline resilience. Signed-out users use `localStorage` only.
+   **Sync:** Progress is read **synchronously** from an offline-first `localStorage` cache and written through to Firestore via the `ProgressStore` / `ProgressBackend` seam (session saves debounced ~400ms); signed-out play works locally and survives reloads. On sign-out or an account switch, `ProgressStore.resetLocalUserState()` wipes per-user local state (progress + casino table-clears + bankroll) so a shared device never leaks data between accounts (H1).
 
 5. **Stage 5** — Streaks + XP + levels on home dashboard ✅
 
@@ -164,8 +172,8 @@ The pre-production hardening pass changed `firestore.rules` and auth/XP logic bu
 
    **Levels:** `xpToNextLevel(level) = 100 + (level − 1) × 25` — e.g. 100 XP for 1→2, 125 for 2→3, 150 for 3→4.
 
-   **Streak:** +1 per CAT calendar day (`America/Guatemala`, UTC−6) with at least one qualifying activity; once per day; missing a day resets displayed streak to 0. Qualifying = a first completion, a **skill-check retake pass**, or a **completed-lesson review finish** — the latter two keep the streak alive after all 5 lessons are done **without** re-awarding XP.
+   **Streak:** +1 per CAT calendar day (`America/Guatemala`, UTC−6) with at least one qualifying activity; once per day; missing a day resets displayed streak to 0. Qualifying = a first completion, a **skill-check retake pass**, or a **completed-lesson review finish** — the latter two keep the streak alive after all 9 lessons are done **without** re-awarding XP.
 
-   **Award hook:** `saveSkillCheckResult` → `awardLessonCompletion` (single Firestore transaction: marks `lessonProgress` completed + `xpAwarded`, adds XP only on first completion, advances the streak once/day). Review-only activity uses `touchStreakForActivity` (streak, no XP). Profile refreshes via `gamification-updated` event.
+   **Award hook:** `ProgressStore.completeLesson` → `FirestoreProgressBackend.completeLesson` (a single Firestore transaction behind the `ProgressBackend` seam: marks `lessonProgress` completed + `xpAwarded`, adds XP only on first completion, advances the streak once/day). Review-only activity uses `recordReviewActivity` → `touchStreak` (streak, no XP). Profile refreshes via `gamification-updated` event.
 
 6. **Stage 6** — Lessons 4–5 + Firebase deploy prep ✅
