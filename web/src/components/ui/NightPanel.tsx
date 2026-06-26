@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react'
 import { cx } from './cx'
 
+/** Component-scoped (kept out of index.css for merge-safety). Auto-frozen by the
+ *  global reduced-motion kill-switch since it targets every element's animation. */
+const glowKeyframes = `
+@keyframes suitedGlowBreathe {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.09); }
+}
+.suited-glow { animation: suitedGlowBreathe 9s ease-in-out infinite; }
+`
+
 type NightPanelProps = {
   children: ReactNode
   className?: string
@@ -40,12 +50,14 @@ export function NightPanel({
       </span>
       {glow && (
         <>
+          <style>{glowKeyframes}</style>
           <div
-            className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand-500/25 blur-3xl"
+            className="suited-glow pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand-500/25 blur-3xl"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-gold-500/15 blur-3xl"
+            className="suited-glow pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-gold-500/15 blur-3xl"
+            style={{ animationDelay: '-4.5s' }}
             aria-hidden
           />
         </>

@@ -97,13 +97,27 @@ export function Layout() {
                     to={item.to}
                     aria-current={active ? 'page' : undefined}
                     className={cx(
-                      'rounded-lg px-3.5 py-2 text-sm font-semibold transition',
+                      'relative rounded-lg px-3.5 py-2 text-sm font-semibold transition',
                       active
-                        ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/70'
+                        ? 'text-brand-700'
                         : 'text-night-700/70 hover:bg-night-900/5 hover:text-night-900',
                     )}
                   >
-                    {item.label}
+                    {active &&
+                      (reduced ? (
+                        <span
+                          className="absolute inset-0 rounded-lg bg-brand-50 ring-1 ring-inset ring-brand-200/70"
+                          aria-hidden
+                        />
+                      ) : (
+                        <motion.span
+                          layoutId="nav-active-desktop"
+                          className="absolute inset-0 rounded-lg bg-brand-50 ring-1 ring-inset ring-brand-200/70"
+                          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                          aria-hidden
+                        />
+                      ))}
+                    <span className="relative">{item.label}</span>
                   </Link>
                 )
               })}
@@ -160,11 +174,22 @@ export function Layout() {
                     to={item.to}
                     aria-current={active ? 'page' : undefined}
                     className={cx(
-                      'flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition',
-                      active ? 'bg-brand-600 text-white shadow-sm' : 'text-night-700/70',
+                      'relative flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition',
+                      active ? 'text-white' : 'text-night-700/70',
                     )}
                   >
-                    {item.label}
+                    {active &&
+                      (reduced ? (
+                        <span className="absolute inset-0 rounded-lg bg-brand-600 shadow-sm" aria-hidden />
+                      ) : (
+                        <motion.span
+                          layoutId="nav-active-mobile"
+                          className="absolute inset-0 rounded-lg bg-brand-600 shadow-sm"
+                          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                          aria-hidden
+                        />
+                      ))}
+                    <span className="relative">{item.label}</span>
                   </Link>
                 )
               })}
