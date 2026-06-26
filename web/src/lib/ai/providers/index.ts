@@ -13,6 +13,7 @@ import { geminiProvider } from './gemini'
 import { openaiProvider } from './openai'
 import { anthropicProvider } from './anthropic'
 import { openaiProxyProvider } from './openai-proxy'
+import { readEnv } from './env'
 
 export type LLMProviderId = 'gemini' | 'openai' | 'anthropic' | 'openai-proxy'
 
@@ -22,15 +23,6 @@ export type LLMProvider = {
   isConfigured(): boolean
   /** One-shot generation. Resolve to `null` on any failure; callers handle fallback. */
   generateText(prompt: string, signal: AbortSignal): Promise<string | null>
-  /**
-   * Optional native streaming. When a provider omits this, `aiClient` derives a
-   * "stream" by emitting the full `generateText()` result once via `onToken`.
-   */
-  streamText?(
-    prompt: string,
-    signal: AbortSignal,
-    onToken: (chunk: string) => void,
-  ): Promise<string | null>
 }
 
 const PROVIDERS: Record<LLMProviderId, LLMProvider> = {
@@ -38,11 +30,6 @@ const PROVIDERS: Record<LLMProviderId, LLMProvider> = {
   openai: openaiProvider,
   anthropic: anthropicProvider,
   'openai-proxy': openaiProxyProvider,
-}
-
-/** Read a string env var, trimmed; non-strings (incl. undefined) become ''. */
-function readEnv(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
 }
 
 /**

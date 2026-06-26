@@ -41,10 +41,6 @@ export const sections: SectionMeta[] = [
   },
 ]
 
-export function getSection(id: SectionId): SectionMeta {
-  return sections.find((s) => s.id === id) ?? sections[0]
-}
-
 export type LessonMeta = {
   id: string
   title: string

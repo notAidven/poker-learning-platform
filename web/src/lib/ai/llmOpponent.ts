@@ -11,6 +11,7 @@
 import type { CardId } from '../../types/lesson'
 import type { BettingAction, PokerStreet } from '../../types/poker'
 import { generateJSON, generateText, isAIConfigured } from './aiClient'
+import { describeLegalActions, tidyModelText } from './aiText'
 
 export type OppDecision = { action: BettingAction; amount?: number; reason: string }
 export type LegalAction = { action: BettingAction; min?: number; max?: number }
@@ -113,12 +114,7 @@ function clampAmount(amount: number, min?: number, max?: number): number | null 
 
 function cleanReason(raw: unknown, action: BettingAction): string {
   if (typeof raw === 'string') {
-    const text = raw
-      .trim()
-      .replace(/\s+/g, ' ')
-      .replace(/^["'“”]+/, '')
-      .replace(/["'“”]+$/, '')
-      .trim()
+    const text = tidyModelText(raw)
     if (text) return text.slice(0, 160)
   }
   return DEFAULT_REASONS[action]
@@ -149,7 +145,7 @@ function buildOpponentPrompt(ctx: LLMOpponentContext): string {
     `- Position: ${position}`,
     '',
     'Choose exactly one of these legal actions:',
-    `- ${describeLegalActions(ctx)}`,
+    `- ${describeLegalActions(ctx.legalActions, 'list', ctx.toCall)}`,
     '',
     'Respond with ONLY a JSON object (no code fences) in this exact shape:',
     '{"action": "<one legal action>", "amount": <number, REQUIRED only for bet or raise>, "reason": "<short in-character explanation, max ~15 words>"}',
@@ -157,25 +153,7 @@ function buildOpponentPrompt(ctx: LLMOpponentContext): string {
   ].join('\n')
 }
 
-function describeLegalActions(ctx: LLMOpponentContext): string {
-  if (ctx.legalActions.length === 0) return '(none)'
-  return ctx.legalActions
-    .map((la) => {
-      if (la.action === 'call') return `call (to call ${ctx.toCall})`
-      if (la.action === 'bet' || la.action === 'raise') {
-        return `${la.action} (min ${la.min ?? '?'}, max ${la.max ?? '?'})`
-      }
-      return la.action
-    })
-    .join('\n- ')
-}
-
 function tidyLine(raw: string): string {
   const firstLine = raw.split('\n').map((line) => line.trim()).find((line) => line.length > 0) ?? ''
-  return firstLine
-    .replace(/\s+/g, ' ')
-    .replace(/^["'“”]+/, '')
-    .replace(/["'“”]+$/, '')
-    .trim()
-    .slice(0, 120)
+  return tidyModelText(firstLine).slice(0, 120)
 }

@@ -10,6 +10,7 @@ import {
 import { db } from './firebase'
 import type { LessonStats } from './lessonProgress'
 import type { LessonSession } from './lessonSession'
+import { sanitizeProblemAttempts, sanitizeStringArray } from './lessonProgressSanitize'
 
 /** Firestore: users/{uid}/lessonProgress/{lessonId} */
 export type FirestoreLessonProgressDoc = LessonStats & {
@@ -46,16 +47,9 @@ export async function fetchAllLessonProgress(
         lessonAccuracy: data.lessonAccuracy ?? null,
         skillCheckCorrect: data.skillCheckCorrect ?? null,
         skillCheckTotal: data.skillCheckTotal ?? null,
-        pendingProblemAttempts:
-          data.pendingProblemAttempts && typeof data.pendingProblemAttempts === 'object'
-            ? Object.fromEntries(
-                Object.entries(data.pendingProblemAttempts).filter(
-                  ([, n]) => typeof n === 'number' && n > 0,
-                ),
-              )
-            : null,
+        pendingProblemAttempts: sanitizeProblemAttempts(data.pendingProblemAttempts) ?? null,
         pendingProblemStepIds: Array.isArray(data.pendingProblemStepIds)
-          ? data.pendingProblemStepIds.filter((id) => typeof id === 'string')
+          ? sanitizeStringArray(data.pendingProblemStepIds)
           : null,
         lastLessonXpBreakdown:
           data.lastLessonXpBreakdown &&
@@ -70,18 +64,8 @@ export async function fetchAllLessonProgress(
       session: data.session
         ? {
             stepIndex: data.session.stepIndex ?? 0,
-            solvedStepIds: Array.isArray(data.session.solvedStepIds)
-              ? data.session.solvedStepIds.filter((id) => typeof id === 'string')
-              : [],
-            problemAttempts:
-              data.session.problemAttempts &&
-              typeof data.session.problemAttempts === 'object'
-                ? Object.fromEntries(
-                    Object.entries(data.session.problemAttempts).filter(
-                      ([, n]) => typeof n === 'number' && n > 0,
-                    ),
-                  )
-                : undefined,
+            solvedStepIds: sanitizeStringArray(data.session.solvedStepIds),
+            problemAttempts: sanitizeProblemAttempts(data.session.problemAttempts),
           }
         : undefined,
     }

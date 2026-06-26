@@ -4,13 +4,13 @@ import {
   isRedSuit,
   parseCardId,
   type CardId,
-  type CardSuit,
   type HandRankingLadderAnswer,
   type HandRankingLadderConfig,
 } from '../../../types/lesson'
 import type { HandCategory } from '../../../types/poker'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { SuitIcon } from './cards/PlayingCardKit'
 
 /**
  * `hand-ranking-ladder`: a non-graded "explore the ladder" display used in
@@ -113,46 +113,6 @@ const LADDER: LadderEntry[] = [
     example: ['AS', 'KD', '9C', '6H', '2S'],
   },
 ]
-
-/** Crisp vector suit symbol (no emoji); colour is inherited via currentColor. */
-function SuitIcon({ suit, className }: { suit: CardSuit; className?: string }) {
-  const common = {
-    viewBox: '0 0 24 24',
-    className,
-    fill: 'currentColor',
-    'aria-hidden': true as const,
-    focusable: 'false' as const,
-  }
-  switch (suit) {
-    case 'H':
-      return (
-        <svg {...common}>
-          <path d="M12 21.35 10.55 20.03 C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3 c1.74 0 3.41 .81 4.5 2.09 C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5 c0 3.78-3.4 6.86-8.55 11.53 L12 21.35 Z" />
-        </svg>
-      )
-    case 'D':
-      return (
-        <svg {...common}>
-          <polygon points="12,1.5 21,12 12,22.5 3,12" />
-        </svg>
-      )
-    case 'S':
-      return (
-        <svg {...common}>
-          <path d="M12 2 C12 2 5 8.5 5 13.5 c0 2.5 2 4.5 4.5 4.5 1 0 1.9 -.3 2.6 -.9 -.2 2.2 -1.3 3.9 -3.1 4.9 h6 c-1.8 -1 -2.9 -2.7 -3.1 -4.9 .7 .6 1.6 .9 2.6 .9 2.5 0 4.5 -2 4.5 -4.5 C19 8.5 12 2 12 2 Z" />
-        </svg>
-      )
-    case 'C':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="6.6" r="3.7" />
-          <circle cx="7.3" cy="13.1" r="3.7" />
-          <circle cx="16.7" cy="13.1" r="3.7" />
-          <path d="M10.6 10 C10.5 14.5 9.3 19 7.4 22 L16.6 22 C14.7 19 13.5 14.5 13.4 10 Z" />
-        </svg>
-      )
-  }
-}
 
 /** A compact example card face: corner rank + suit, with a centred suit pip. */
 function ExampleCard({ id }: { id: CardId }) {

@@ -14,6 +14,7 @@
  * TODO(secure): route via VITE_LLM_PROXY_URL in production.
  */
 import type { LLMProvider } from './index'
+import { readEnv } from './env'
 
 // TODO(model): default Anthropic model — change here, or override with VITE_ANTHROPIC_MODEL.
 const DEFAULT_ANTHROPIC_MODEL = 'claude-3-5-haiku-latest'
@@ -23,10 +24,6 @@ const DEFAULT_MAX_TOKENS = 1024
 // Direct Anthropic REST base; the `/v1/messages` path is appended below.
 const ANTHROPIC_API_BASE = 'https://api.anthropic.com'
 const ANTHROPIC_VERSION = '2023-06-01'
-
-function readEnv(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
 
 function apiKey(): string {
   return readEnv(import.meta.env.VITE_ANTHROPIC_API_KEY)

@@ -1,14 +1,11 @@
 import { type FormEvent, useId, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { getAuthErrorMessage } from '../lib/authErrors'
+import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/accountSettings'
 import { Button } from './ui/Button'
 import { NightPanel } from './ui/NightPanel'
+import { darkFieldClass } from './account/fields'
 import { CheckIcon, LockIcon } from './icons'
-
-const MIN_PASSWORD_LENGTH = 6
-
-const darkFieldClass =
-  'mt-1.5 w-full rounded-xl border border-white/12 bg-night-950/50 px-4 py-3 text-sm text-white shadow-[inset_0_1px_2px_rgba(7,21,15,0.35)] outline-none transition placeholder:text-white/30 focus:border-gold-400/60 focus:bg-night-950/70 focus:ring-4 focus:ring-gold-500/15'
 
 /**
  * "Set a password" form shown on the profile to Google-authenticated users who
@@ -34,12 +31,9 @@ export function SetPasswordCard() {
     event.preventDefault()
     setError(null)
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`)
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
+    const validationError = validateNewPassword(password, confirmPassword)
+    if (validationError) {
+      setError(validationError)
       return
     }
 

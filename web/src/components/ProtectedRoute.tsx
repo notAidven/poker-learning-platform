@@ -2,11 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { PageLoader } from './ui/PageLoader'
 
-type ProtectedRouteProps = {
-  requireProfile?: boolean
-}
-
-export function ProtectedRoute({ requireProfile = true }: ProtectedRouteProps) {
+export function ProtectedRoute() {
   const { user, profile, loading } = useAuth()
 
   if (loading) {
@@ -17,7 +13,7 @@ export function ProtectedRoute({ requireProfile = true }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />
   }
 
-  if (requireProfile && !profile?.profileComplete) {
+  if (!profile?.profileComplete) {
     return <Navigate to="/setup-profile" replace />
   }
 

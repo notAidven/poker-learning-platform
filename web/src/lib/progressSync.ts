@@ -5,7 +5,7 @@ import {
   writeLessonProgress,
   type LessonProgressPayload,
 } from './lessonProgressFirestore'
-import type { LessonSession } from './lessonSession'
+import { loadLessonSession, type LessonSession } from './lessonSession'
 import {
   applyRemoteProgress,
   clearLocalProgress,
@@ -24,37 +24,8 @@ const SESSION_DEBOUNCE_MS = 400
 
 type SessionPayload = LessonSession
 
-function readSessionFromStorage(lessonId: string): SessionPayload {
-  try {
-    const raw = localStorage.getItem(`lesson-session-${lessonId}`)
-    if (!raw) return { stepIndex: 0, solvedStepIds: [] }
-    const parsed = JSON.parse(raw) as SessionPayload
-    const problemAttempts =
-      parsed.problemAttempts && typeof parsed.problemAttempts === 'object'
-        ? Object.fromEntries(
-            Object.entries(parsed.problemAttempts).filter(
-              ([, n]) => typeof n === 'number' && n > 0,
-            ),
-          )
-        : undefined
-    return {
-      stepIndex: typeof parsed.stepIndex === 'number' ? parsed.stepIndex : 0,
-      solvedStepIds: Array.isArray(parsed.solvedStepIds)
-        ? parsed.solvedStepIds.filter((id) => typeof id === 'string')
-        : [],
-      problemAttempts,
-    }
-  } catch {
-    return { stepIndex: 0, solvedStepIds: [] }
-  }
-}
-
 export function isProgressSyncReady() {
   return syncReady
-}
-
-export function getProgressSyncUid() {
-  return syncUid
 }
 
 export async function syncProgressOnAuth(uid: string | null): Promise<void> {
@@ -112,7 +83,7 @@ export function queueStatsFirestoreWrite(lessonId: string, stats: LessonStats) {
   const uid = syncUid ?? auth.currentUser?.uid
   if (!uid) return
 
-  const session = readSessionFromStorage(lessonId)
+  const session = loadLessonSession(lessonId, Number.MAX_SAFE_INTEGER)
   const payload: LessonProgressPayload = {
     stats,
     session: session.stepIndex > 0 || session.solvedStepIds.length > 0 ? session : null,

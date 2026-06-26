@@ -18,10 +18,6 @@ export function hasSkillCheck(lessonId: string): boolean {
   return lessonId in skillCheckLoaders
 }
 
-export function getSkillCheck(lessonId: string): SkillCheckDefinition | undefined {
-  return skillCheckCache.get(lessonId)
-}
-
 export async function loadSkillCheck(
   lessonId: string,
 ): Promise<SkillCheckDefinition | undefined> {

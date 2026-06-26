@@ -13,6 +13,7 @@ import { HAND_CATEGORY_RANK, type BettingAction, type PokerStreet } from '../../
 import { lookupGlossaryTerm } from '../../data/glossary'
 import { analyzeSpot, type HintContext, type SpotAnalysis } from '../poker/hints'
 import { generateText, isAIConfigured } from './aiClient'
+import { describeLegalActions, tidyModelText } from './aiText'
 
 export type CoachContext = {
   hole: [CardId, CardId]
@@ -75,7 +76,7 @@ function buildCoachPrompt(ctx: CoachContext, analysis: SpotAnalysis): string {
     `- Board: ${board}`,
     `- Pot: ${ctx.pot}; To call: ${ctx.toCall}; Hero stack: ${ctx.heroStack}; Opponents in hand: ${ctx.opponentsInHand}`,
     ...analysis.facts.map((fact) => `- ${fact}`),
-    `- Legal actions: ${describeLegalActions(ctx.legalActions)}`,
+    `- Legal actions: ${describeLegalActions(ctx.legalActions, 'inline')}`,
     '',
     'Coaching tip:',
   ].join('\n')
@@ -103,23 +104,9 @@ function glossaryBlock(analysis: SpotAnalysis): string {
   return lines.length > 0 ? lines.join('\n') : '- (none)'
 }
 
-function describeLegalActions(legalActions: CoachContext['legalActions']): string {
-  if (legalActions.length === 0) return '(none)'
-  return legalActions
-    .map((la) => {
-      if ((la.action === 'bet' || la.action === 'raise') && (la.min != null || la.max != null)) {
-        return `${la.action} (${la.min ?? '?'}–${la.max ?? '?'})`
-      }
-      return la.action
-    })
-    .join(', ')
-}
-
-/** Normalize model output: collapse whitespace, strip wrapping quotes, cap length. */
+/** Normalize model output: collapse whitespace + strip quotes, then cap length. */
 function tidyTip(raw: string): string {
-  let text = raw.trim().replace(/\s+/g, ' ')
-  text = text.replace(/^["'“”]+/, '').replace(/["'“”]+$/, '').trim()
-  return limitSentences(text, 2).slice(0, 320).trim()
+  return limitSentences(tidyModelText(raw), 2).slice(0, 320).trim()
 }
 
 function limitSentences(text: string, max: number): string {
@@ -290,7 +277,7 @@ function buildDeepCoachPrompt(ctx: DeepCoachContext, analysis: SpotAnalysis): st
     'Seats:',
     seats,
     ...analysis.facts.map((fact) => `- ${fact}`),
-    `- Legal actions: ${describeLegalActions(ctx.legalActions)}`,
+    `- Legal actions: ${describeLegalActions(ctx.legalActions, 'inline')}`,
     '',
     'Deep analysis:',
   ].join('\n')

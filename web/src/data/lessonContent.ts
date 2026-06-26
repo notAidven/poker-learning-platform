@@ -18,10 +18,6 @@ export function hasLessonContent(id: string): boolean {
   return id in lessonLoaders
 }
 
-export function getLesson(id: string): LessonDefinition | undefined {
-  return lessonCache.get(id)
-}
-
 export async function loadLesson(id: string): Promise<LessonDefinition | undefined> {
   if (!hasLessonContent(id)) return undefined
 
@@ -31,8 +27,4 @@ export async function loadLesson(id: string): Promise<LessonDefinition | undefin
   const lesson = await lessonLoaders[id]()
   lessonCache.set(id, lesson)
   return lesson
-}
-
-export function listAvailableLessonIds(): string[] {
-  return Object.keys(lessonLoaders)
 }

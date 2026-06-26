@@ -21,6 +21,7 @@
  */
 import type { LLMProvider } from './index'
 import { auth } from '../../firebase'
+import { readEnv } from './env'
 
 /** Request payload accepted by the Worker's `POST /chat` (kept minimal + server-validated). */
 type AiChatRequest = {
@@ -36,10 +37,6 @@ type AiChatResponse = {
   text: string
   model?: string
   finishReason?: string | null
-}
-
-function readEnv(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
 }
 
 /** The deployed Worker base URL (or full `/chat` URL); empty when not configured. */
@@ -125,23 +122,8 @@ async function generateText(prompt: string, signal: AbortSignal): Promise<string
   }
 }
 
-/**
- * The Worker is non-streaming, so "streaming" is a single non-streamed call whose
- * full result is emitted once via `onToken` (mirrors aiClient's own fallback).
- */
-async function streamText(
-  prompt: string,
-  signal: AbortSignal,
-  onToken: (chunk: string) => void,
-): Promise<string | null> {
-  const text = await generateText(prompt, signal)
-  if (text != null) onToken(text)
-  return text
-}
-
 export const openaiProxyProvider: LLMProvider = {
   id: 'openai-proxy',
   isConfigured,
   generateText,
-  streamText,
 }

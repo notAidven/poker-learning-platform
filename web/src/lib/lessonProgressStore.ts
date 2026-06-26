@@ -1,5 +1,7 @@
 import type { LessonProgressPayload } from './lessonProgressFirestore'
 import type { LessonSession } from './lessonSession'
+import { sanitizeProblemAttempts, sanitizeStringArray } from './lessonProgressSanitize'
+import { clearLocalBankroll } from './bankroll'
 
 const COMPLETED_KEY = 'completed-lesson-ids'
 const STATS_KEY = 'lesson-stats'
@@ -73,7 +75,7 @@ export function getCompletedLessonIdsFromStorage(): string[] {
     const raw = localStorage.getItem(COMPLETED_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+    return sanitizeStringArray(parsed)
   } catch {
     return []
   }
@@ -116,20 +118,10 @@ export function exportLocalProgress(): Record<string, LessonProgressPayload> {
     if (sessionRaw) {
       try {
         const parsed = JSON.parse(sessionRaw) as LessonSession
-        const problemAttempts =
-          parsed.problemAttempts && typeof parsed.problemAttempts === 'object'
-            ? Object.fromEntries(
-                Object.entries(parsed.problemAttempts).filter(
-                  ([, n]) => typeof n === 'number' && n > 0,
-                ),
-              )
-            : undefined
         session = {
           stepIndex: typeof parsed.stepIndex === 'number' ? parsed.stepIndex : 0,
-          solvedStepIds: Array.isArray(parsed.solvedStepIds)
-            ? parsed.solvedStepIds.filter((id) => typeof id === 'string')
-            : [],
-          problemAttempts,
+          solvedStepIds: sanitizeStringArray(parsed.solvedStepIds),
+          problemAttempts: sanitizeProblemAttempts(parsed.problemAttempts),
         }
       } catch {
         session = undefined
@@ -162,8 +154,7 @@ export function clearLocalProgress() {
     // outside the XP economy. Drop them too so a different account on this device
     // can never inherit the previous user's table progress or chips.
     localStorage.removeItem('cleared-table-ids')
-    localStorage.removeItem('bankroll-chips')
-    localStorage.removeItem('bankroll-granted')
+    clearLocalBankroll()
 
     const sessionKeys: string[] = []
     for (let i = 0; i < localStorage.length; i += 1) {

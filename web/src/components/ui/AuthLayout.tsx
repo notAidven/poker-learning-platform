@@ -64,8 +64,6 @@ type AuthLayoutProps = {
   subtitle?: ReactNode
   children: ReactNode
   footer?: ReactNode
-  /** Width of the form card column on large screens */
-  maxWidthClass?: string
 }
 
 export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProps) {

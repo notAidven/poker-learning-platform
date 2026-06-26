@@ -14,16 +14,13 @@
  * TODO(secure): route via VITE_LLM_PROXY_URL in production.
  */
 import type { LLMProvider } from './index'
+import { readEnv } from './env'
 
 // TODO(model): default OpenAI model — change here, or override with VITE_OPENAI_MODEL.
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini'
 
 // Direct OpenAI REST base; the `/chat/completions` path is appended below.
 const OPENAI_API_BASE = 'https://api.openai.com/v1'
-
-function readEnv(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
 
 function apiKey(): string {
   return readEnv(import.meta.env.VITE_OPENAI_API_KEY)

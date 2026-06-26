@@ -43,10 +43,6 @@ export function getLessonStats(lessonId: string): LessonStats {
   return defaultLessonStats()
 }
 
-export function getAllLessonStats(): Record<string, LessonStats> {
-  return { ...ensureStatsCache() }
-}
-
 export function markLessonAttempted(lessonId: string) {
   const map = ensureStatsCache()
   const current = map[lessonId] ?? defaultLessonStats()
@@ -165,11 +161,6 @@ export function recordReviewActivity(): void {
   void touchStreakForActivity(uid).catch((err) => {
     console.warn('Failed to record review activity for streak:', err)
   })
-}
-
-/** @deprecated Use saveSkillCheckResult after the skill check */
-export function markLessonComplete(_lessonId: string) {
-  // Legacy no-op — completion now requires the skill check
 }
 
 export function getCompletedLessonIds(): string[] {

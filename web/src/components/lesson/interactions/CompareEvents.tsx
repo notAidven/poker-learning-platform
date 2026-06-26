@@ -8,8 +8,7 @@ import type {
 } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
-import { FractionAnswerInput } from './FractionAnswerInput'
-import { fractionMatches, hasValidFractionInput, reduceFraction } from './fractionAnswer'
+import { reduceFraction } from './fractionAnswer'
 
 type CompareEventsProps = InteractionProps & {
   config: CompareEventsConfig
@@ -63,16 +62,11 @@ export function CompareEvents({
   initialSolved = false,
   allowRetry = true,
 }: CompareEventsProps) {
-  const requireProbabilities = config.requireProbabilities ?? false
   const allowEqual = config.allowEqual ?? answer.more === 'equal'
 
   const [choice, setChoice] = useState<CompareEventsChoice | null>(
     initialSolved ? answer.more : null,
   )
-  const [numA, setNumA] = useState('')
-  const [denA, setDenA] = useState('')
-  const [numB, setNumB] = useState('')
-  const [denB, setDenB] = useState('')
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
 
@@ -85,22 +79,11 @@ export function CompareEvents({
     config.helperText ??
     'Compare the two events below, then tap the one that is more likely.'
   const chooseLabel = config.chooseLabel ?? 'Which event is more likely?'
-  const probabilityALabel =
-    config.probabilityALabel ?? `Enter P(${config.eventA.label}) as a reduced fraction.`
-  const probabilityBLabel =
-    config.probabilityBLabel ?? `Enter P(${config.eventB.label}) as a reduced fraction.`
-
-  function probabilitiesValid() {
-    if (!requireProbabilities) return true
-    const aOk = answer.probabilityA ? fractionMatches(numA, denA, answer.probabilityA) : true
-    const bOk = answer.probabilityB ? fractionMatches(numB, denB, answer.probabilityB) : true
-    return aOk && bOk
-  }
 
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (choice === answer.more && probabilitiesValid()) {
+    if (choice === answer.more) {
       setSolved(true)
       onCorrect()
     } else {
@@ -116,10 +99,7 @@ export function CompareEvents({
     setSolved(false)
   }
 
-  const probsReady =
-    !requireProbabilities ||
-    (hasValidFractionInput(numA, denA) && hasValidFractionInput(numB, denB))
-  const canSubmit = choice !== null && probsReady && !locked
+  const canSubmit = choice !== null && !locked
 
   function panelClass(side: 'a' | 'b') {
     const active = choice === side
@@ -194,7 +174,7 @@ export function CompareEvents({
   // the learner must enter probabilities. Deterministic comparisons ("which hand
   // wins?", "who acts last?", kicker tiebreaks) have no probabilities, so use neutral
   // wording instead.
-  const isProbabilistic = requireProbabilities || dispA.value !== null || dispB.value !== null
+  const isProbabilistic = dispA.value !== null || dispB.value !== null
   const correctLabel = aMoreLikely ? config.eventA.label : config.eventB.label
   const revealText = equalLikely
     ? isProbabilistic
@@ -243,29 +223,6 @@ export function CompareEvents({
         >
           They are equally likely
         </button>
-      )}
-
-      {requireProbabilities && choice !== null && (
-        <div className="space-y-3">
-          <FractionAnswerInput
-            id="compare-events-prob-a"
-            label={probabilityALabel}
-            numerator={numA}
-            denominator={denA}
-            onNumeratorChange={setNumA}
-            onDenominatorChange={setDenA}
-            disabled={locked}
-          />
-          <FractionAnswerInput
-            id="compare-events-prob-b"
-            label={probabilityBLabel}
-            numerator={numB}
-            denominator={denB}
-            onNumeratorChange={setNumB}
-            onDenominatorChange={setDenB}
-            disabled={locked}
-          />
-        </div>
       )}
 
       {submitted && (

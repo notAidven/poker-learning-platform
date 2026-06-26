@@ -14,6 +14,7 @@ import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { BurnCard, CardBack, CardFace, CardKitStyles, DeckPile, EmptySlot } from './cards/PlayingCardKit'
+import { mulberry32 } from '../../../lib/poker/rng'
 
 /**
  * `board-dealer` (design doc §5.3). Deals the hole + community cards street by
@@ -23,7 +24,6 @@ import { BurnCard, CardBack, CardFace, CardKitStyles, DeckPile, EmptySlot } from
  *     This is a no-input "watch it happen" gate, so there is no "Check answer"
  *     to press — it auto-completes (showing a small "✓ All cards dealt"
  *     confirmation) once `answer.minStreetsRevealed` streets are revealed.
- *     Mirrors `CardDeck`'s `draw-tally` `minDraws`.
  *  2. **`askBestHandAt`** (Lesson 3): at each listed street the learner names their
  *     best made hand; the pick is validated against `evaluateHoldem(hole, boardSoFar)`.
  *  3. **Showdown winner** (Lesson 3): with `config.villain` + `answer.winner`, the
@@ -86,17 +86,6 @@ const SHOWDOWN_CHOICES: { value: ShowdownWinner; label: string }[] = [
   { value: 'split', label: 'Split' },
 ]
 
-/** Seeded RNG (mulberry32) + Fisher–Yates so 'random'/'deal' deals are reproducible. */
-function makeRng(seed: number) {
-  let s = seed >>> 0
-  return () => {
-    s = (s + 0x6d2b79f5) | 0
-    let t = Math.imul(s ^ (s >>> 15), 1 | s)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 function shuffle(cards: CardId[], rng: () => number): CardId[] {
   const a = [...cards]
   for (let i = a.length - 1; i > 0; i--) {
@@ -149,7 +138,7 @@ export function BoardDealer({
     ])
     const deck = shuffle(
       fullDeck().filter((c) => !used.has(c)),
-      makeRng(effectiveSeed),
+      mulberry32(effectiveSeed),
     )
     let di = 0
     const hole: [CardId, CardId] = fixedHole ?? [deck[di++], deck[di++]]

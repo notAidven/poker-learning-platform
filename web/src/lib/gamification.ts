@@ -1,9 +1,6 @@
 /** Base XP on first full lesson completion (lesson + skill check). */
 export const XP_BASE_LESSON = 100
 
-/** @deprecated Use XP_BASE_LESSON — kept for imports that expect a single constant. */
-export const XP_PER_LESSON = XP_BASE_LESSON
-
 /** Max bonus XP when every lesson problem is solved on the first submit. */
 export const XP_MAX_BONUS = 50
 

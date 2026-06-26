@@ -52,7 +52,6 @@ export type SupportMode = 'coach' | 'hints'
 export type TableRuntimeConfig = {
   tableId: string
   title: string
-  subtitle?: string
   feature: TableFeature
   /** 'rule' = synchronous `decideAI` (Feature 1); 'llm' = `decideWithLLM` + fallback (Feature 2). */
   opponentSource: OpponentSource
@@ -71,7 +70,6 @@ export function toRuntimeConfig(table: TableConfig): TableRuntimeConfig {
   return {
     tableId: table.id,
     title: table.title,
-    subtitle: table.subtitle,
     feature: table.feature,
     opponentSource: coached ? 'rule' : 'llm',
     tier: table.tier,

@@ -1,4 +1,5 @@
 import { queueSessionFirestoreWrite } from './progressSync'
+import { sanitizeProblemAttempts, sanitizeStringArray } from './lessonProgressSanitize'
 
 const sessionKey = (lessonId: string) => `lesson-session-${lessonId}`
 
@@ -20,17 +21,8 @@ export function loadLessonSession(lessonId: string, stepCount: number): LessonSe
       parsed.stepIndex < stepCount
         ? parsed.stepIndex
         : 0
-    const solvedStepIds = Array.isArray(parsed.solvedStepIds)
-      ? parsed.solvedStepIds.filter((id) => typeof id === 'string')
-      : []
-    const problemAttempts =
-      parsed.problemAttempts && typeof parsed.problemAttempts === 'object'
-        ? Object.fromEntries(
-            Object.entries(parsed.problemAttempts).filter(
-              ([, n]) => typeof n === 'number' && n > 0,
-            ),
-          )
-        : undefined
+    const solvedStepIds = sanitizeStringArray(parsed.solvedStepIds)
+    const problemAttempts = sanitizeProblemAttempts(parsed.problemAttempts)
     return { stepIndex, solvedStepIds, problemAttempts }
   } catch {
     return { stepIndex: 0, solvedStepIds: [] }

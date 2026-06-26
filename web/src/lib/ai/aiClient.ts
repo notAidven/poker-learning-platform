@@ -8,17 +8,13 @@
  * resolves to `null` (or `false`) instead of throwing — callers can therefore always
  * fall back to rule-based logic.
  */
-import { getActiveProvider, type LLMProvider } from './providers'
+import { getActiveProvider } from './providers'
 
 const DEFAULT_TIMEOUT_MS = 8000
 
 type GenerateOpts = {
   prompt: string
   timeoutMs?: number
-}
-
-type StreamOpts = GenerateOpts & {
-  onToken: (chunk: string) => void
 }
 
 /** True when the active provider is configured (Firebase AI Logic, or a key/proxy). */
@@ -52,45 +48,6 @@ export async function generateText(opts: GenerateOpts): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-/**
- * Streaming text generation. Each non-empty chunk is delivered via `onToken`, and
- * the full aggregated string is returned (or `null` on error/timeout/AI off). The
- * timeout bounds the whole stream; tokens delivered before a timeout are kept.
- *
- * Providers without native streaming emit the full text once via `onToken`.
- */
-export async function streamText(opts: StreamOpts): Promise<string | null> {
-  const provider = getActiveProvider()
-  if (!provider.isConfigured()) return null
-
-  const controller = new AbortController()
-  try {
-    const native = provider.streamText
-    const run = native
-      ? native(opts.prompt, controller.signal, opts.onToken)
-      : emitFullTextOnce(provider, opts.prompt, controller.signal, opts.onToken)
-    return await withTimeout(run, opts.timeoutMs ?? DEFAULT_TIMEOUT_MS, controller)
-  } catch {
-    return null
-  }
-}
-
-/**
- * Fallback "stream" for providers without native streaming: generate the full text,
- * then emit it as a single `onToken` chunk.
- */
-async function emitFullTextOnce(
-  provider: LLMProvider,
-  prompt: string,
-  signal: AbortSignal,
-  onToken: (chunk: string) => void,
-): Promise<string | null> {
-  const text = await provider.generateText(prompt, signal)
-  const full = typeof text === 'string' && text.trim().length > 0 ? text : null
-  if (full != null) onToken(full)
-  return full
 }
 
 /**
