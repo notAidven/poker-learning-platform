@@ -121,33 +121,55 @@ function testSectionStructure() {
 }
 
 // Two-room Casino Floor (mirrors data/tables.ts + isTableUnlocked in
-// lib/lessonProgress.ts): exactly two rooms. Room 1 (coached) opens once every
-// lesson is complete; Room 2 (AI) opens only after Room 1 has been cleared.
+// lib/lessonProgress.ts): exactly two rooms. Room 1 (coached) now opens once the
+// first two sections (Foundations + Playing a Hand) are complete, so learners
+// reach guided play before grinding The Math; Room 2 (AI) opens only after Room 1
+// has been cleared.
 function testCasinoRooms() {
+  // 9 lessons across 3 sections; the two casino rooms are separate ai-table nodes.
+  const lessons = [
+    { id: '1', section: 'foundations' },
+    { id: '2', section: 'foundations' },
+    { id: '3', section: 'playing' },
+    { id: '4', section: 'playing' },
+    { id: 'preflop', section: 'playing' },
+    { id: '5', section: 'math' },
+    { id: '6', section: 'math' },
+    { id: '7', section: 'math' },
+    { id: '8', section: 'math' },
+  ]
+  // Mirrors areGuidedPlayLessonsComplete: every lesson in the first two sections.
+  const GUIDED_SECTIONS = new Set(['foundations', 'playing'])
+  const guidedPlayComplete = (done) =>
+    lessons.filter((l) => GUIDED_SECTIONS.has(l.section)).every((l) => done.includes(l.id))
+
   const rooms = [
     { id: 'room-1', feature: 'coached', prereqId: '8' },
     { id: 'room-2', feature: 'ai', prereqId: 'room-1' },
   ]
   const isTableId = (id) => rooms.some((r) => r.id === id)
-  const allLessonsComplete = (lessonsDone) => lessonsDone >= 9
 
-  function isTableUnlocked(room, lessonsDone, clearedIds) {
-    if (!allLessonsComplete(lessonsDone)) return false
+  function isTableUnlocked(room, done, clearedIds) {
+    if (!guidedPlayComplete(done)) return false
     if (!isTableId(room.prereqId)) return true // Room 1's prereq is a lesson id
     return clearedIds.includes(room.prereqId) // Room 2 needs Room 1 cleared
   }
 
   const [room1, room2] = rooms
+  const firstTwoSections = ['1', '2', '3', '4', 'preflop'] // Foundations + Playing a Hand
+  const everyLesson = lessons.map((l) => l.id)
+
   assert.equal(rooms.length, 2, 'the Casino Floor has exactly two rooms')
-  assert.equal(isTableUnlocked(room1, 8, []), false) // not all lessons → locked
-  assert.equal(isTableUnlocked(room1, 9, []), true) // all lessons → Room 1 opens
-  assert.equal(isTableUnlocked(room2, 9, []), false) // Room 1 not cleared → locked
-  assert.equal(isTableUnlocked(room2, 9, ['room-1']), true) // Room 1 cleared → Room 2 opens
-  assert.equal(isTableUnlocked(room2, 0, ['room-1']), false) // still needs every lesson
+  assert.equal(isTableUnlocked(room1, ['1', '2', '3', '4'], []), false) // Playing a Hand unfinished → locked
+  assert.equal(isTableUnlocked(room1, firstTwoSections, []), true) // first two sections → Room 1 opens early
+  assert.equal(isTableUnlocked(room1, everyLesson, []), true) // a finished course keeps Room 1 open
+  assert.equal(isTableUnlocked(room2, firstTwoSections, []), false) // Room 1 not cleared → locked
+  assert.equal(isTableUnlocked(room2, firstTwoSections, ['room-1']), true) // Room 1 cleared → Room 2 opens
+  assert.equal(isTableUnlocked(room2, ['1', '2'], ['room-1']), false) // still needs the Playing a Hand section
   record(
     'casino-rooms',
     true,
-    'Two rooms: Room 1 opens after all lessons, Room 2 after Room 1 is cleared',
+    'Two rooms: Room 1 opens after the first two sections, Room 2 after Room 1 is cleared',
   )
 }
 

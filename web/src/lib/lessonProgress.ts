@@ -1,4 +1,4 @@
-import { lessons } from '../data/lessons'
+import { lessons, type SectionId } from '../data/lessons'
 import { isTableId, tables, type TableConfig } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
@@ -11,11 +11,14 @@ import {
   ensureStatsCache,
   getCompletedLessonIdsFromStorage,
   notifyProgressUpdated,
+  readClearedTableIdsFromStorage,
   syncCompletedIds,
+  writeClearedTableIdsToStorage,
   writeStatsMap,
   type LessonStats,
 } from './lessonProgressStore'
 import {
+  queueClearedTablesFirestoreWrite,
   queueCompletionFallbackWrite,
   queueSessionClearFirestoreWrite,
   queueStatsFirestoreWrite,
@@ -223,17 +226,33 @@ export function skillCheckScorePercent(stats: LessonStats): number | null {
 // showdown (or the hero wins one); there is no XP and no skill check.
 //
 // Unlock gating (two-room model):
-//  - The whole Casino Floor opens only once EVERY lesson is complete.
-//  - Room 1 (coached) then opens immediately (its prereq is a lesson id).
+//  - Room 1 (coached) opens once the first two sections (Foundations + Playing a
+//    Hand) are complete, so learners reach guided play before grinding The Math.
 //  - Room 2 (AI) opens only after Room 1 has been cleared (its prereq is Room 1).
+//
+// Cleared-room state persists to Firestore (via progressSync) and is reconciled
+// on sign-in, so clearing Room 1 on one device unlocks Room 2 on another.
 // ---------------------------------------------------------------------------
 
-const CLEARED_TABLES_KEY = 'cleared-table-ids'
+/** The sections a learner must finish to reach guided casino play (Room 1). */
+const GUIDED_PLAY_SECTIONS: ReadonlySet<SectionId> = new Set<SectionId>(['foundations', 'playing'])
 
 /** True when every interactive lesson (kind !== 'ai-table') is in the completed set. */
 export function areAllLessonsComplete(completedLessonIds: string[]): boolean {
   return lessons
     .filter((l) => l.kind !== 'ai-table')
+    .every((l) => completedLessonIds.includes(l.id))
+}
+
+/**
+ * True once every interactive lesson in the first two sections (Foundations +
+ * Playing a Hand) is complete — the gate that opens the coached Room 1. It is a
+ * strict subset of `areAllLessonsComplete`, so a fully-finished course always
+ * keeps the casino open and the two gates stay coherent.
+ */
+export function areGuidedPlayLessonsComplete(completedLessonIds: string[]): boolean {
+  return lessons
+    .filter((l) => l.kind !== 'ai-table' && GUIDED_PLAY_SECTIONS.has(l.section))
     .every((l) => completedLessonIds.includes(l.id))
 }
 
@@ -244,42 +263,35 @@ export function hasClearedAnyCoachedTable(): boolean {
 }
 
 export function getClearedTableIds(): string[] {
-  try {
-    const raw = localStorage.getItem(CLEARED_TABLES_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
-  } catch {
-    return []
-  }
+  return readClearedTableIdsFromStorage()
 }
 
 export function isTableCleared(tableId: string): boolean {
   return getClearedTableIds().includes(tableId)
 }
 
-/** Mark a table cleared (idempotent) and notify the path/home so they re-render. */
+/**
+ * Mark a table cleared (idempotent): update the local mirror, persist to Firestore
+ * for cross-device unlock, and notify the path/home so they re-render.
+ */
 export function markTableCleared(tableId: string): void {
   const current = getClearedTableIds()
   if (current.includes(tableId)) return
   const next = [...current, tableId]
-  try {
-    localStorage.setItem(CLEARED_TABLES_KEY, JSON.stringify(next))
-  } catch {
-    // Ignore storage errors (private mode / disabled storage): play still works.
-  }
+  writeClearedTableIdsToStorage(next)
+  queueClearedTablesFirestoreWrite(next)
   notifyProgressUpdated()
 }
 
 /**
  * Whether a casino room is unlocked (two-room model).
  *
- *  - Nothing in the casino opens until ALL lessons are complete.
- *  - Room 1's prereq is a lesson id (so the all-lessons gate alone opens it).
+ *  - Room 1's prereq is a lesson id, so the guided-play gate (Foundations +
+ *    Playing a Hand complete) alone opens it.
  *  - Room 2's prereq is Room 1 (a table id), so it opens once Room 1 is cleared.
  */
 export function isTableUnlocked(table: TableConfig, completedLessonIds: string[]): boolean {
-  if (!areAllLessonsComplete(completedLessonIds)) return false
+  if (!areGuidedPlayLessonsComplete(completedLessonIds)) return false
   if (!isTableId(table.prereqId)) return true
   return isTableCleared(table.prereqId)
 }

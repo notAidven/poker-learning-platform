@@ -1,7 +1,9 @@
 import { auth } from './firebase'
 import {
   fetchAllLessonProgress,
+  fetchClearedTableIds,
   writeAllLessonProgress,
+  writeClearedTableIds,
   writeLessonProgress,
   type LessonProgressPayload,
 } from './lessonProgressFirestore'
@@ -13,6 +15,8 @@ import {
   exportLocalProgress,
   getStatsMapSnapshot,
   notifyProgressUpdated,
+  readClearedTableIdsFromStorage,
+  writeClearedTableIdsToStorage,
   type LessonStats,
 } from './lessonProgressStore'
 
@@ -50,22 +54,22 @@ export async function syncProgressOnAuth(uid: string | null): Promise<void> {
 
   syncUid = uid
 
+  // A genuine pre-auth/anonymous session this load (no real uid synced earlier).
+  // Only such a handoff may donate local data to a freshly signed-in account;
+  // a different account must NOT inherit the prior user's progress (H1).
+  const isAnonymousHandoff = previousUid == null
+
   try {
     const remote = await fetchAllLessonProgress(uid)
 
     if (Object.keys(remote).length === 0) {
-      // Only merge local → remote for a genuine pre-auth/anonymous session,
-      // i.e. no real uid was synced earlier this session. For a freshly
-      // signed-in different account we must NOT donate the prior local data;
-      // clear it and treat remote (empty) as the source of truth (H1).
-      const isAnonymousHandoff = previousUid == null
       const local = exportLocalProgress()
       if (isAnonymousHandoff && Object.keys(local).length > 0) {
         await writeAllLessonProgress(uid, local)
         applyRemoteProgress(local)
       } else {
         // Different account with empty remote — make sure no prior local data
-        // lingers. (The `finally` block fires the progress-updated event.)
+        // lingers. (The progress-updated event fires at the end.)
         clearLocalProgress()
       }
     } else {
@@ -73,9 +77,49 @@ export async function syncProgressOnAuth(uid: string | null): Promise<void> {
     }
   } catch (err) {
     console.warn('Failed to sync lesson progress from Firestore:', err)
-  } finally {
-    syncReady = true
-    notifyProgressUpdated()
+  }
+
+  // Cleared-room (casino) state syncs alongside lesson progress so a room cleared
+  // on one device unlocks Room 2 on another. Reconciled the same way: remote is
+  // the source of truth, except a real anonymous handoff donates local clears once.
+  // Done after the lesson reconcile, since clearLocalProgress() also wipes the
+  // local cleared-room mirror.
+  try {
+    await reconcileClearedTables(uid, isAnonymousHandoff)
+  } catch (err) {
+    console.warn('Failed to sync cleared-table state from Firestore:', err)
+  }
+
+  syncReady = true
+  notifyProgressUpdated()
+}
+
+function unionIds(a: string[], b: string[]): string[] {
+  return Array.from(new Set([...a, ...b]))
+}
+
+/**
+ * Reconcile cleared-room ids between Firestore and the local mirror on sign-in,
+ * mirroring the lesson-progress reconcile:
+ *  - remote has clears  → remote wins (a true anonymous handoff also folds in any
+ *    local clears and pushes the union back, so a just-finished room is not lost);
+ *  - remote empty + anonymous handoff with local clears → donate local once;
+ *  - remote empty otherwise (different account / nothing local) → match remote.
+ */
+async function reconcileClearedTables(uid: string, isAnonymousHandoff: boolean): Promise<void> {
+  const remote = await fetchClearedTableIds(uid)
+  const local = readClearedTableIdsFromStorage()
+
+  if (remote.length > 0) {
+    const merged = isAnonymousHandoff ? unionIds(remote, local) : remote
+    writeClearedTableIdsToStorage(merged)
+    if (isAnonymousHandoff && merged.length > remote.length) {
+      await writeClearedTableIds(uid, merged)
+    }
+  } else if (isAnonymousHandoff && local.length > 0) {
+    await writeClearedTableIds(uid, local) // local already holds them
+  } else {
+    writeClearedTableIdsToStorage([])
   }
 }
 
@@ -91,6 +135,20 @@ export function queueStatsFirestoreWrite(lessonId: string, stats: LessonStats) {
 
   void writeLessonProgress(uid, lessonId, payload).catch((err) => {
     console.warn(`Failed to persist lesson stats for ${lessonId}:`, err)
+  })
+}
+
+/**
+ * Persist the cleared-room list to Firestore (best-effort) so a room cleared on
+ * one device unlocks Room 2 on another. Signed-out users have no uid, so this is
+ * a no-op and play stays local-only — matching the lesson-stats write path.
+ */
+export function queueClearedTablesFirestoreWrite(clearedTableIds: string[]) {
+  const uid = syncUid ?? auth.currentUser?.uid
+  if (!uid) return
+
+  void writeClearedTableIds(uid, clearedTableIds).catch((err) => {
+    console.warn('Failed to persist cleared-table state:', err)
   })
 }
 
