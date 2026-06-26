@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build / wrangler
+dist/
+.wrangler/
+
+# Secrets / local env (never commit these)
+.dev.vars
+.env
+.env.*
+*.local
+
+# Logs
+*.log

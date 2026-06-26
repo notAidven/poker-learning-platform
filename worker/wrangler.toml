@@ -1,0 +1,19 @@
+# Cloudflare Worker config for the "Suited" AI proxy.
+#
+# This Worker replaces the old Firebase callable so the app can use OpenAI on the
+# FREE tiers (Cloudflare Workers free plan + Firebase Spark) — no Blaze required.
+#
+# SECRET: OPENAI_API_KEY is set at deploy time and is NEVER stored here or committed:
+#   wrangler secret put OPENAI_API_KEY
+#
+# Deploy: `wrangler login` → `wrangler secret put OPENAI_API_KEY` → `wrangler deploy`
+# (full steps in README.md).
+
+name = "suited-ai-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Keep the deployed bundle lean; no extra runtime APIs are required (the Worker
+# uses only standard fetch + Web Crypto).
+[observability]
+enabled = true
