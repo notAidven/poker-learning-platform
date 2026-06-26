@@ -22,7 +22,7 @@ export const lesson8: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'Value bets and bluffs',
-      content: `Every bet has a purpose. You already met one in the Expected Value lesson: a **bluff** bets a weak hand hoping a **better** hand folds (it only works when you have fold equity).
+      content: `Every bet has a purpose. You already met one in the Fold Equity & Bluffing lesson: a **bluff** bets a weak hand hoping a **better** hand folds (it only works when you have **fold equity**).
 
 This lesson is about the other purpose:
 
@@ -35,7 +35,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       showCalculator: true,
       id: 'p1',
       prompt:
-        'You flop top set (three Kings) on K-8-3 and no one has bet. Plenty of worse hands (a King, a pair, a draw) can call. What is the best action?',
+        'You flop **top set** (three Kings) on K-8-3 and no one has bet. Plenty of worse hands (a King, a pair, a draw) can call. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['KS', 'KD'],
@@ -52,7 +52,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       feedback: {
         correct: 'Yes. **Bet for value**. Worse hands can call, so betting charges them and grows the pot you will usually win.',
         incorrect:
-          'With a monster and worse hands able to call, **bet for value**. Checking just lets them off the hook.',
+          'With a **monster** and worse hands able to call, **bet for value**. Checking just lets them off the hook.',
         hints: [
           'No bet faces you, so it is check or bet.',
           'You have a huge hand and worse hands can call.',
@@ -66,7 +66,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       showCalculator: true,
       id: 'p2',
       prompt:
-        'You hold top pair, good kicker (A-J on J-8-3) and no one has bet. Many worse hands (a weaker Jack, a pair of 8s, a draw) would call a bet. What is the best action?',
+        'You hold **top pair**, good kicker (A-J on J-8-3) and no one has bet. Many worse hands (a weaker Jack, a pair of 8s, a draw) would call a bet. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'JC'],
@@ -81,7 +81,7 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Right. A **thin value bet**. Top pair is not a monster, but enough worse hands call to make betting profitable.',
+        correct: 'Right. A **thin value** bet. Top pair is not a monster, but enough worse hands call to make betting profitable.',
         incorrect:
           'Top pair good kicker still beats many hands that will call. That is **thin value**, so bet, do not check it down.',
         hints: [
@@ -129,18 +129,18 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       title: 'Sizing to the board',
       content: `In the Betting Basics lesson you saw that a bet is a **fraction of the pot**. Now you choose **which** fraction. Size it to the **board and purpose, not your hand's strength** (always betting big with big hands gives you away).
 
-- **Small (about ⅓ pot):** dry, disconnected boards where little can call.
+- **Small (about ⅓ pot):** a **dry board** (disconnected, few draws), where little can call.
 - **Medium (½ pot):** the everyday default.
-- **Large (¾ pot):** wet, draw-heavy boards, to make draws pay.
+- **Large (¾ pot):** a **wet board** (draw-heavy), to make draws pay.
 
-A bigger bet lays a worse price (worse **pot odds**, from the Pot Odds lesson), so sizing up on a wet board makes draws pay too much to chase. Use the **same** sizes for value bets and bluffs so opponents can never read your hand from your bet.`,
+A bigger bet lays a worse price (worse **pot odds**, from the Pot Odds lesson), so sizing up on a **wet board** makes draws pay too much to chase. Use the **same** sizes for value bets and bluffs so opponents can never read your hand from your bet.`,
     },
     {
       type: 'problem',
       showCalculator: true,
       id: 'p4',
       prompt:
-        'Top pair on a K-7-2 board, and you want the everyday default value bet, half the pot. The pot is 60. Which sizing is half the pot?',
+        '**Top pair** on a K-7-2 board, and you want the everyday default value bet, half the pot. The pot is 60. Which sizing is half the pot?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'KD'],
@@ -166,7 +166,7 @@ A bigger bet lays a worse price (worse **pot odds**, from the Pot Odds lesson), 
       showCalculator: true,
       id: 'p5',
       prompt:
-        'Overpair (two Aces) on a wet 9-8-7 board full of draws. You want to charge those draws. The pot is 80. Which is the large, draw-charging bet?',
+        '**Overpair** (two Aces) on a **wet board** (9-8-7, full of draws). You want to charge those draws. The pot is 80. Which is the large, draw-charging bet?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'AS'],
@@ -196,7 +196,7 @@ A bigger bet lays a worse price (worse **pot odds**, from the Pot Odds lesson), 
       showCalculator: true,
       id: 'p6',
       prompt:
-        'Top pair on a very dry, disconnected Q-8-3 rainbow board where little can call, so a small bet does the job. The pot is 60. Which is the small, ⅓-pot bet?',
+        '**Top pair** on a very **dry board** (Q-8-3 **rainbow**, disconnected) where little can call, so a small bet does the job. The pot is 60. Which is the small, ⅓-pot bet?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'QD'],
@@ -218,7 +218,7 @@ A bigger bet lays a worse price (worse **pot odds**, from the Pot Odds lesson), 
           'Here a small bet is enough to do the job.',
           'A small bet keeps your risk low while still getting thin value.',
         ],
-        why: 'On a **dry, disconnected** board there is little for opponents to call with, so a **small (⅓-pot)** bet gets thin value and keeps your risk low. Size to the board: small here, big on wet boards.',
+        why: 'On a **dry board** there is little for opponents to call with, so a **small (⅓-pot)** bet gets **thin value** and keeps your risk low. Size to the board: small here, big on wet boards.',
       },
     },
   ],

@@ -1,9 +1,10 @@
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 
 /**
- * Skill Check 3 (design doc §6, Lesson 3): experience the streets, name the best
- * hand at a street, and identify who acts last post-flop. Three interactive
- * questions, 2/3 to pass, free retries, no hints. Keep `lessonId: '3'` /
+ * Skill Check 3 (Lesson 3 · Flow of a Hand). TRANSFER questions: none reuse a Lesson 3
+ * hand. (q1) play a new showdown and call the winner (graded live by the evaluator),
+ * (q2) name the best hand as it climbs across the streets, (q3) who acts first pre-flop,
+ * and (q4) whether a hand with one player left goes to showdown. Keep `lessonId: '3'` /
  * export `skillCheck3`.
  */
 export const skillCheck3: SkillCheckDefinition = {
@@ -12,12 +13,12 @@ export const skillCheck3: SkillCheckDefinition = {
   questions: [
     {
       id: 'q1',
-      prompt: 'You hold A♠ J♣. Deal the hand to showdown against one opponent, then call who won the pot.',
+      prompt: 'You hold A♠ K♦. Deal the hand to showdown against one opponent, then call who won the pot.',
       interaction: 'board-dealer',
       config: {
-        hole: ['AS', 'JC'],
-        villain: ['7H', '7D'],
-        board: ['7S', '2C', '9D', 'JH', '4S'],
+        hole: ['AS', 'KD'],
+        villain: ['5H', '5D'],
+        board: ['AC', '9S', '5C', '4D', '2H'],
         opponents: 1,
         streets: ['preflop', 'flop', 'turn', 'river'],
         annotateStreets: true,
@@ -25,35 +26,54 @@ export const skillCheck3: SkillCheckDefinition = {
       },
       answer: { minStreetsRevealed: 4, winner: 'opponent' },
       incorrectFeedback:
-        "Your pair of Jacks loses to your opponent's three of a kind. The 7♥ 7♦ pair the 7♠ on the board for a set of sevens, which beats one pair.",
+        "Your pair of Aces loses to your opponent's three of a kind. The 5♥ 5♦ pair the 5♣ on the board for a set of fives, which beats one pair.",
     },
     {
       id: 'q2',
-      prompt: 'You hold A♠ A♦. Deal to the river, then name your best hand.',
+      prompt: 'You hold K♠ K♦. Deal each street and name your best hand as it changes.',
       interaction: 'board-dealer',
       config: {
-        hole: ['AS', 'AD'],
-        board: ['KH', 'KD', '7C', '2S', '9H'],
+        hole: ['KS', 'KD'],
+        board: ['QC', '7H', '3D', 'QS', 'KC'],
         streets: ['preflop', 'flop', 'turn', 'river'],
-        askBestHandAt: ['river'],
+        askBestHandAt: ['flop', 'turn', 'river'],
         annotateStreets: true,
+        helperText: 'Deal the flop, turn, and river, naming your best hand at each.',
       },
-      answer: { minStreetsRevealed: 4, bestHandByStreet: { river: 'two-pair' } },
+      answer: {
+        minStreetsRevealed: 4,
+        bestHandByStreet: { flop: 'pair', turn: 'two-pair', river: 'full-house' },
+      },
       incorrectFeedback:
-        'Your pair of Aces plus the pair of Kings on the board makes two pair (Aces and Kings).',
+        'Pair of Kings on the flop; the board pairs Queens on the turn for two pair; the river King gives three Kings and a full house.',
     },
     {
       id: 'q3',
-      prompt: 'Post-flop, which player acts last on every street?',
+      prompt: 'Pre-flop, which player must act first?',
       interaction: 'compare-events',
       config: {
-        chooseLabel: 'Who acts last after the flop?',
-        eventA: { label: 'The button', detail: 'The dealer position' },
-        eventB: { label: 'The small blind', detail: 'First to act after the flop' },
+        chooseLabel: 'Pre-flop, who acts first?',
+        helperText: 'The blinds are already in, so everyone else must answer the big blind.',
+        eventA: { label: 'Under the gun', detail: 'The seat just left of the big blind' },
+        eventB: { label: 'The big blind', detail: 'Posted the big forced bet' },
       },
       answer: { more: 'a' },
       incorrectFeedback:
-        'The button acts last on every post-flop street, and that edge is why it’s the best seat.',
+        'Pre-flop, the big blind is a live bet and acts last, so action starts to its left, at under the gun.',
+    },
+    {
+      id: 'q4',
+      prompt: 'Everyone else folds, leaving just one player. Does the hand go to showdown?',
+      interaction: 'compare-events',
+      config: {
+        chooseLabel: 'Is there a showdown?',
+        helperText: 'A showdown compares hands, but only if there are hands to compare.',
+        eventA: { label: 'Yes, a showdown happens', detail: 'Cards are revealed and compared' },
+        eventB: { label: 'No showdown', detail: 'The last player wins the pot, no cards shown' },
+      },
+      answer: { more: 'b' },
+      incorrectFeedback:
+        'A showdown needs two or more players after the river. With everyone else folded, the last player simply wins the pot, no cards shown.',
     },
   ],
 }
