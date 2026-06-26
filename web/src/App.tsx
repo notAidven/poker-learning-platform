@@ -21,6 +21,9 @@ const LessonPage = lazy(() =>
 const SkillCheckPage = lazy(() =>
   import('./pages/SkillCheckPage').then((m) => ({ default: m.SkillCheckPage })),
 )
+const TablePage = lazy(() =>
+  import('./pages/TablePage').then((m) => ({ default: m.TablePage })),
+)
 
 function RouteFallback() {
   return (
@@ -74,6 +77,14 @@ const router = createBrowserRouter([
             element: (
               <Lazy>
                 <SkillCheckPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'table/:id',
+            element: (
+              <Lazy>
+                <TablePage />
               </Lazy>
             ),
           },

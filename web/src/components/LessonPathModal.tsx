@@ -1,11 +1,15 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import type { LessonMeta } from '../data/lessons'
+import { lessonNumber, type LessonMeta } from '../data/lessons'
+import { getTable } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
+import { useCompletedLessons } from '../hooks/useCompletedLessons'
 import {
+  areAllLessonsComplete,
   getLessonStats,
   isLessonInProgress,
+  isTableCleared,
   skillCheckScorePercent,
   type LessonStats,
 } from '../lib/lessonProgress'
@@ -20,6 +24,7 @@ type LessonPathModalProps = {
 }
 
 export function LessonPathModal({ lesson, status, open, onClose }: LessonPathModalProps) {
+  const isTable = lesson.kind === 'ai-table'
   const stats = getLessonStats(lesson.id)
   const inProgress = isLessonInProgress(lesson.id, 100)
   const hasContent = hasLessonContent(lesson.id)
@@ -60,7 +65,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         </button>
 
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-          Lesson {lesson.id}
+          {isTable ? 'Casino table' : `Lesson ${lessonNumber(lesson.id)}`}
         </p>
         <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-slate-900">
           {lesson.title}
@@ -68,20 +73,26 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         <p className="mt-1 text-sm text-slate-500">{lesson.unit}</p>
 
         <div className="mt-5">
-          {status === 'locked' && <LockedBody />}
-          {status !== 'locked' && stats.completed && (
-            <CompletedBody stats={stats} lessonId={lesson.id} onClose={onClose} />
-          )}
-          {status !== 'locked' && !stats.completed && stats.lessonFinished && hasSkillCheck(lesson.id) && (
-            <SkillCheckPendingBody lessonId={lesson.id} onClose={onClose} />
-          )}
-          {status !== 'locked' && !stats.completed && !(stats.lessonFinished && hasSkillCheck(lesson.id)) && (
-            <StartBody
-              lessonId={lesson.id}
-              hasContent={hasContent}
-              inProgress={inProgress}
-              onClose={onClose}
-            />
+          {isTable ? (
+            <TableBody lesson={lesson} status={status} onClose={onClose} />
+          ) : (
+            <>
+              {status === 'locked' && <LockedBody />}
+              {status !== 'locked' && stats.completed && (
+                <CompletedBody stats={stats} lessonId={lesson.id} onClose={onClose} />
+              )}
+              {status !== 'locked' && !stats.completed && stats.lessonFinished && hasSkillCheck(lesson.id) && (
+                <SkillCheckPendingBody lessonId={lesson.id} onClose={onClose} />
+              )}
+              {status !== 'locked' && !stats.completed && !(stats.lessonFinished && hasSkillCheck(lesson.id)) && (
+                <StartBody
+                  lessonId={lesson.id}
+                  hasContent={hasContent}
+                  inProgress={inProgress}
+                  onClose={onClose}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -94,6 +105,54 @@ function LockedBody() {
     <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
       Complete the previous lesson and its skill check to unlock this one.
     </p>
+  )
+}
+
+function TableBody({
+  lesson,
+  status,
+  onClose,
+}: {
+  lesson: LessonMeta
+  status: LessonStatus
+  onClose: () => void
+}) {
+  const table = getTable(lesson.id)
+  const cleared = isTableCleared(lesson.id)
+  const { completedIds } = useCompletedLessons()
+
+  if (status === 'locked') {
+    const lockedMessage =
+      table?.feature === 'ai'
+        ? 'Finish all lessons and play a coached game to unlock the AI table.'
+        : !areAllLessonsComplete(completedIds)
+          ? 'Finish all lessons to open the Casino Floor.'
+          : 'Clear the previous coached table to unlock this one.'
+    return (
+      <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{lockedMessage}</p>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-600">
+        {table?.feature === 'coached'
+          ? 'Play full hands against rule-based opponents while an AI coach talks you through every decision.'
+          : 'Take a seat against AI opponents. The always-on strategy hint has your back on every street.'}
+      </p>
+      {cleared && (
+        <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          Table cleared — pull up a chair any time.
+        </p>
+      )}
+      <Link
+        to={`/table/${lesson.id}`}
+        onClick={onClose}
+        className="block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700"
+      >
+        {cleared ? 'Play again' : 'Play the table'}
+      </Link>
+    </div>
   )
 }
 

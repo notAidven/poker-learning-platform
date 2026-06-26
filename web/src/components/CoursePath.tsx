@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
+import { lessonNumber, sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
+import { getTable } from '../data/tables'
+import { isTableCleared, isTableUnlocked } from '../lib/lessonProgress'
 import { LessonPathModal } from './LessonPathModal'
-import { CheckIcon, LockIcon, StarIcon } from './icons'
+import { CheckIcon, ChipIcon, LockIcon, StarIcon } from './icons'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 
@@ -93,6 +95,21 @@ const SECTION_THEME: Record<
       locked: 'bg-gold-200/60 text-gold-600 ring-[5px] ring-gold-200',
     },
   },
+  // Casino Floor (Phase 2 AI tables): a distinct violet "neon" tint, separate from
+  // the three learning sections so the capstone arena reads as its own place.
+  casino: {
+    band: 'bg-violet-50/70 ring-1 ring-inset ring-violet-100',
+    headerRing: 'ring-violet-200',
+    eyebrow: 'text-violet-600',
+    title: 'text-violet-900',
+    connector: '#8b5cf6',
+    node: {
+      completed: 'bg-violet-500 text-white shadow-md ring-[5px] ring-violet-200',
+      current:
+        'bg-violet-600 text-white shadow-lg shadow-violet-500/40 ring-[5px] ring-violet-200 animate-[pulse_2.5s_ease-in-out_infinite]',
+      locked: 'bg-violet-50 text-violet-300 ring-[5px] ring-violet-100',
+    },
+  },
 }
 
 type LessonLayout = {
@@ -161,16 +178,30 @@ function computeLayout(lessonList: LessonMeta[]): PathLayout {
   return { lessonLayouts, sectionLayouts, totalHeight: cursor - SECTION_GAP + TAIL_PAD }
 }
 
+/** Has this path node been finished? Lessons use completedIds; tables use the cleared store. */
+function isNodeDone(node: LessonMeta, completedIds: string[]): boolean {
+  return node.kind === 'ai-table' ? isTableCleared(node.id) : completedIds.includes(node.id)
+}
+
 function getLessonStatus(
   lesson: LessonMeta,
   index: number,
   lessonList: LessonMeta[],
   completedIds: string[],
 ): LessonStatus {
+  // AI tables unlock by their own prerequisite (a completed lesson or a cleared
+  // table), independent of the strict lesson sequence.
+  if (lesson.kind === 'ai-table') {
+    if (isTableCleared(lesson.id)) return 'completed'
+    const table = getTable(lesson.id)
+    const unlocked = table ? isTableUnlocked(table, completedIds) : false
+    return unlocked ? 'current' : 'locked'
+  }
+
   if (completedIds.includes(lesson.id)) return 'completed'
   if (index === 0) return 'current'
   const prev = lessonList[index - 1]
-  if (completedIds.includes(prev.id)) return 'current'
+  if (isNodeDone(prev, completedIds)) return 'current'
   return 'locked'
 }
 
@@ -475,29 +506,35 @@ function PathNode({
     .filter(Boolean)
     .join(' ')
 
+  const isTable = lesson.kind === 'ai-table'
+  const number = lessonNumber(lesson.id)
   const content =
     status === 'completed' ? (
       <CheckIcon className="h-8 w-8" strokeWidth={3} />
     ) : status === 'locked' ? (
       <LockIcon className="h-6 w-6" />
+    ) : isTable ? (
+      <ChipIcon className="h-9 w-9" strokeWidth={2.25} />
     ) : isLast ? (
       <StarIcon className="h-8 w-8" />
     ) : (
-      <span className="text-2xl font-bold">{lesson.id}</span>
+      <span className="text-2xl font-bold">{number}</span>
     )
+
+  const badgeText = isTable ? 'Play' : number === 1 ? 'Start' : 'Up next'
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-4"
-      aria-label={`Lesson ${lesson.id}: ${lesson.title}`}
+      aria-label={isTable ? `Table: ${lesson.title}` : `Lesson ${number}: ${lesson.title}`}
     >
       <div className={shell}>
         {content}
         {status === 'current' && (
           <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow">
-            {lesson.id === '1' ? 'Start' : 'Up next'}
+            {badgeText}
           </span>
         )}
       </div>

@@ -7,7 +7,8 @@ service cloud.firestore {
 
     // users/{uid} profile + gamification fields:
     //   level (int >= 1), totalXp (int >= 0), streak (int >= 0),
-    //   lastActivityDate (string YYYY-MM-DD or null)
+    //   lastActivityDate (string YYYY-MM-DD or null),
+    //   chips (int >= 0), bankrollGranted (bool) — Phase 2 casino bankroll.
     function validGamificationFields(data) {
       return (!('level' in data) || (data.level is int && data.level >= 1))
         && (!('totalXp' in data) || (data.totalXp is int && data.totalXp >= 0))
@@ -15,7 +16,9 @@ service cloud.firestore {
         && (!('lastActivityDate' in data)
           || data.lastActivityDate == null
           || (data.lastActivityDate is string
-            && data.lastActivityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
+            && data.lastActivityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+        && (!('chips' in data) || (data.chips is int && data.chips >= 0))
+        && (!('bankrollGranted' in data) || data.bankrollGranted is bool);
     }
 
     // Whitelist of every field the app ever writes to a user doc. Blocks
@@ -23,7 +26,8 @@ service cloud.firestore {
     function validUserFields(data) {
       return data.keys().hasOnly([
         'email', 'username', 'profileAnimal', 'profileComplete',
-        'level', 'totalXp', 'streak', 'lastActivityDate', 'createdAt'
+        'level', 'totalXp', 'streak', 'lastActivityDate',
+        'chips', 'bankrollGranted', 'createdAt'
       ]);
     }
 

@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   cardLabel,
   fullDeck,
-  isRedSuit,
   parseCardId,
   type BoardDealerAnswer,
   type BoardDealerConfig,
   type CardId,
-  type CardSuit,
   type ShowdownWinner,
 } from '../../../types/lesson'
 import type { HandCategory, PokerStreet } from '../../../types/poker'
@@ -15,6 +13,7 @@ import { compareHands, evaluateHoldem } from '../../../lib/poker/handEvaluator'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
+import { BurnCard, CardBack, CardFace, CardKitStyles, DeckPile, EmptySlot } from './cards/PlayingCardKit'
 
 /**
  * `board-dealer` (design doc §5.3). Deals the hole + community cards street by
@@ -107,136 +106,6 @@ function shuffle(cards: CardId[], rng: () => number): CardId[] {
   return a
 }
 
-const STYLES = `
-.bd-scene { perspective: 1000px; }
-.bd-deal { animation: bd-deal 0.44s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
-@keyframes bd-deal {
-  from { opacity: 0; transform: translateY(-26px) rotateY(-46deg) scale(0.82); }
-  to { opacity: 1; transform: none; }
-}
-`
-
-/** Crisp vector suit symbol — color comes from the parent via currentColor. */
-function SuitIcon({ suit, className }: { suit: CardSuit; className?: string }) {
-  const common = {
-    viewBox: '0 0 24 24',
-    className,
-    fill: 'currentColor',
-    'aria-hidden': true as const,
-    focusable: 'false' as const,
-  }
-  switch (suit) {
-    case 'H':
-      return (
-        <svg {...common}>
-          <path d="M12 21.35 10.55 20.03 C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3 c1.74 0 3.41 .81 4.5 2.09 C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5 c0 3.78-3.4 6.86-8.55 11.53 L12 21.35 Z" />
-        </svg>
-      )
-    case 'D':
-      return (
-        <svg {...common}>
-          <polygon points="12,1.5 21,12 12,22.5 3,12" />
-        </svg>
-      )
-    case 'S':
-      return (
-        <svg {...common}>
-          <path d="M12 2 C12 2 5 8.5 5 13.5 c0 2.5 2 4.5 4.5 4.5 1 0 1.9 -.3 2.6 -.9 -.2 2.2 -1.3 3.9 -3.1 4.9 h6 c-1.8 -1 -2.9 -2.7 -3.1 -4.9 .7 .6 1.6 .9 2.6 .9 2.5 0 4.5 -2 4.5 -4.5 C19 8.5 12 2 12 2 Z" />
-        </svg>
-      )
-    case 'C':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="6.6" r="3.7" />
-          <circle cx="7.3" cy="13.1" r="3.7" />
-          <circle cx="16.7" cy="13.1" r="3.7" />
-          <path d="M10.6 10 C10.5 14.5 9.3 19 7.4 22 L16.6 22 C14.7 19 13.5 14.5 13.4 10 Z" />
-        </svg>
-      )
-  }
-}
-
-function CardFace({
-  id,
-  animate,
-  delay,
-  small = false,
-}: {
-  id: CardId
-  animate: boolean
-  delay: number
-  small?: boolean
-}) {
-  const { rank, suit } = parseCardId(id)
-  const color = isRedSuit(suit) ? 'text-rose-600' : 'text-slate-900'
-  const rankClass = small ? 'text-[0.55rem]' : 'text-[0.7rem]'
-  const cornerIcon = small ? 'h-1.5 w-1.5' : 'h-2 w-2'
-  const leftInset = small ? 'left-0.5' : 'left-1'
-  const rightInset = small ? 'right-0.5' : 'right-1'
-  return (
-    <span
-      className={`relative block rounded-md border-2 border-slate-200 bg-white shadow-sm ${
-        small ? 'h-12 w-8' : 'h-16 w-11'
-      } ${animate ? 'bd-deal' : ''}`}
-      style={animate ? { animationDelay: `${delay}ms` } : undefined}
-      role="img"
-      aria-label={cardLabel(id)}
-    >
-      <span
-        className={`absolute top-0.5 ${leftInset} flex flex-col items-center leading-none ${color}`}
-      >
-        <span className={`${rankClass} font-bold tabular-nums`}>{rank}</span>
-        <SuitIcon suit={suit} className={cornerIcon} />
-      </span>
-      <span className={`absolute inset-0 flex items-center justify-center ${color}`}>
-        <SuitIcon suit={suit} className={small ? 'h-4 w-4' : 'h-5 w-5'} />
-      </span>
-      <span
-        className={`absolute bottom-0.5 ${rightInset} flex rotate-180 flex-col items-center leading-none ${color}`}
-      >
-        <span className={`${rankClass} font-bold tabular-nums`}>{rank}</span>
-        <SuitIcon suit={suit} className={cornerIcon} />
-      </span>
-    </span>
-  )
-}
-
-function CardBack({
-  small = false,
-  animate = false,
-  delay = 0,
-}: {
-  small?: boolean
-  animate?: boolean
-  delay?: number
-}) {
-  return (
-    <span
-      className={`block rounded-md border-2 border-white bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm ${
-        small ? 'h-12 w-8' : 'h-16 w-11'
-      } ${animate ? 'bd-deal' : ''}`}
-      style={animate ? { animationDelay: `${delay}ms` } : undefined}
-      aria-hidden="true"
-    >
-      <span
-        className="dot-field block h-full w-full rounded-sm"
-        style={{ '--dot-size': '6px' } as CSSProperties}
-      />
-    </span>
-  )
-}
-
-function EmptySlot({ small = false }: { small?: boolean }) {
-  return (
-    <span
-      className={`block rounded-md border-2 border-dashed border-slate-300/80 bg-slate-50 ${
-        small ? 'h-12 w-8' : 'h-16 w-11'
-      }`}
-      aria-hidden="true"
-    />
-  )
-}
-
 export function BoardDealer({
   config,
   answer,
@@ -248,6 +117,8 @@ export function BoardDealer({
   allowRetry = true,
 }: BoardDealerProps) {
   const reduceMotion = usePrefersReducedMotion()
+  const showDeck = config.showDeck ?? true
+  const showBurns = config.showBurns ?? true
 
   const streets = useMemo<PokerStreet[]>(() => config.streets ?? DEFAULT_STREETS, [config.streets])
   const askedStreets = useMemo<PokerStreet[]>(
@@ -404,6 +275,19 @@ export function BoardDealer({
       }
     })
 
+  // Cards visibly off the deck, so the stock pile's count counts down realistically:
+  // hole cards (hero + opponents), revealed community cards, and one burn per revealed street.
+  const revealedCommunityCount = communityGroups.reduce(
+    (n, g) => n + (g.revealedHere ? g.cards.length : 0),
+    0,
+  )
+  const burnsShown = communityGroups.filter((g) => g.revealedHere).length
+  const dealtToPlayers = holeShown ? 2 + opponents * 2 : 0
+  const deckRemaining = Math.max(
+    0,
+    52 - dealtToPlayers - revealedCommunityCount - (showBurns ? burnsShown : 0),
+  )
+
   function dealNext() {
     if (locked || revealed >= streets.length) return
     setRevealed((r) => Math.min(r + 1, streets.length))
@@ -461,11 +345,11 @@ export function BoardDealer({
 
   return (
     <div className="space-y-4">
-      <style>{STYLES}</style>
+      <CardKitStyles />
 
       {config.helperText && <p className="text-center text-sm text-slate-600">{config.helperText}</p>}
 
-      <div className="bd-scene space-y-4 rounded-2xl border border-emerald-900/10 bg-gradient-to-b from-emerald-50 to-white p-4 shadow-inner">
+      <div className="pck-scene space-y-4 rounded-2xl border border-emerald-900/10 bg-gradient-to-b from-emerald-50 to-white p-4 shadow-inner">
         {opponents > 0 ? (
           <div className="flex flex-wrap items-end justify-center gap-4">
             {Array.from({ length: opponents }).map((_, i) => {
@@ -476,17 +360,17 @@ export function BoardDealer({
                   <div className="flex gap-1">
                     {villainCards ? (
                       villainCards.map((c, j) => (
-                        <CardFace key={c} id={c} small animate={animate} delay={j * 90} />
+                        <CardFace key={c} id={c} size="sm" animate={animate} delay={j * 90} />
                       ))
                     ) : holeShown ? (
                       <>
-                        <CardBack small animate={animate} />
-                        <CardBack small animate={animate} delay={70} />
+                        <CardBack size="sm" animate={animate} />
+                        <CardBack size="sm" animate={animate} delay={70} />
                       </>
                     ) : (
                       <>
-                        <EmptySlot small />
-                        <EmptySlot small />
+                        <EmptySlot size="sm" />
+                        <EmptySlot size="sm" />
                       </>
                     )}
                   </div>
@@ -504,9 +388,20 @@ export function BoardDealer({
         ) : null}
 
         <div className="flex flex-wrap items-end justify-center gap-3">
+          {showDeck && (
+            <div className="flex flex-col items-center gap-1">
+              <DeckPile size="sm" count={deckRemaining} />
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">
+                Deck
+              </span>
+            </div>
+          )}
           {communityGroups.map((group) => (
             <div key={group.street} className="flex flex-col items-center gap-1">
-              <div className="flex gap-1.5">
+              <div className="flex items-center gap-1.5">
+                {showBurns && group.revealedHere && (
+                  <BurnCard size="md" animate={animate} className="mr-0.5" />
+                )}
                 {group.cards.map((c, i) =>
                   group.revealedHere ? (
                     <CardFace key={c} id={c} animate={animate} delay={i * 90} />
@@ -521,7 +416,7 @@ export function BoardDealer({
                     group.revealedHere ? 'text-emerald-700' : 'text-slate-400'
                   }`}
                 >
-                  {STREET_NAME[group.street]}
+                  {group.revealedHere && showBurns ? `Burn + ${STREET_NAME[group.street]}` : STREET_NAME[group.street]}
                 </span>
               )}
             </div>

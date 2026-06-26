@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CARD_SUITS,
   cardLabel,
@@ -19,50 +19,11 @@ import { NumericAnswerInput } from './NumericAnswerInput'
 import { fractionMatches, hasValidFractionInput, reduceFraction } from './fractionAnswer'
 import { countMatches, hasValidCountInput } from './numericAnswer'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
+import { CardKitStyles, DeckPile, SuitIcon } from './cards/PlayingCardKit'
 
 type CardDeckProps = InteractionProps & {
   config: CardDeckConfig
   answer: CardDeckAnswer
-}
-
-/** Crisp vector suit symbols (no emoji) — color comes from the parent via `currentColor`. */
-function SuitIcon({ suit, className }: { suit: CardSuit; className?: string }) {
-  const common = {
-    viewBox: '0 0 24 24',
-    className,
-    fill: 'currentColor',
-    'aria-hidden': true as const,
-    focusable: 'false' as const,
-  }
-  switch (suit) {
-    case 'H':
-      return (
-        <svg {...common}>
-          <path d="M12 21.35 10.55 20.03 C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3 c1.74 0 3.41 .81 4.5 2.09 C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5 c0 3.78-3.4 6.86-8.55 11.53 L12 21.35 Z" />
-        </svg>
-      )
-    case 'D':
-      return (
-        <svg {...common}>
-          <polygon points="12,1.5 21,12 12,22.5 3,12" />
-        </svg>
-      )
-    case 'S':
-      return (
-        <svg {...common}>
-          <path d="M12 2 C12 2 5 8.5 5 13.5 c0 2.5 2 4.5 4.5 4.5 1 0 1.9 -.3 2.6 -.9 -.2 2.2 -1.3 3.9 -3.1 4.9 h6 c-1.8 -1 -2.9 -2.7 -3.1 -4.9 .7 .6 1.6 .9 2.6 .9 2.5 0 4.5 -2 4.5 -4.5 C19 8.5 12 2 12 2 Z" />
-        </svg>
-      )
-    case 'C':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="6.6" r="3.7" />
-          <circle cx="7.3" cy="13.1" r="3.7" />
-          <circle cx="16.7" cy="13.1" r="3.7" />
-          <path d="M10.6 10 C10.5 14.5 9.3 19 7.4 22 L16.6 22 C14.7 19 13.5 14.5 13.4 10 Z" />
-        </svg>
-      )
-  }
 }
 
 const CARD_STYLES = `
@@ -219,26 +180,6 @@ function GridCardFace({ id }: { id: CardId }) {
   )
 }
 
-/** The stacked face-down deck graphic shared by both modes. */
-function DeckPile({ className }: { className?: string }) {
-  return (
-    <div className={`relative h-14 w-10 shrink-0 ${className ?? ''}`} aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="cd-pile-card absolute h-14 w-10 rounded-md border-2 border-white bg-gradient-to-br from-brand-500 to-brand-700"
-          style={{ transform: `translate(${i * 2}px, ${-i * 2}px)` }}
-        >
-          <span
-            className="dot-field absolute inset-1 rounded-sm"
-            style={{ '--dot-size': '7px' } as CSSProperties}
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function CardDeck(props: CardDeckProps) {
   const mode = props.config.mode ?? 'select-all'
   if (mode === 'draw-tally') return <DrawTallyMode {...props} />
@@ -373,9 +314,10 @@ function SelectAllMode({
   return (
     <div className="space-y-5">
       <style>{CARD_STYLES}</style>
+      <CardKitStyles />
 
       <div className="flex items-center justify-center gap-3">
-        <DeckPile />
+        <DeckPile size="sm" />
         <p className="text-sm font-semibold text-slate-700">
           Standard 52-card deck
           <span className="block text-xs font-normal text-slate-500">
@@ -675,9 +617,10 @@ function DrawTallyMode({
   return (
     <div className="space-y-5">
       <style>{CARD_STYLES}</style>
+      <CardKitStyles />
 
       <div className="flex items-center justify-center gap-3">
-        <DeckPile />
+        <DeckPile size="sm" />
         <p className="text-sm font-semibold text-slate-700">
           Standard 52-card deck
           <span className="block text-xs font-normal text-slate-500">
@@ -712,7 +655,7 @@ function DrawTallyMode({
         <>
           {/* deal stage: deck pile + the most recent card flipping up */}
           <div className="cd-scene flex items-center justify-center gap-4 rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50 to-white p-4 shadow-inner">
-            <DeckPile />
+            <DeckPile size="sm" />
             <div className="flex min-h-[7rem] w-20 items-center justify-center">
               {current ? (
                 <span

@@ -24,6 +24,9 @@ const BettingRound = lazy(() =>
 const HandRankingLadder = lazy(() =>
   import('./interactions/HandRankingLadder').then((m) => ({ default: m.HandRankingLadder })),
 )
+const PreflopHand = lazy(() =>
+  import('./interactions/PreflopHand').then((m) => ({ default: m.PreflopHand })),
+)
 
 type InteractionRendererProps = InteractionProps & {
   step: ProblemStep
@@ -79,6 +82,11 @@ export function InteractionRenderer({
     case 'hand-ranking-ladder':
       interaction = (
         <HandRankingLadder key={step.id} config={step.config} answer={step.answer} {...props} />
+      )
+      break
+    case 'preflop-hand':
+      interaction = (
+        <PreflopHand key={step.id} config={step.config} answer={step.answer} {...props} />
       )
       break
     default:

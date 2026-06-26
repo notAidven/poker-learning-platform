@@ -84,6 +84,24 @@ const GLOSSARY: Record<string, string> = {
   'all-in': 'Betting every chip you have left.',
   'all in': 'Betting every chip you have left.',
 
+  // --- preflop & starting hands ---
+  suited:
+    'Two hole cards of the same suit, like A and K of spades. A suited hand can make a flush, so it is a little stronger than the offsuit version.',
+  offsuit: 'Two hole cards of different suits. Written with an "o", as in AKo.',
+  'pocket pair': 'Two hole cards of the same rank, like two Nines.',
+  'premium hand':
+    'One of the strongest starting hands: a big pocket pair (AA, KK, QQ) or A-K. Worth raising from any seat.',
+  premium:
+    'The strongest starting hands, like a big pocket pair (AA, KK, QQ) or A-K. Worth raising from any seat.',
+  broadway: 'A card from Ten up to Ace (T, J, Q, K, A). Two broadway cards make a strong starting hand.',
+  'broadway cards': 'The high cards from Ten to Ace. Two of them, like K-Q, make a strong starting hand.',
+  'suited connector':
+    'Two cards of the same suit that sit next to each other in rank, like 8-7 suited. It can flop straights and flushes.',
+  open: 'To be the first player to put in a raise before the flop.',
+  'open-raise': 'To be the first player to raise before the flop, rather than just calling.',
+  limp: 'To enter the pot before the flop by just calling the big blind instead of raising.',
+  'starting hand': 'The two hole cards you are dealt before the flop.',
+
   // --- the math (outs, odds, equity, EV) ---
   out: 'An unseen card that turns your hand into a likely winner.',
   draw: 'An unfinished hand that needs one more card to become strong (such as a flush draw).',

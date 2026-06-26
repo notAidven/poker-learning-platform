@@ -5,6 +5,7 @@ const lessonLoaders: Record<string, () => Promise<LessonDefinition>> = {
   '2': () => import('./lessons/lesson-2').then((m) => m.lesson2),
   '3': () => import('./lessons/lesson-3').then((m) => m.lesson3),
   '4': () => import('./lessons/lesson-4').then((m) => m.lesson4),
+  preflop: () => import('./lessons/lesson-preflop').then((m) => m.lessonPreflop),
   '5': () => import('./lessons/lesson-5').then((m) => m.lesson5),
   '6': () => import('./lessons/lesson-6').then((m) => m.lesson6),
   '7': () => import('./lessons/lesson-7').then((m) => m.lesson7),

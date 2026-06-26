@@ -20,4 +20,6 @@ export const E2E_MOCK_PROFILE: UserProfile = {
   totalXp: 0,
   streak: 0,
   lastActivityDate: null,
+  chips: 0,
+  bankrollGranted: false,
 }

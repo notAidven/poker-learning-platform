@@ -20,6 +20,10 @@ export type UserProfile = {
   streak: number
   /** Last CAT calendar day (YYYY-MM-DD) with a qualifying lesson completion */
   lastActivityDate: string | null
+  /** Play-money casino bankroll (Phase 2). Granted once when the Casino Floor unlocks. */
+  chips: number
+  /** Idempotency guard so the starting bankroll is granted exactly once. */
+  bankrollGranted: boolean
   createdAt?: Timestamp
 }
 
@@ -37,6 +41,8 @@ function normalizeUserProfile(data: Record<string, unknown>): UserProfile {
     streak: typeof data.streak === 'number' ? data.streak : 0,
     lastActivityDate:
       typeof data.lastActivityDate === 'string' ? data.lastActivityDate : null,
+    chips: typeof data.chips === 'number' ? data.chips : 0,
+    bankrollGranted: data.bankrollGranted === true,
     createdAt: data.createdAt as Timestamp | undefined,
   }
 }
@@ -113,6 +119,8 @@ export async function completeProfileSetup(
       totalXp: 0,
       streak: 0,
       lastActivityDate: null,
+      chips: 0,
+      bankrollGranted: false,
     }
 
     if (userSnap.exists()) {

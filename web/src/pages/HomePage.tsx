@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { course } from '../data/course'
-import { lessons } from '../data/lessons'
+import { lessonNumber, lessons } from '../data/lessons'
 import { hasLessonContent } from '../data/lessonContent'
 import { useAuth } from '../contexts/AuthContext'
 import { useCompletedLessons } from '../hooks/useCompletedLessons'
@@ -29,16 +29,20 @@ export function HomePage() {
   const levelProgress = getLevelProgress(totalXp)
   const streak = getEffectiveStreak(profile?.streak ?? 0, profile?.lastActivityDate ?? null)
 
+  // The home overview lists the interactive lessons only; casino tables live on
+  // the course path and are excluded from the lesson completion math.
+  const lessonNodes = lessons.filter((l) => l.kind !== 'ai-table')
+
   function lessonUnlocked(index: number) {
     if (index === 0) return true
-    return completedIds.includes(lessons[index - 1].id)
+    return completedIds.includes(lessonNodes[index - 1].id)
   }
 
-  const nextIndex = lessons.findIndex(
+  const nextIndex = lessonNodes.findIndex(
     (lesson, index) =>
       lessonUnlocked(index) && hasLessonContent(lesson.id) && !completedIds.includes(lesson.id),
   )
-  const completedCount = lessons.filter((l) => completedIds.includes(l.id)).length
+  const completedCount = lessonNodes.filter((l) => completedIds.includes(l.id)).length
   const startedJourney = completedCount > 0 || streak > 0 || totalXp > 0
 
   return (
@@ -137,7 +141,7 @@ export function HomePage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {lessons.map((lesson, index) => (
+          {lessonNodes.map((lesson, index) => (
             <LessonCard
               key={lesson.id}
               lesson={lesson}
@@ -174,7 +178,13 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
       )}
       aria-hidden
     >
-      {done ? <CheckIcon className="h-6 w-6" /> : unlocked ? lesson.id : <LockIcon className="h-5 w-5" />}
+      {done ? (
+        <CheckIcon className="h-6 w-6" />
+      ) : unlocked ? (
+        lessonNumber(lesson.id)
+      ) : (
+        <LockIcon className="h-5 w-5" />
+      )}
     </span>
   )
 

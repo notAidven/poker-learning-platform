@@ -1,13 +1,30 @@
+import { useEffect } from 'react'
 import { CoursePath } from '../components/CoursePath'
+import { Chip } from '../components/lesson/interactions/cards/PlayingCardKit'
 import { course } from '../data/course'
 import { lessons } from '../data/lessons'
+import { useAuth } from '../contexts/AuthContext'
 import { useCompletedLessons } from '../hooks/useCompletedLessons'
+import { areAllLessonsComplete } from '../lib/lessonProgress'
+import { grantBankroll, useBankroll } from '../lib/bankroll'
 
 export function CoursePage() {
   const { completedIds } = useCompletedLessons()
-  const total = lessons.length
-  const completedCount = lessons.filter((l) => completedIds.includes(l.id)).length
+  const { user, profile } = useAuth()
+  const { chips: bankroll } = useBankroll()
+  // Casino tables render on the path but are NOT part of the lesson completion math.
+  const lessonNodes = lessons.filter((l) => l.kind !== 'ai-table')
+  const total = lessonNodes.length
+  const completedCount = lessonNodes.filter((l) => completedIds.includes(l.id)).length
   const percent = Math.round((completedCount / total) * 100)
+  const casinoUnlocked = areAllLessonsComplete(completedIds)
+
+  // Grant the starting bankroll once the whole course is complete (idempotent).
+  useEffect(() => {
+    if (casinoUnlocked) {
+      void grantBankroll(user?.uid ?? null, { profileGranted: Boolean(profile?.bankrollGranted) })
+    }
+  }, [casinoUnlocked, user?.uid, profile?.bankrollGranted])
 
   return (
     <div className="mx-auto max-w-lg space-y-7">
@@ -16,6 +33,15 @@ export function CoursePage() {
           Your learning path
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-night-700/80">{course.pathDescription}</p>
+        {casinoUnlocked && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-night-900 px-3 py-1.5 text-sm font-bold text-gold-300 shadow-sm">
+            <Chip size={16} tone="gold" />
+            <span className="tabular-nums">{bankroll.toLocaleString()}</span>
+            <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/50">
+              casino bankroll
+            </span>
+          </div>
+        )}
       </header>
 
       <div className="rounded-2xl border border-night-900/10 bg-white p-4 shadow-card sm:p-5">

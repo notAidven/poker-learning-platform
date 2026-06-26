@@ -15,7 +15,8 @@ const navItems = [
   {
     to: '/course',
     label: 'Course',
-    match: (p: string) => p.startsWith('/course') || p.startsWith('/lesson'),
+    match: (p: string) =>
+      p.startsWith('/course') || p.startsWith('/lesson') || p.startsWith('/table'),
   },
 ]
 

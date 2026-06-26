@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  cardLabel,
-  isRedSuit,
-  parseCardId,
   type BettingRoundAnswer,
   type BettingRoundConfig,
-  type CardId,
-  type CardSuit,
 } from '../../../types/lesson'
 import type { BettingAction } from '../../../types/poker'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { MathContent } from '../MathContent'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
+import { CardBack, CardFace, CardKitStyles, Chip, ChipCount, PotPile } from './cards/PlayingCardKit'
 
 /**
  * `betting-round` (design doc §5.5) — one street of betting against a scripted,
@@ -32,143 +28,6 @@ type BettingRoundProps = InteractionProps & {
 }
 
 const DEFAULT_SIZES = [0.5, 0.75, 1]
-
-// --- suit + card rendering (self-contained; mirrors CardDeck's visual language) ---
-function SuitGlyph({ suit, className }: { suit: CardSuit; className?: string }) {
-  const common = {
-    viewBox: '0 0 24 24',
-    className,
-    fill: 'currentColor',
-    'aria-hidden': true as const,
-    focusable: 'false' as const,
-  }
-  switch (suit) {
-    case 'H':
-      return (
-        <svg {...common}>
-          <path d="M12 21.35 10.55 20.03 C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3 c1.74 0 3.41 .81 4.5 2.09 C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5 c0 3.78-3.4 6.86-8.55 11.53 L12 21.35 Z" />
-        </svg>
-      )
-    case 'D':
-      return (
-        <svg {...common}>
-          <polygon points="12,1.5 21,12 12,22.5 3,12" />
-        </svg>
-      )
-    case 'S':
-      return (
-        <svg {...common}>
-          <path d="M12 2 C12 2 5 8.5 5 13.5 c0 2.5 2 4.5 4.5 4.5 1 0 1.9 -.3 2.6 -.9 -.2 2.2 -1.3 3.9 -3.1 4.9 h6 c-1.8 -1 -2.9 -2.7 -3.1 -4.9 .7 .6 1.6 .9 2.6 .9 2.5 0 4.5 -2 4.5 -4.5 C19 8.5 12 2 12 2 Z" />
-        </svg>
-      )
-    case 'C':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="6.6" r="3.7" />
-          <circle cx="7.3" cy="13.1" r="3.7" />
-          <circle cx="16.7" cy="13.1" r="3.7" />
-          <path d="M10.6 10 C10.5 14.5 9.3 19 7.4 22 L16.6 22 C14.7 19 13.5 14.5 13.4 10 Z" />
-        </svg>
-      )
-  }
-}
-
-function FaceCard({
-  id,
-  dealing = false,
-  delay = 0,
-}: {
-  id: CardId
-  dealing?: boolean
-  delay?: number
-}) {
-  const { rank, suit } = parseCardId(id)
-  const color = isRedSuit(suit) ? 'text-rose-600' : 'text-slate-900'
-  return (
-    <span
-      className={`br-card relative block h-16 w-11 border-2 border-white bg-white shadow-sm ${
-        dealing ? 'br-card--deal' : ''
-      }`}
-      style={dealing ? { animationDelay: `${delay}ms` } : undefined}
-      role="img"
-      aria-label={cardLabel(id)}
-    >
-      <span className={`absolute left-1 top-0.5 flex flex-col items-center leading-none ${color}`}>
-        <span className="text-[0.66rem] font-bold tabular-nums">{rank}</span>
-        <SuitGlyph suit={suit} className="h-2 w-2" />
-      </span>
-      <span className={`absolute inset-0 flex items-center justify-center ${color}`}>
-        <SuitGlyph suit={suit} className="h-5 w-5" />
-      </span>
-      <span
-        className={`absolute bottom-0.5 right-1 flex rotate-180 flex-col items-center leading-none ${color}`}
-      >
-        <span className="text-[0.66rem] font-bold tabular-nums">{rank}</span>
-        <SuitGlyph suit={suit} className="h-2 w-2" />
-      </span>
-    </span>
-  )
-}
-
-function HiddenCard() {
-  return (
-    <span
-      className="relative block h-16 w-11 rounded-[0.4rem] border-2 border-white bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm"
-      role="img"
-      aria-label="Face-down card"
-    >
-      <span
-        className="dot-field absolute inset-1 rounded-sm"
-        style={{ '--dot-size': '8px' } as CSSProperties}
-        aria-hidden="true"
-      />
-    </span>
-  )
-}
-
-const CHIP_TONES: Record<'gold' | 'blue' | 'rose', CSSProperties> = {
-  gold: { '--c-hi': '#fde68a', '--c-mid': '#f59e0b', '--c-lo': '#b45309' } as CSSProperties,
-  blue: { '--c-hi': '#bfdbfe', '--c-mid': '#3b82f6', '--c-lo': '#1d4ed8' } as CSSProperties,
-  rose: { '--c-hi': '#fecdd3', '--c-mid': '#f43f5e', '--c-lo': '#be123c' } as CSSProperties,
-}
-
-function Chip({ size = 18, tone = 'gold' }: { size?: number; tone?: 'gold' | 'blue' | 'rose' }) {
-  return (
-    <span
-      className="br-chip"
-      style={{ width: size, height: size, ...CHIP_TONES[tone] }}
-      aria-hidden="true"
-    />
-  )
-}
-
-/** A small fanned pile of chips used for the pot. */
-function PotPile({ pop }: { pop: boolean }) {
-  return (
-    <span
-      className={`relative inline-block h-7 w-16 ${pop ? 'br-pot-pop' : ''}`}
-      aria-hidden="true"
-    >
-      {[0, 1, 2, 3].map((i) => (
-        <span
-          key={i}
-          className="br-chip absolute bottom-0"
-          style={{ left: i * 12, width: 28, height: 28, ...CHIP_TONES.gold }}
-        />
-      ))}
-    </span>
-  )
-}
-
-/** Compact "chips + count" label used for a player's stack. */
-function ChipCount({ value, tone = 'blue' }: { value: number; tone?: 'gold' | 'blue' | 'rose' }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <Chip size={15} tone={tone} />
-      <span className="text-sm font-bold tabular-nums">{value.toLocaleString()}</span>
-    </span>
-  )
-}
 
 // --- pure helpers -----------------------------------------------------------
 
@@ -356,34 +215,6 @@ const BR_STYLES = `
     radial-gradient(120% 130% at 50% -10%, #12876310 0%, transparent 60%),
     linear-gradient(160deg, #0f7a5a 0%, #0b6349 48%, #084c39 100%);
 }
-.br-card { border-radius: 0.4rem; }
-.br-card--deal { animation: br-deal 0.42s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
-@keyframes br-deal {
-  from { opacity: 0; transform: translateY(-18px) rotateY(-40deg) scale(0.86); }
-  to { opacity: 1; transform: none; }
-}
-.br-chip {
-  position: relative;
-  display: inline-block;
-  border-radius: 9999px;
-  background: radial-gradient(circle at 50% 32%, var(--c-hi), var(--c-mid) 60%, var(--c-lo));
-  box-shadow: inset 0 0 0 0.16em rgba(255, 255, 255, 0.6), 0 1px 2px rgba(8, 20, 16, 0.4);
-}
-.br-chip::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.92) 0 13deg, transparent 13deg 36deg);
-  -webkit-mask: radial-gradient(circle, transparent 58%, #000 59% 76%, transparent 77%);
-  mask: radial-gradient(circle, transparent 58%, #000 59% 76%, transparent 77%);
-}
-.br-pot-pop { animation: br-pop 0.5s cubic-bezier(0.34, 1.5, 0.64, 1); }
-@keyframes br-pop {
-  0% { transform: scale(0.82); }
-  60% { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
 .br-reveal { animation: br-fade 0.4s ease backwards; }
 @keyframes br-fade {
   from { opacity: 0; transform: translateY(6px); }
@@ -537,6 +368,7 @@ export function BettingRound({
   return (
     <div className="space-y-5">
       <style>{BR_STYLES}</style>
+      <CardKitStyles />
 
       {/* The table */}
       <div className="br-felt rounded-3xl border border-emerald-900/40 p-4 text-white shadow-inner">
@@ -557,8 +389,8 @@ export function BettingRound({
               </span>
             )}
             <div className="flex gap-1">
-              <HiddenCard />
-              <HiddenCard />
+              <CardBack size="md" />
+              <CardBack size="md" />
             </div>
           </div>
         </div>
@@ -587,7 +419,7 @@ export function BettingRound({
               <span className="text-xs italic text-emerald-100/70">No community cards yet</span>
             ) : (
               config.board.map((card, i) => (
-                <FaceCard key={card} id={card} dealing={wantsDeal} delay={i * 90} />
+                <CardFace key={card} id={card} size="md" animate={wantsDeal} delay={i * 90} />
               ))
             )}
           </div>
@@ -608,7 +440,7 @@ export function BettingRound({
           </div>
           <div className="flex gap-1.5">
             {config.hole.map((card, i) => (
-              <FaceCard key={card} id={card} dealing={wantsDeal} delay={300 + i * 90} />
+              <CardFace key={card} id={card} size="md" animate={wantsDeal} delay={300 + i * 90} />
             ))}
           </div>
         </div>
