@@ -1,5 +1,16 @@
 # MVP Test Results (Phase 1, lines 93–110)
 
+> **⚠️ Historical (2026-06-23) — predates the poker product.** This is a point-in-time MVP test
+> artifact for the **earlier "Probability & Random Variables" app**. Its scenarios (coin flips,
+> sample spaces, "Events & Basic Probability") and module names (`progressSync.ts`,
+> `awardLessonCompletion`, `completed-lesson-ids`, `loadLessonSession`) describe code that has since
+> been **replaced**: the product is now **Suited** (Texas Hold'em) and the progress/persistence layer
+> was refactored to the `ProgressStore` / `ProgressBackend` seam (see `CONTEXT.md`,
+> `docs/ARCHITECTURE.md`). Preserved as history and **not** rewritten into poker results.
+> **Current verified quality bar:** `npm run test` → **514 tests pass across 12 files**;
+> `npm run build` (`tsc -b && vite build`) → **green**. Poker-specific end-to-end scenarios are
+> **pending a re-run**.
+
 **Date:** 2026-06-23  
 **App:** Brilliant Alpha Clone (`web/`)  
 **Method:** Playwright automation (`web/scripts/mvp-scenarios.mjs`) against dev server with `VITE_E2E_BYPASS_AUTH=true` (port 5176), plus logic checks (`web/scripts/mvp-logic-check.mjs`).  

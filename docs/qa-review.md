@@ -1,5 +1,15 @@
 # Product-Experience QA Review — Brilliant Alpha Clone (Phase 1)
 
+> **⚠️ Historical (2026-06-23) — predates the poker product.** This QA review covers the **earlier
+> "Probability & Random Variables" app**: it audits 13 probability interactions (sample-space-picker,
+> coin-flip-lab, two-dice-grid, venn-diagram, …) across "lessons 1–6" and references modules
+> (`lessonProgress.ts`, `lessonProgressStore.ts`, `lessonProgressFirestore.ts`) that have since been
+> **replaced**. The product is now **Suited** (Texas Hold'em) — a 9-lesson / 3-section course plus a
+> Casino Floor — with a refactored `ProgressStore` / `ProgressBackend` persistence seam (see
+> `CONTEXT.md`, `docs/ARCHITECTURE.md`). Preserved as history and **not** rewritten into a poker QA
+> pass. **Current verified quality bar:** `npm run test` → **514 tests pass across 12 files**;
+> `npm run build` (`tsc -b && vite build`) → **green**. A poker-specific QA pass is **pending**.
+
 **Date:** 2026-06-23
 **Scope:** `web/` SPA — lesson flow, all 13 interaction types, answer validation (lessons 1–6 + 6 skill checks), progress/persistence, gamification, edge cases, routing.
 **Method:** Full static read of the lesson player, skill-check player, every interaction component, all lesson/skill-check data, gamification + progress libs, auth/Firestore sync, hooks, and routing. Build + logic-check run before and after fixes.

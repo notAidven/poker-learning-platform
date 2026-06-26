@@ -1,5 +1,17 @@
 # MVP Performance Results (Phase 1)
 
+> **⚠️ Historical (2026-06-23) — predates the poker product.** This performance audit targets the
+> **earlier "Probability & Random Variables" app**: the widgets it measures (`CoinFlipLab`,
+> `SampleSpacePicker`, `CoinFlipProbability`, `BirthdaySimulation`) and the modules it cites
+> (`progressSync.ts`, `lessonProgress.ts`, `lessonProgressStore.ts`, `lessonProgressFirestore.ts`)
+> have since been **removed/replaced** — the product is now **Suited** (Texas Hold'em), with the
+> progress layer refactored to the `ProgressStore` / `ProgressBackend` seam (see `docs/ARCHITECTURE.md`).
+> The general techniques (code-splitting, compositor-friendly animations, debounced writes,
+> touch-target sizing) still hold, but the specific numbers and file names are stale. Preserved as
+> history and **not** rewritten into poker metrics. **Current verified bar:** `npm run test` → **514
+> tests pass across 12 files**; `npm run build` → **green**. Poker-specific perf numbers are
+> **pending a re-run**.
+
 Audit date: 2026-06-23  
 Scope: `web/` SPA — lesson player, interactions, Firestore sync  
 Build: `npm run build` ✅ passes

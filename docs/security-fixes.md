@@ -45,8 +45,8 @@ Turn on [App Check](https://firebase.google.com/docs/app-check) (reCAPTCHA Enter
 
 **After (`firestore.rules`):**
 
-- `validUserFields(...)` whitelists exactly the fields the app writes: `email, username, profileAnimal, profileComplete, level, totalXp, streak, lastActivityDate, createdAt` — applied on both `create` and `update`.
-- `identityFieldsUnchanged(...)` pins `email` and `username` on `update`: once set (non-null) they can't change to a different value. Profile setup still works (initial null→value set is allowed); the gamification transaction (`totalXp/level/streak/lastActivityDate`) leaves identity fields untouched.
+- `validUserFields(...)` whitelists exactly the fields the app writes: `email, username, profileAnimal, profileComplete, level, totalXp, streak, lastActivityDate, chips, bankrollGranted, createdAt` — applied on both `create` and `update`. (`chips` / `bankrollGranted` are the play-money casino-bankroll fields added later; `validGamificationFields` bounds their types/ranges.)
+- `identityFieldsValid(prev, next)` constrains `email` and `username` on `update` so a profile can never point at an address or name the caller hasn't proven they own: `email` may only be set to the caller's **verified token email** (or left unchanged), and `username` may be absent, null, unchanged, or changed only to a name the caller **owns in the `usernames` index** after the commit (this also closes **M3** — username impersonation / index desync). Profile setup still works (the initial null→value set), and the gamification/bankroll transactions leave identity fields untouched. (`profileAnimal` stores the chosen avatar; despite the name, the shipped avatars are poker icons — the field name is kept for back-compat.)
 
 ---
 
@@ -54,15 +54,15 @@ Turn on [App Check](https://firebase.google.com/docs/app-check) (reCAPTCHA Enter
 
 **Before:** XP was awarded in a `users/{uid}`-only transaction, gated only by the **local** `completed` flag. A stale second device, a double-tap, or a re-completion could double-award.
 
-**After (`gamificationFirestore.ts` / `lessonProgress.ts`):** completion now runs in **one** transaction that reads `users/{uid}/lessonProgress/{lessonId}`, writes `completed: true` + an `xpAwarded: true` flag, and bumps `users/{uid}` XP **only if `xpAwarded` was not already set**. The persisted flag (not local state) is the single source of truth, so re-completion / double-tap / multi-device can never double-award. The base+bonus amount logic is unchanged.
+**After (`web/src/lib/progress/FirestoreProgressBackend.ts` → `completeLesson`, behind the `ProgressBackend` seam):** completion now runs in **one** transaction that reads `users/{uid}/lessonProgress/{lessonId}`, writes `completed: true` + an `xpAwarded: true` flag, and bumps `users/{uid}` XP **only if `xpAwarded` (or an already-`completed` doc) was not already set**. The persisted flag (not in-memory state) is the single source of truth, so re-completion / double-tap / multi-device can never double-award. The base+bonus amount logic is unchanged. (The progress-layer refactor replaced the former `gamificationFirestore.ts` / `lessonProgress.ts` path with this `ProgressStore` / `ProgressBackend` seam.)
 
 ---
 
 ## H1 (high) — Shared-device account contamination
 
-**Before:** logout never cleared local progress, and `syncProgressOnAuth` uploaded the previous user's local data into a newly-signed-in user's empty Firestore.
+**Before:** logout never cleared local progress, and the auth-sync uploaded the previous user's local data into a newly-signed-in user's empty Firestore.
 
-**After:** added `clearLocalProgress()` (`lessonProgressStore.ts`) and call it on logout (`AuthContext.logOut`), at the start of `syncProgressOnAuth(null)`, and when the authenticated uid changes from a different previous uid. Local→remote upload now happens **only** for a genuine pre-auth/anonymous session (no real uid synced earlier this session); a freshly signed-in different account clears local and treats remote as the source of truth.
+**After:** the H1 reset is the explicit `ProgressStore.resetLocalUserState()` orchestrator, called from `AuthContext` on logout and whenever the authenticated uid changes from a different previous uid. It wipes **all per-user local state** — lesson progress **plus** casino table-clears and the play-money bankroll (the latter two via an injected `onLocalReset`) — so a shared device never leaks one account's data into the next. A freshly signed-in different account starts from cleared local state and treats the remote backend as the source of truth. (This replaces the former `clearLocalProgress()` / `syncProgressOnAuth` in `lessonProgressStore.ts`.)
 
 ---
 

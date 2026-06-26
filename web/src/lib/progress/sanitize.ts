@@ -1,9 +1,7 @@
 /**
- * Pure sanitizers for persisted lesson-progress shapes (localStorage + Firestore).
- *
- * Kept dependency-free so every progress module (`lessonSession`, `progressSync`,
- * `lessonProgressStore`, `lessonProgressFirestore`) can share them without creating
- * an import cycle.
+ * Pure sanitizers for persisted lesson-progress shapes (localStorage + backend).
+ * Dependency-free so the store, the selectors, and every backend adapter can share
+ * them without creating an import cycle.
  */
 
 /** Keep only the string entries of an unknown value; non-arrays become `[]`. */

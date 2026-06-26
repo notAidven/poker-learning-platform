@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { lessonNumber, sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
-import { isTableCleared, isTableUnlocked } from '../lib/lessonProgress'
+import { isTableCleared, isTableUnlocked } from '../lib/casinoProgress'
 import { LessonPathModal } from './LessonPathModal'
 import { CheckIcon, ChipIcon, LockIcon } from './icons'
 

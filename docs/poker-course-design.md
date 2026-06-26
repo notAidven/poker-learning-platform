@@ -1,15 +1,19 @@
 # Design Doc: Texas Hold'em Poker Course Revamp
 
-**Status:** Proposed (planning only — no code written)
-**Scope:** Replace the 6 probability lessons with 6 Texas Hold'em poker lessons, reusing the existing lesson engine, skill-check flow, gamification, and card widgets.
+**Status:** Implemented, then evolved. This is the original poker-revamp design doc; the shipped product has since grown well past it — see the scope note below and `docs/poker-sections-design.md`.
+**Scope (original):** Replace the 6 probability lessons with Texas Hold'em poker lessons, reusing the existing lesson engine, skill-check flow, gamification, and card widgets.
 **Audience for this doc:** implementation agents and content authors. The "Poker content reference" section is the **source of truth** for poker correctness.
 
-> **Shipped-scope update:** The shipped course is now **5 lessons with no AI**. The original
-> **Lesson 6** capstone ("play a full hand") and the rule-based opponent (`lib/poker/opponentAI.ts`
-> plus the `full-hand` interaction) described below were removed from the shipped build and archived
-> on a local-only `poker-with-lesson6` branch. Lesson 5's betting now uses a scripted, deterministic
-> opponent (no AI). Sections that mention Lesson 6 / `full-hand` / opponent AI / `aiTier` are kept
-> below as historical design context only.
+> **Shipped-scope update (current).** The shipped course is **9 lessons across 3 sections**
+> (Foundations → Playing a Hand → The Math), followed by a **Casino Floor** of two play-money
+> tables. The "play a full hand vs. AI opponents" capstone described below as **Lesson 6** was
+> **not** shipped as a lesson — it became the **Casino Floor**: Room 1 (rule-based opponents via
+> `lib/poker/opponentAI.ts` + an AI coach) and Room 2 (LLM-driven opponents + a rule-based hint
+> bar). **AI is built but opt-in**, always degrading to deterministic rule-based logic. The
+> sectioning + the four-lesson Math track are detailed in `docs/poker-sections-design.md`; the
+> canonical path/branding live in `web/src/data/lessons.ts` + `course.ts`. Sections below that
+> describe a single "Lesson 6 / `full-hand`" capstone are kept as **historical design context** —
+> the poker pedagogy and math (§3) remain the source of truth.
 
 ---
 
@@ -215,7 +219,7 @@ A betting round **ends** when every still-active player has either matched the l
 | Interaction infra | `InteractionRenderer.tsx` (extended, not rewritten), `interactions/types.ts`, `CheckPanel.tsx`, `NumericAnswerInput.tsx`, `numericAnswer.ts`, `FractionAnswerInput.tsx`, `fractionAnswer.ts`, `usePrefersReducedMotion.ts` |
 | Card primitives | `CardId`/`CardSuit`/`CardRank`, `fullDeck`, `cardsBySuit`, `cardsByRank`, `parseCardId`, `cardLabel`, `isRedSuit` in `types/lesson.ts` |
 | Reused card widgets | **`CardDeck.tsx`** (both `select-all` and `draw-tally` modes), **`CompareEvents.tsx`** (generic two-option comparator) |
-| Gamification & progress | `gamification.ts`, `lessonProgress.ts`, `lessonProgressStore.ts`, `lessonProgressFirestore.ts`, `gamificationFirestore.ts`, `progressSync.ts`, `lessonSession.ts` |
+| Gamification & progress | `gamification.ts`, `bankroll.ts`, and the `lib/progress/` module (`ProgressStore` + `ProgressBackend` adapters) — *the progress/persistence layer was later refactored from the original `lessonProgress*` / `progressSync` / `lessonSession` split* |
 | Auth / routing / shell | `AuthContext.tsx`, `ProtectedRoute.tsx`, `App.tsx`, pages, `firebase.ts`, course-path UI |
 
 ### Reused **with light reconfiguration** (no code change, just new content)

@@ -38,8 +38,7 @@ import {
   syncProfileEmail,
   type UserProfile,
 } from '../lib/userProfile'
-import { syncProgressOnAuth } from '../lib/progressSync'
-import { clearLocalProgress } from '../lib/lessonProgressStore'
+import { useProgressStore } from '../lib/progress/ProgressContext'
 
 type AuthContextValue = {
   user: User | null
@@ -154,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // (not derived from `user`) because `linkWithCredential` mutates the existing
   // User instance in place, so the banner/profile UI need an explicit re-render.
   const [providerIds, setProviderIds] = useState<string[]>([])
+  const progressStore = useProgressStore()
 
   const refreshProfile = useCallback(async () => {
     if (E2E_BYPASS_AUTH) {
@@ -191,10 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (nextUser) {
           const data = await getUserProfile(nextUser.uid)
           setProfile(await reconcileProfileEmail(nextUser, data))
-          await syncProgressOnAuth(nextUser.uid)
+          await progressStore.syncOnAuth(nextUser.uid)
         } else {
           setProfile(null)
-          await syncProgressOnAuth(null)
+          await progressStore.syncOnAuth(null)
         }
       } catch (err) {
         console.error('Auth initialization failed; continuing without profile:', err)
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeAuth()
       unsubscribeToken()
     }
-  }, [])
+  }, [progressStore])
 
   useEffect(() => {
     function onGamificationUpdated() {
@@ -372,13 +372,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logOut = useCallback(async () => {
     await signOut(auth)
-    // Shared-device safety: drop this user's local progress immediately so the
-    // next account can't inherit or upload it (H1). The auth listener also
-    // clears via syncProgressOnAuth(null), but we do it here too so it happens
-    // synchronously on the explicit logout path.
-    clearLocalProgress()
+    // Shared-device safety: drop this user's local state immediately so the next
+    // account can't inherit or upload it (H1). The auth listener also clears via
+    // syncOnAuth(null), but we do it here too so it happens synchronously on the
+    // explicit logout path.
+    progressStore.resetLocalUserState()
     setProfile(null)
-  }, [])
+  }, [progressStore])
 
   const needsPasswordSetup = useMemo(
     () => deriveNeedsPasswordSetup(providerIds),

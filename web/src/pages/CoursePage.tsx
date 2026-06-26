@@ -4,12 +4,12 @@ import { Chip } from '../components/lesson/interactions/cards/PlayingCardKit'
 import { course } from '../data/course'
 import { lessons } from '../data/lessons'
 import { useAuth } from '../contexts/AuthContext'
-import { useCompletedLessons } from '../hooks/useCompletedLessons'
-import { areAllLessonsComplete } from '../lib/lessonProgress'
+import { useProgress } from '../lib/progress'
+import { areAllLessonsComplete } from '../lib/casinoProgress'
 import { grantBankroll, useBankroll } from '../lib/bankroll'
 
 export function CoursePage() {
-  const { completedIds } = useCompletedLessons()
+  const { completedIds } = useProgress()
   const { user, profile } = useAuth()
   const { chips: bankroll } = useBankroll()
   // Casino tables render on the path but are NOT part of the lesson completion math.
