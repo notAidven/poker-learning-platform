@@ -166,3 +166,14 @@ export function lookupGlossaryTerm(raw: string): GlossaryEntry | null {
   }
   return null
 }
+
+/**
+ * Every glossary entry, sorted alphabetically by its canonical term. Derived
+ * directly from the GLOSSARY map above, so any term added there shows up here
+ * automatically (e.g. on the Glossary page) with no extra wiring. The keys are
+ * already the normalized canonical term; presentation (acronym casing, etc.) is
+ * left to the consumer.
+ */
+export const glossaryEntries: GlossaryEntry[] = Object.entries(GLOSSARY)
+  .map(([term, definition]) => ({ term, definition }))
+  .sort((a, b) => a.term.localeCompare(b.term))

@@ -289,6 +289,20 @@ export function BoardDealer({
   const canSubmit =
     !locked && revealed >= requiredReveals && askedRevealed && askedFilled && showdownReady
 
+  const disabledReason = isRevealGate
+    ? undefined
+    : isShowdown
+      ? revealed < streets.length
+        ? 'Deal through the river'
+        : winnerPick == null
+          ? 'Pick who won the pot'
+          : undefined
+      : !askedRevealed
+        ? 'Deal each street to continue'
+        : !askedFilled
+          ? 'Pick your best hand for each street'
+          : undefined
+
   function handleSubmit() {
     if (!canSubmit) return
     setSubmitted(true)
@@ -557,6 +571,7 @@ export function BoardDealer({
         allowRetry={allowRetry}
         hideSubmit={isRevealGate}
         confirmation={isRevealGate ? '✓ All cards dealt' : undefined}
+        disabledReason={disabledReason}
       />
     </div>
   )

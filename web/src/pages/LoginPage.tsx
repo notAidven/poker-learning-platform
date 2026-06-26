@@ -157,6 +157,7 @@ export function LoginPage() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="your_username"
+          hint="Sign in with your username, not the email you signed up with."
         />
         <Field
           label="Password"
