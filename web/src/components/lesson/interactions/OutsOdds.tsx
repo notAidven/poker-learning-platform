@@ -13,6 +13,7 @@ import type { HandCategory } from '../../../types/poker'
 import { countOuts } from '../../../lib/poker/handEvaluator'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { Button } from '../../ui/Button'
 import { NumericAnswerInput } from './NumericAnswerInput'
 import { countMatches, hasValidCountInput, percentMatches } from './numericAnswer'
 import { fractionPercentMatches, hasValidFractionInput } from './fractionAnswer'
@@ -614,20 +615,12 @@ export function OutsOdds({
             </span>
           </p>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => runTrials(1)}
-              className="min-h-11 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
-            >
+            <Button type="button" onClick={() => runTrials(1)}>
               Deal once
-            </button>
-            <button
-              type="button"
-              onClick={() => runTrials(50)}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => runTrials(50)}>
               Deal ×50
-            </button>
+            </Button>
           </div>
           <div>
             <div className="mb-1 flex items-baseline justify-between text-sm">

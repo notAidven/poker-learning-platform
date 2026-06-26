@@ -12,6 +12,7 @@ import type { HandCategory, PokerStreet } from '../../../types/poker'
 import { compareHands, evaluateHoldem } from '../../../lib/poker/handEvaluator'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { Button } from '../../ui/Button'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { BurnCard, CardBack, CardFace, CardKitStyles, DeckPile, EmptySlot } from './cards/PlayingCardKit'
 import { mulberry32 } from '../../../lib/poker/rng'
@@ -434,13 +435,9 @@ export function BoardDealer({
       </p>
 
       {nextStreet && !locked && (
-        <button
-          type="button"
-          onClick={dealNext}
-          className="chip-3d min-h-11 w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-700"
-        >
+        <Button type="button" fullWidth onClick={dealNext} className="chip-3d">
           {DEAL_LABEL[nextStreet]}
-        </button>
+        </Button>
       )}
 
       {askedStreets.length > 0 && (

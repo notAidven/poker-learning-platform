@@ -20,6 +20,7 @@ import { ConceptStepView } from './ConceptStepView'
 import { LessonCompleteModal } from './LessonCompleteModal'
 import { LessonProgressBar } from './LessonProgressBar'
 import { ProblemStepView } from './ProblemStepView'
+import { Button } from '../ui/Button'
 
 type LessonPlayerProps = {
   lesson: LessonDefinition
@@ -224,23 +225,17 @@ export function LessonPlayer({
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
           disabled={stepIndex === 0}
-          className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
         >
           Back
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={!canContinue}
-          className="min-h-11 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
-        >
+        <Button onClick={goNext} disabled={!canContinue}>
           {isLast ? 'Finish lesson' : 'Continue'}
-        </button>
+        </Button>
       </div>
 
       <LessonCompleteModal

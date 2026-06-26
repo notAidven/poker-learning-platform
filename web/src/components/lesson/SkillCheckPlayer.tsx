@@ -5,6 +5,7 @@ import { isSkillCheckPassing } from '../../lib/gamification'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 import { SkillCheckStepView } from './SkillCheckStepView'
 import { CheckIcon, RetryIcon, StarIcon } from '../icons'
+import { Button, buttonVariants } from '../ui/Button'
 
 type SkillCheckPlayerProps = {
   skillCheck: SkillCheckDefinition
@@ -101,16 +102,10 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
               to redo the lesson.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <button
-                type="button"
-                onClick={handleRetake}
-                className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700"
-              >
-                Retake skill check
-              </button>
+              <Button onClick={handleRetake}>Retake skill check</Button>
               <Link
                 to={`/lesson/${skillCheck.lessonId}`}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className={buttonVariants({ variant: 'secondary' })}
               >
                 Review lesson
               </Link>
@@ -147,15 +142,12 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
             </p>
           )}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              to="/course"
-              className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700"
-            >
+            <Link to="/course" className={buttonVariants({ variant: 'primary' })}>
               Back to course path
             </Link>
             <Link
               to={`/lesson/${skillCheck.lessonId}`}
-              className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className={buttonVariants({ variant: 'secondary' })}
             >
               Review lesson
             </Link>
@@ -188,13 +180,9 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
 
       <div className="mt-6 flex justify-end">
         {answered && (
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
-          >
+          <Button onClick={handleContinue}>
             {isLast ? 'Finish skill check' : 'Next question'}
-          </button>
+          </Button>
         )}
       </div>
     </div>

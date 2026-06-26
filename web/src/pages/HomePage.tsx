@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/Badge'
 import { buttonVariants } from '../components/ui/Button'
 import { NightPanel } from '../components/ui/NightPanel'
 import { StatToken } from '../components/ui/StatToken'
+import { Stagger } from '../components/ui/Stagger'
 import { cx } from '../components/ui/cx'
 import {
   CheckIcon,
@@ -140,19 +141,18 @@ export function HomePage() {
           <p className="mt-1 text-sm text-night-700/70">{course.courseSummary}</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {lessonNodes.map((lesson, index) => (
             <LessonCard
               key={lesson.id}
               lesson={lesson}
-              index={index}
               unlocked={lessonUnlocked(index) && hasLessonContent(lesson.id)}
               done={completedIds.includes(lesson.id)}
               isNext={index === nextIndex}
               hasContent={hasLessonContent(lesson.id)}
             />
           ))}
-        </div>
+        </Stagger>
       </section>
     </div>
   )
@@ -160,14 +160,13 @@ export function HomePage() {
 
 type LessonCardProps = {
   lesson: (typeof lessons)[number]
-  index: number
   unlocked: boolean
   done: boolean
   isNext: boolean
   hasContent: boolean
 }
 
-function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: LessonCardProps) {
+function LessonCard({ lesson, unlocked, done, isNext, hasContent }: LessonCardProps) {
   const chip = (
     <span
       className={cx(
@@ -217,7 +216,7 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
     </>
   )
 
-  const baseCard = 'anim-fade-up flex flex-col rounded-2xl border p-5 shadow-card'
+  const baseCard = 'flex h-full flex-col rounded-2xl border p-5 shadow-card'
 
   if (unlocked) {
     return (
@@ -227,19 +226,12 @@ function LessonCard({ lesson, index, unlocked, done, isNext, hasContent }: Lesso
           baseCard,
           'group border-night-900/10 bg-white transition hover:-translate-y-1 hover:border-brand-300 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2',
         )}
-        style={{ animationDelay: `${index * 60}ms` }}
       >
         {inner}
       </Link>
     )
   }
 
-  return (
-    <article
-      className={cx(baseCard, 'border-night-900/10 bg-white/55')}
-      style={{ animationDelay: `${index * 60}ms` }}
-    >
-      {inner}
-    </article>
-  )
+  return <article className={cx(baseCard, 'border-night-900/10 bg-white/55')}>{inner}</article>
+
 }
