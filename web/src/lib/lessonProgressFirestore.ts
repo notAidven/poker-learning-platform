@@ -2,6 +2,7 @@ import {
   collection,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
@@ -23,6 +24,16 @@ export type LessonProgressPayload = {
   session?: LessonSession | null
 }
 
+/**
+ * Reserved lessonProgress doc id that holds the Phase 2 casino state (cleared
+ * rooms) instead of a lesson. It lives in this subcollection because the user
+ * doc is locked to a strict field whitelist by firestore.rules, while
+ * lessonProgress is owner read/write with no field constraint. The double
+ * underscore can never collide with a real lesson id, and it is skipped by
+ * `fetchAllLessonProgress` so it never masquerades as a lesson.
+ */
+export const CASINO_STATE_DOC_ID = '__casino__'
+
 function progressCollection(uid: string) {
   return collection(db, 'users', uid, 'lessonProgress')
 }
@@ -38,6 +49,9 @@ export async function fetchAllLessonProgress(
   const out: Record<string, LessonProgressPayload> = {}
 
   for (const docSnap of snap.docs) {
+    // The casino-state doc shares this subcollection but is not a lesson — skip it
+    // so it never becomes a phantom lesson entry in the stats map.
+    if (docSnap.id === CASINO_STATE_DOC_ID) continue
     const data = docSnap.data() as FirestoreLessonProgressDoc
     out[docSnap.id] = {
       stats: {
@@ -106,5 +120,28 @@ export async function writeAllLessonProgress(
     Object.entries(entries).map(([lessonId, payload]) =>
       writeLessonProgress(uid, lessonId, payload),
     ),
+  )
+}
+
+/** Firestore: users/{uid}/lessonProgress/__casino__ */
+type FirestoreCasinoStateDoc = {
+  clearedTableIds?: unknown
+  updatedAt?: Timestamp
+}
+
+/** Read the cleared-room ids for cross-device casino unlock. Missing doc → []. */
+export async function fetchClearedTableIds(uid: string): Promise<string[]> {
+  const snap = await getDoc(progressDoc(uid, CASINO_STATE_DOC_ID))
+  if (!snap.exists()) return []
+  const data = snap.data() as FirestoreCasinoStateDoc
+  return sanitizeStringArray(data.clearedTableIds)
+}
+
+/** Persist the cleared-room ids so a room cleared on one device unlocks elsewhere. */
+export async function writeClearedTableIds(uid: string, clearedTableIds: string[]): Promise<void> {
+  await setDoc(
+    progressDoc(uid, CASINO_STATE_DOC_ID),
+    { clearedTableIds, updatedAt: serverTimestamp() },
+    { merge: true },
   )
 }

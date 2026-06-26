@@ -4,7 +4,13 @@
  * a recommendation, and it must respect "playing the board".
  */
 import { describe, expect, it } from 'vitest'
-import { composeDeepRead, roughWinPct, type DeepCoachContext } from './coach'
+import {
+  buildDeepCoachPrompt,
+  composeDeepRead,
+  computeDeepReadNumbers,
+  roughWinPct,
+  type DeepCoachContext,
+} from './coach'
 import { analyzeSpot } from '../poker/hints'
 
 function deepContext(partial: Partial<DeepCoachContext>): DeepCoachContext {
@@ -132,5 +138,57 @@ describe('roughWinPct — pairs are tiered, not a flat 50%', () => {
     const ctx = deepContext({ hole: ['4S', '7D'], board: ['KH', '9D', '4C'], pot: 100, toCall: 50 })
     const text = composeDeepRead(ctx, analysisFor(ctx))
     expect(text.toLowerCase()).toContain('folding is likely best')
+  })
+})
+
+describe('buildDeepCoachPrompt — the LLM only PHRASES pre-computed numbers', () => {
+  function analysisFor(ctx: DeepCoachContext) {
+    return analyzeSpot({
+      hole: ctx.hole,
+      board: ctx.board,
+      street: ctx.street,
+      pot: ctx.pot,
+      toCall: ctx.toCall,
+    })
+  }
+
+  it('embeds the deterministic numbers and forbids the model from recomputing them', () => {
+    const ctx = deepContext({}) // AS KS on KD 7C 2D, pot 120, to call 40
+    const nums = computeDeepReadNumbers(ctx, analysisFor(ctx))
+    const prompt = buildDeepCoachPrompt(ctx, analysisFor(ctx))
+
+    // Pot odds is the EXACT price (it is real arithmetic, not a guess).
+    expect(nums.potOddsPct).toBe(25)
+    expect(prompt).toContain('Pot odds (exact price to call): 25%')
+
+    // Equity is given as a rough BAND, never a single false-precision figure.
+    expect(prompt).toContain(`about ${nums.equityLowPct}-${nums.equityHighPct}%`)
+
+    // EV is pre-computed and clearly labelled rough, with a range.
+    expect(prompt.toLowerCase()).toContain('ev of calling (rough estimate, not exact)')
+    expect(prompt).toContain(`around +${nums.evChips} chips per call`)
+
+    // The model must phrase, not recompute.
+    expect(prompt.toLowerCase()).toContain('do not recalculate or change them')
+    expect(prompt.toLowerCase()).toContain('do not recompute or change them')
+    expect(prompt.toLowerCase()).toContain('do not invent more precise figures')
+
+    // The deterministic recommendation is handed in so AI-on agrees with AI-off.
+    expect(prompt.toLowerCase()).toContain('a call is justified')
+  })
+
+  it('marks pot odds and EV not applicable when there is no bet to call', () => {
+    const ctx = deepContext({
+      hole: ['KD', 'KC'],
+      board: ['KS', '9D', '2C'],
+      street: 'flop',
+      pot: 60,
+      toCall: 0,
+      legalActions: [{ action: 'check' }, { action: 'bet', min: 10, max: 460 }],
+    })
+    const prompt = buildDeepCoachPrompt(ctx, analysisFor(ctx))
+    expect(prompt).toContain('Pot odds: not applicable (no bet to call)')
+    expect(prompt).toContain('EV of calling: not applicable (no bet to call)')
+    expect(prompt.toLowerCase()).toContain('bet for value')
   })
 })

@@ -230,21 +230,21 @@ function preflopTip(hole: [CardId, CardId], position?: 'ip' | 'oop'): string {
   const STRONG = new Set(['JJ', 'TT', 'AQs', 'AQo', 'AJs', 'KQs'])
 
   if (PREMIUM.has(code)) {
-    return clampSentence(`${code} is a premium hand—raise to build the pot and thin the field.${tail}`)
+    return clampSentence(`${code} is a premium hand, so raise to build the pot and thin the field.${tail}`)
   }
   if (STRONG.has(code)) {
-    return clampSentence(`${code} is strong enough to raise with—just respect heavy resistance.${tail}`)
+    return clampSentence(`${code} is strong enough to raise with, but respect heavy resistance.${tail}`)
   }
   if (isPair) {
-    return clampSentence(`${code} is a small pocket pair—see a cheap flop and hope to hit a set.${tail}`)
+    return clampSentence(`${code} is a small pocket pair, so see a cheap flop and hope to make three of a kind.${tail}`)
   }
   if (suited && hiVal === 14) {
-    return clampSentence(`${code} has nut-flush potential—playable, and stronger in position.${tail}`)
+    return clampSentence(`${code} can make the strongest possible flush, so it is playable and stronger in position.${tail}`)
   }
   if (suited && gap <= 2) {
     return clampSentence(`${code} is a suited connector that can flop straights and flushes.${tail}`)
   }
-  return clampSentence(`${code} is marginal—let position and pot odds decide whether to play.${tail}`)
+  return clampSentence(`${code} is marginal, so let position and pot odds decide whether to play.${tail}`)
 }
 
 /** Standard shorthand for a starting hand, e.g. "AA", "AKs", "T9o". */
@@ -287,10 +287,10 @@ function postflopTip(a: SpotAnalysis, ctx: HintContext): string {
   if (!a.madeLabel) {
     if (a.facingBet && a.potOddsPct != null) {
       return clampSentence(
-        `You need about ${a.potOddsPct}% equity to call—continue only with a hand or draw that clears that bar.`,
+        `You need about ${a.potOddsPct}% equity to call, so continue only with a hand or draw that clears that bar.`,
       )
     }
-    return clampSentence('No bet to call—take the free card and reassess as the board develops.')
+    return clampSentence('No bet to call, so take the free card and reassess as the board develops.')
   }
 
   const madeRank = a.madeCategory ? HAND_CATEGORY_RANK[a.madeCategory] : PAIR_RANK
@@ -319,12 +319,12 @@ function postflopTip(a: SpotAnalysis, ctx: HintContext): string {
         ? `you're getting the right price to chase`
         : `the price is too steep for the draw`
       return clampSentence(
-        `Your ${a.drawName} (~${a.equityPct}% by the river) vs ${a.potOddsPct}% pot odds—${verdict}.${sunk}`,
+        `Your ${a.drawName} (about ${a.equityPct}% by the river) vs ${a.potOddsPct}% pot odds, so ${verdict}.${sunk}`,
       )
     }
     if (strong) {
       return clampSentence(
-        `You hold ${a.madeLabel}—a value hand, so raising for value usually beats just calling.`,
+        `You hold ${a.madeLabel}, a value hand, so raising for value usually beats just calling.`,
       )
     }
     return clampSentence(
@@ -332,18 +332,18 @@ function postflopTip(a: SpotAnalysis, ctx: HintContext): string {
     )
   }
 
-  // No bet to call — we can check or bet.
+  // No bet to call: we can check or bet.
   if (strong) {
-    return clampSentence(`You hold ${a.madeLabel}—bet for value so weaker hands pay you off.`)
+    return clampSentence(`You hold ${a.madeLabel}, so bet for value and let weaker hands pay you off.`)
   }
   if (hasDraw) {
     return clampSentence(
-      `You have a ${a.drawName} (${a.outs} outs, ~${a.equityPct}%)—a semi-bluff adds fold equity to the draw.`,
+      `You have a ${a.drawName} (${a.outs} outs, about ${a.equityPct}%), so a semi-bluff adds fold equity to the draw.`,
     )
   }
   const posTag = positionTag(ctx.position)
   const posTail = posTag ? ` Use being ${posTag} to control the pot.` : ''
-  return clampSentence(`Just ${lowerFirst(a.madeLabel)}—checking to keep the pot small is reasonable.${posTail}`)
+  return clampSentence(`Just ${lowerFirst(a.madeLabel)}, so checking to keep the pot small is reasonable.${posTail}`)
 }
 
 // --- shared helpers ----------------------------------------------------------

@@ -7,8 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { STARTING_BANKROLL, getLocalBankroll, grantBankroll, rebuy, setBankroll } from './bankroll'
 import {
   areAllLessonsComplete,
+  areGuidedPlayLessonsComplete,
+  getClearedTableIds,
   hasClearedAnyCoachedTable,
+  isTableCleared,
   isTableUnlocked,
+  markTableCleared,
 } from './lessonProgress'
 import { lessons } from '../data/lessons'
 import { getTable } from '../data/tables'
@@ -32,6 +36,13 @@ function makeStorage() {
 }
 
 const ALL_LESSON_IDS = lessons.filter((l) => l.kind !== 'ai-table').map((l) => l.id)
+// Foundations + Playing a Hand — the first two sections that open the coached room.
+const GUIDED_PLAY_IDS = lessons
+  .filter((l) => l.kind !== 'ai-table' && (l.section === 'foundations' || l.section === 'playing'))
+  .map((l) => l.id)
+const FOUNDATIONS_IDS = lessons
+  .filter((l) => l.kind !== 'ai-table' && l.section === 'foundations')
+  .map((l) => l.id)
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', makeStorage())
@@ -80,24 +91,41 @@ describe('casino unlock gating (two rooms)', () => {
     expect(areAllLessonsComplete([])).toBe(false)
   })
 
-  it('Room 1 opens once every lesson is complete', () => {
+  it('areGuidedPlayLessonsComplete needs only the first two sections', () => {
+    // The first two sections are enough, and they are a strict subset of the
+    // whole course, so a finished course also satisfies the guided-play gate.
+    expect(areGuidedPlayLessonsComplete(GUIDED_PLAY_IDS)).toBe(true)
+    expect(areGuidedPlayLessonsComplete(ALL_LESSON_IDS)).toBe(true)
+    // Foundations alone (Playing a Hand unfinished) is not enough.
+    expect(areGuidedPlayLessonsComplete(FOUNDATIONS_IDS)).toBe(false)
+    expect(areGuidedPlayLessonsComplete([])).toBe(false)
+  })
+
+  it('Room 1 opens after the first two sections, before The Math is done', () => {
     const room1 = getTable('room-1')!
     expect(isTableUnlocked(room1, [])).toBe(false)
+    expect(isTableUnlocked(room1, FOUNDATIONS_IDS)).toBe(false)
+    // Reaches guided play without having finished The Math section.
+    expect(isTableUnlocked(room1, GUIDED_PLAY_IDS)).toBe(true)
+    // A fully-finished course keeps Room 1 open too (gates stay coherent).
     expect(isTableUnlocked(room1, ALL_LESSON_IDS)).toBe(true)
   })
 
-  it('Room 2 needs ALL lessons AND Room 1 cleared', () => {
+  it('Room 2 needs the first two sections AND Room 1 cleared', () => {
     const room2 = getTable('room-2')!
 
     expect(hasClearedAnyCoachedTable()).toBe(false)
-    // All lessons done, but Room 1 is not cleared yet → still locked.
-    expect(isTableUnlocked(room2, ALL_LESSON_IDS)).toBe(false)
+    // Guided-play sections done, but Room 1 is not cleared yet → still locked.
+    expect(isTableUnlocked(room2, GUIDED_PLAY_IDS)).toBe(false)
 
-    localStorage.setItem('cleared-table-ids', JSON.stringify(['room-1']))
+    markTableCleared('room-1')
     expect(hasClearedAnyCoachedTable()).toBe(true)
-    expect(isTableUnlocked(room2, ALL_LESSON_IDS)).toBe(true)
+    expect(isTableCleared('room-1')).toBe(true)
+    expect(getClearedTableIds()).toContain('room-1')
+    expect(isTableUnlocked(room2, GUIDED_PLAY_IDS)).toBe(true)
 
-    // …but only once every lesson is complete.
+    // …but only once the first two sections are complete.
+    expect(isTableUnlocked(room2, FOUNDATIONS_IDS)).toBe(false)
     expect(isTableUnlocked(room2, [])).toBe(false)
   })
 })
