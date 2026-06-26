@@ -9,6 +9,8 @@
  * lives in index.css).
  */
 import type { CSSProperties } from 'react'
+import { motion } from 'motion/react'
+import { EASE } from '../../../../lib/motion'
 import { cardLabel, isRedSuit, parseCardId, type CardId, type CardSuit } from '../../../../types/lesson'
 
 export type CardSize = 'sm' | 'md' | 'lg'
@@ -150,6 +152,70 @@ export function CardBack({
         style={{ '--dot-size': DOT[size] } as CSSProperties}
         aria-hidden="true"
       />
+    </span>
+  )
+}
+
+/**
+ * A card that flips from its face-down back to its face-up front in 3D — used for a
+ * showdown reveal (back → face) instead of a hard back/face swap. Purely additive:
+ * the static <CardBack> / <CardFace> primitives are untouched.
+ *
+ * The flip is self-contained: when `animate`, the card always starts on its back and
+ * settles to `revealed ? face : back`, so mounting it straight into a revealed state
+ * (the showdown swap) still plays the flip — and the real card `id` only needs to
+ * enter the DOM at reveal time. `revealed` toggling false→true on a persisted card
+ * also flips it.
+ *
+ * `animate` gates the motion; pass `false` (e.g. under `prefers-reduced-motion`) to
+ * snap straight to the final face/back. The flip is JS-driven (motion/react), so
+ * callers MUST gate `animate` on the reduced-motion preference themselves — the
+ * global CSS kill-switch cannot stop it. `delay` (ms) staggers the flip.
+ */
+export function RevealCard({
+  id,
+  size = 'md',
+  revealed,
+  animate = false,
+  delay = 0,
+  className = '',
+  backLabel = 'Face-down card',
+}: {
+  id: CardId
+  size?: CardSize
+  revealed: boolean
+  animate?: boolean
+  delay?: number
+  className?: string
+  backLabel?: string
+}) {
+  const faceStyle: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+  }
+  return (
+    <span
+      className={`relative block ${FRAME[size]} ${className}`}
+      style={{ perspective: '600px' }}
+      role="img"
+      aria-label={revealed ? cardLabel(id) : backLabel}
+    >
+      <motion.span
+        className="relative block h-full w-full"
+        style={{ transformStyle: 'preserve-3d' }}
+        initial={animate ? { rotateY: 180 } : false}
+        animate={{ rotateY: revealed ? 0 : 180 }}
+        transition={animate ? { duration: 0.5, delay: delay / 1000, ease: EASE.deal } : { duration: 0 }}
+      >
+        <span style={faceStyle} aria-hidden="true">
+          <CardFace id={id} size={size} />
+        </span>
+        <span style={{ ...faceStyle, transform: 'rotateY(180deg)' }} aria-hidden="true">
+          <CardBack size={size} label={backLabel} />
+        </span>
+      </motion.span>
     </span>
   )
 }

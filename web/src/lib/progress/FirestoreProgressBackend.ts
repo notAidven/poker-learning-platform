@@ -13,6 +13,7 @@ import type { LessonXpBreakdown } from '../gamification'
 import {
   XP_BASE_LESSON,
   computeStreakAfterCompletion,
+  didStreakIncrease,
   getCalendarDayCAT,
   levelFromTotalXp,
   notifyGamificationUpdated,
@@ -189,11 +190,12 @@ export class FirestoreProgressBackend implements ProgressBackend {
         level: newLevel,
         streak: streakUpdate.streak,
         leveledUp: newLevel > previousLevel,
+        streakIncreased: didStreakIncrease(storedStreak, lastActivityDate, today),
       }
     })
 
     if (result) {
-      notifyGamificationUpdated()
+      notifyGamificationUpdated({ streakIncreased: result.streakIncreased })
     }
 
     return result
@@ -203,27 +205,28 @@ export class FirestoreProgressBackend implements ProgressBackend {
     const userRef = doc(db, 'users', uid)
     const today = getCalendarDayCAT()
 
-    const changed = await runTransaction(db, async (transaction) => {
+    const result = await runTransaction(db, async (transaction) => {
       const snap = await transaction.get(userRef)
-      if (!snap.exists()) return false
+      if (!snap.exists()) return { changed: false, streakIncreased: false }
 
       const data = snap.data()
       const lastActivityDate =
         typeof data.lastActivityDate === 'string' ? data.lastActivityDate : null
-      if (lastActivityDate === today) return false
+      if (lastActivityDate === today) return { changed: false, streakIncreased: false }
 
       const storedStreak = typeof data.streak === 'number' ? data.streak : 0
+      const streakIncreased = didStreakIncrease(storedStreak, lastActivityDate, today)
       const streakUpdate = computeStreakAfterCompletion(storedStreak, lastActivityDate, today)
 
       transaction.update(userRef, {
         streak: streakUpdate.streak,
         lastActivityDate: streakUpdate.lastActivityDate,
       })
-      return true
+      return { changed: true, streakIncreased }
     })
 
-    if (changed) {
-      notifyGamificationUpdated()
+    if (result.changed) {
+      notifyGamificationUpdated({ streakIncreased: result.streakIncreased })
     }
   }
 

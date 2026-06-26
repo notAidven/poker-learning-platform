@@ -28,12 +28,15 @@ export function SignUpPage() {
     }
   }
 
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
 
+    // The mismatch surfaces inline on the confirm field (with a transition); just
+    // block the submit here so we never create an account with the wrong password.
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
       return
     }
 
@@ -53,7 +56,7 @@ export function SignUpPage() {
       title="Create your account"
       subtitle="Sign up with email or Google, then pick a username and avatar."
       footer={
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-night-700/70">
           Already have an account?{' '}
           <Link to="/login" className="font-semibold text-brand-600 transition hover:text-brand-700">
             Sign in
@@ -100,9 +103,10 @@ export function SignUpPage() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="••••••••"
+          error={passwordsMismatch ? 'Passwords do not match.' : undefined}
         />
-        <Button type="submit" variant="primary" size="lg" fullWidth disabled={submitting}>
-          {submitting ? 'Creating account…' : 'Continue'}
+        <Button type="submit" variant="primary" size="lg" fullWidth loading={submitting}>
+          Continue
         </Button>
       </form>
     </AuthLayout>

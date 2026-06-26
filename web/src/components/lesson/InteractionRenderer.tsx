@@ -33,7 +33,7 @@ type InteractionRendererProps = InteractionProps & {
 }
 
 function InteractionFallback() {
-  return <div className="py-6 text-center text-sm text-slate-400">Loading activity…</div>
+  return <div className="py-6 text-center text-sm text-night-500">Loading activity…</div>
 }
 
 export function InteractionRenderer({

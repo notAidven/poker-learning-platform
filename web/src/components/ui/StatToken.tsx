@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { animate } from 'motion/react'
 import { cx } from './cx'
+import { DUR, EASE } from '../../lib/motion'
+import { usePrefersReducedMotion } from '../lesson/interactions/usePrefersReducedMotion'
 
 /** Chip denominations for the gamification tokens. */
 export type TokenAccent = 'gold' | 'wine' | 'green' | 'slate'
@@ -26,6 +29,8 @@ type StatTokenProps = {
   orientation?: 'row' | 'col'
   /** Entrance stagger in ms */
   delayMs?: number
+  /** Count up + pulse when a numeric `value` changes (default true). */
+  countUp?: boolean
   className?: string
 }
 
@@ -37,6 +42,7 @@ export function StatToken({
   accent = 'gold',
   orientation = 'row',
   delayMs = 0,
+  countUp = true,
   className,
 }: StatTokenProps) {
   const col = orientation === 'col'
@@ -63,7 +69,9 @@ export function StatToken({
         {icon}
       </span>
       <div className={cx('min-w-0', col && 'flex flex-col items-center')}>
-        <p className="font-display text-2xl font-bold leading-none tnum text-white">{value}</p>
+        <p className="font-display text-2xl font-bold leading-none tnum text-white">
+          {countUp && typeof value === 'number' ? <AnimatedValue value={value} /> : value}
+        </p>
         <p
           className={cx(
             'font-semibold uppercase tracking-wide text-white/55',
@@ -74,5 +82,46 @@ export function StatToken({
         </p>
       </div>
     </div>
+  )
+}
+
+/**
+ * Counts from the previous value to the new one and gives the number a quick pulse
+ * whenever it changes — the gamification phase drives this off `'gamification-updated'`.
+ * No count-up on first mount; reduced-motion jumps straight to the final value.
+ */
+function AnimatedValue({ value }: { value: number }) {
+  const reduced = usePrefersReducedMotion()
+  // Updated only by the running animation; reduced-motion bypasses it for `value`.
+  const [counted, setCounted] = useState(value)
+  const prev = useRef(value)
+  const scope = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    const from = prev.current
+    prev.current = value
+    if (reduced || from === value) return
+
+    const delta = Math.abs(value - from)
+    const duration = Math.min(DUR.celebrate, Math.max(DUR.base, delta * 0.04))
+    const count = animate(from, value, {
+      duration,
+      ease: EASE.rake,
+      onUpdate: (v) => setCounted(Math.round(v)),
+    })
+    const pulse = scope.current
+      ? animate(scope.current, { scale: [1, 1.12, 1] }, { duration: DUR.base, ease: EASE.chip })
+      : null
+
+    return () => {
+      count.stop()
+      pulse?.stop()
+    }
+  }, [value, reduced])
+
+  return (
+    <span ref={scope} className="inline-block">
+      {reduced ? value : counted}
+    </span>
   )
 }

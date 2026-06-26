@@ -54,12 +54,20 @@ export type LessonCompletionAward = {
   level: number
   streak: number
   leveledUp: boolean
+  /** True when this completion advanced the displayed streak (first activity today). */
+  streakIncreased: boolean
 }
 
 /** Result returned synchronously to the UI when a lesson is completed. */
 export type SkillCheckSaveResult = {
   isFirstCompletion: boolean
   xpBreakdown: LessonXpBreakdown | null
+  /**
+   * The authoritative backend award (XP / level / streak), or null for guests and for
+   * failed writes. Resolved asynchronously so the "win the pot" celebration can prefer
+   * the Firestore values without blocking on them; it never rejects.
+   */
+  award: Promise<LessonCompletionAward | null>
 }
 
 /**

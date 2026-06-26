@@ -1,9 +1,35 @@
 import { useState } from 'react'
+import { motion } from 'motion/react'
 import type { ProblemStep } from '../../types/lesson'
+import { DUR, EASE } from '../../lib/motion'
+import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
 import { MathContent } from './MathContent'
 import { WhyExplanationModal } from './WhyExplanationModal'
 import { InteractionRenderer } from './InteractionRenderer'
 import { Calculator } from './interactions/Calculator'
+
+/** A check mark that draws itself in — the "correct" affirmation. */
+function CheckDraw({ reduced }: { reduced: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="mt-0.5 h-5 w-5 shrink-0 text-success-600"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <motion.path
+        d="M5 13l4 4L19 7"
+        initial={reduced ? false : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={reduced ? { duration: 0 } : { duration: DUR.base, ease: EASE.standard }}
+      />
+    </svg>
+  )
+}
 
 type ProblemStepViewProps = {
   step: ProblemStep
@@ -20,6 +46,7 @@ export function ProblemStepView({
   onFirstSubmit,
   onAttemptSubmit,
 }: ProblemStepViewProps) {
+  const reduced = usePrefersReducedMotion()
   const [solved, setSolved] = useState(alreadySolved)
   const [hintsShown, setHintsShown] = useState(0)
   const [showIncorrect, setShowIncorrect] = useState(false)
@@ -66,7 +93,7 @@ export function ProblemStepView({
 
   return (
     <div className="space-y-5">
-      <MathContent className="text-base font-medium text-slate-900">{step.prompt}</MathContent>
+      <MathContent className="text-base font-medium text-ink">{step.prompt}</MathContent>
 
       {step.showCalculator && <Calculator />}
 
@@ -80,15 +107,24 @@ export function ProblemStepView({
       />
 
       {showIncorrect && !solved && (
-        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
+        <motion.div
+          className="answer-wrong rounded-2xl border px-4 py-3 text-sm"
+          role="alert"
+          initial={reduced ? false : { x: 0 }}
+          animate={reduced ? undefined : { x: [0, -6, 6, -5, 5, -2, 2, 0] }}
+          transition={reduced ? undefined : { duration: DUR.base * 1.4, ease: EASE.standard }}
+        >
           <MathContent>{step.feedback.incorrect}</MathContent>
-        </div>
+        </motion.div>
       )}
 
       {solved && (
-        <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
-          <p className="font-semibold">Correct!</p>
-          <MathContent className="mt-1">{step.feedback.correct}</MathContent>
+        <div className="answer-correct flex items-start gap-2 rounded-2xl border px-4 py-3 text-sm" role="status">
+          <CheckDraw reduced={reduced} />
+          <div>
+            <p className="font-semibold">Correct!</p>
+            <MathContent className="mt-1">{step.feedback.correct}</MathContent>
+          </div>
         </div>
       )}
 
@@ -123,7 +159,7 @@ export function ProblemStepView({
           {visibleHints.map((hint, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-sm text-slate-700"
+              className="rounded-2xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-sm text-night-700"
             >
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-600">
                 Hint {i + 1}

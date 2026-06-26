@@ -27,7 +27,7 @@ const TablePage = lazy(() =>
 
 function RouteFallback() {
   return (
-    <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-500" aria-live="polite">
+    <div className="mx-auto max-w-lg p-8 text-center text-sm text-night-700/70" aria-live="polite">
       Loading…
     </div>
   )

@@ -43,7 +43,7 @@ function HandCards({ hand, animate }: { hand: [CardId, CardId]; animate: boolean
       </div>
       <span
         className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide ${
-          suited ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+          suited ? 'bg-success-100 text-success-700' : 'bg-slate-100 text-slate-600'
         }`}
       >
         {suitTag(hand)}
@@ -56,8 +56,8 @@ function optionClass(submitted: boolean, isSelected: boolean, isCorrect: boolean
   const base =
     'relative flex min-h-11 flex-col items-center justify-center rounded-xl border-2 px-3 py-2.5 text-center transition disabled:cursor-not-allowed'
   if (submitted) {
-    if (isCorrect) return `${base} border-emerald-500 bg-emerald-50 text-emerald-800`
-    if (isSelected) return `${base} border-rose-400 bg-rose-50 text-rose-700`
+    if (isCorrect) return `${base} border-success-500 bg-success-50 text-success-800`
+    if (isSelected) return `${base} border-danger-400 bg-danger-50 text-danger-700`
     return `${base} border-slate-200 bg-white text-slate-500 opacity-70`
   }
   if (isSelected) return `${base} border-brand-500 bg-brand-50 text-brand-800 shadow-sm`
@@ -129,7 +129,7 @@ export function PreflopHand({
       )}
 
       {/* The hand(s) on a felt panel */}
-      <div className="pck-felt flex items-stretch justify-center gap-4 rounded-3xl border border-emerald-900/40 p-5 shadow-inner">
+      <div className="pck-felt flex items-stretch justify-center gap-4 rounded-3xl border border-night-900/40 p-5 shadow-inner">
         {mode === 'classify' && config.hand && (
           <HandCards hand={config.hand} animate={animate} />
         )}
@@ -198,9 +198,9 @@ export function PreflopHand({
           onClick={() => setSide('tie')}
           className={`min-h-11 w-full rounded-xl border-2 px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed ${
             submitted && answer.stronger === 'tie'
-              ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+              ? 'border-success-500 bg-success-50 text-success-800'
               : submitted && side === 'tie'
-                ? 'border-rose-400 bg-rose-50 text-rose-700'
+                ? 'border-danger-400 bg-danger-50 text-danger-700'
                 : side === 'tie'
                   ? 'border-brand-500 bg-brand-50 text-brand-800'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-brand-300'
@@ -249,9 +249,9 @@ function PickPanel({
   let cls: string
   if (submitted) {
     cls = isCorrectSide
-      ? `${base} border-emerald-400 bg-emerald-50/95`
+      ? `${base} border-success-400 bg-success-50/95`
       : selected
-        ? `${base} border-rose-400 bg-rose-50/95`
+        ? `${base} border-danger-400 bg-danger-50/95`
         : `${base} border-white/30 bg-white/85 opacity-80`
   } else {
     cls = selected ? `${base} border-brand-400 bg-white shadow-sm` : `${base} border-white/40 bg-white/90 hover:border-brand-300`

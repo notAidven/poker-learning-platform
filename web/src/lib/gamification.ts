@@ -163,6 +163,23 @@ export function computeStreakAfterCompletion(
   return { streak: 1, lastActivityDate: today }
 }
 
-export function notifyGamificationUpdated() {
-  window.dispatchEvent(new Event('gamification-updated'))
+/**
+ * Whether THIS qualifying completion advances the displayed streak — i.e. it is the
+ * first activity of the day, so the visible streak ticks up (a fresh day after a miss
+ * counts as starting at 1). Drives the header flame pulse.
+ */
+export function didStreakIncrease(
+  storedStreak: number,
+  lastActivityDate: string | null,
+  today = getCalendarDayCAT(),
+): boolean {
+  const before = getEffectiveStreak(storedStreak, lastActivityDate, today)
+  const after = computeStreakAfterCompletion(storedStreak, lastActivityDate, today).streak
+  return after > before
+}
+
+export type GamificationUpdateDetail = { streakIncreased?: boolean }
+
+export function notifyGamificationUpdated(detail?: GamificationUpdateDetail) {
+  window.dispatchEvent(new CustomEvent('gamification-updated', { detail }))
 }

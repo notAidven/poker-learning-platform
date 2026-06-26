@@ -20,7 +20,7 @@ export function HintBar({ context, active }: HintBarProps) {
       <h3 className="mb-1 flex items-center gap-2 text-sm font-bold text-gold-700">
         <span aria-hidden>♠</span> Strategy hint
       </h3>
-      <p className="min-h-[2.5rem] text-sm leading-relaxed text-slate-700" aria-live="polite">
+      <p className="min-h-[2.5rem] text-sm leading-relaxed text-night-800" aria-live="polite">
         {hint ?? (active ? 'Sizing up the spot…' : 'A hint appears when it is your turn to act.')}
       </p>
     </section>

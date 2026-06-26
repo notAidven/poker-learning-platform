@@ -16,6 +16,7 @@ import { sanitizeProblemAttempts, sanitizeStringArray } from './sanitize'
 import { getCompletedIds } from './selectors'
 import {
   defaultLessonStats,
+  type LessonCompletionAward,
   type LessonProgressPayload,
   type LessonSession,
   type LessonStats,
@@ -196,12 +197,15 @@ export class ProgressStore {
     this.commit()
 
     const uid = this.effectiveUid()
+    let award: Promise<LessonCompletionAward | null> = Promise.resolve(null)
     if (uid) {
       // The backend transaction persists the progress doc (completion + xpAwarded),
       // so on SUCCESS we intentionally do NOT also queue a separate stats write —
       // that would race with the atomic award. XP is added only on the first
-      // completion; a retake just refreshes stats and advances the streak.
-      void this.backend.completeLesson(uid, lessonId, xpBreakdown, nextStats).catch((err) => {
+      // completion; a retake just refreshes stats and advances the streak. The
+      // promise is surfaced (and never rejects) so the "win the pot" celebration can
+      // prefer the authoritative award without blocking on it.
+      award = this.backend.completeLesson(uid, lessonId, xpBreakdown, nextStats).catch((err) => {
         // Durability: the atomic award didn't land, so the completion lives only in
         // local storage and the next sync would silently revert it. Best-effort
         // persist completed:true to the remote progress doc. The backend's
@@ -209,10 +213,11 @@ export class ProgressStore {
         // double-awards XP).
         console.warn('Failed to award lesson completion; persisting completion as a fallback:', err)
         this.writeCompletionFallback(lessonId, nextStats)
+        return null
       })
     }
 
-    return { isFirstCompletion, xpBreakdown }
+    return { isFirstCompletion, xpBreakdown, award }
   }
 
   /**

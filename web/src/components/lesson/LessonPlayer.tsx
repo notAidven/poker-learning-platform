@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import { useProgressStore } from '../../lib/progress/ProgressContext'
+import { DUR, EASE } from '../../lib/motion'
+import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
 import { hasSkillCheck } from '../../data/skillCheckContent'
 import type { LessonDefinition } from '../../types/lesson'
 import { isConceptStep, isProblemStep } from '../../types/lesson'
@@ -8,12 +11,20 @@ import { ConceptStepView } from './ConceptStepView'
 import { LessonCompleteModal } from './LessonCompleteModal'
 import { LessonProgressBar } from './LessonProgressBar'
 import { ProblemStepView } from './ProblemStepView'
+import { Button } from '../ui/Button'
 
 type LessonPlayerProps = {
   lesson: LessonDefinition
   onProgressChange?: (progress: { stepIndex: number; solvedCount: number }) => void
   onLessonFinished?: () => void
   allowNavigation?: () => void
+}
+
+/** Directional slide-fade between keyed steps (forward → from the right, back → from the left). */
+const stepVariants = {
+  enter: (dir: number) => ({ x: dir >= 0 ? 28 : -28, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir >= 0 ? -28 : 28, opacity: 0 }),
 }
 
 export function LessonPlayer({
@@ -24,7 +35,10 @@ export function LessonPlayer({
 }: LessonPlayerProps) {
   const navigate = useNavigate()
   const store = useProgressStore()
+  const reduced = usePrefersReducedMotion()
   const [showLessonCompleteModal, setShowLessonCompleteModal] = useState(false)
+  // +1 when advancing, -1 when stepping back, so the slide-fade points the right way.
+  const [direction, setDirection] = useState(1)
   const problemSteps = useMemo(
     () => lesson.steps.filter(isProblemStep),
     [lesson.steps],
@@ -183,8 +197,14 @@ export function LessonPlayer({
       finishLesson()
       return
     }
+    setDirection(1)
     setStepIndex((i) => i + 1)
   }, [canContinue, finishLesson, isLast])
+
+  const goBack = useCallback(() => {
+    setDirection(-1)
+    setStepIndex((i) => Math.max(0, i - 1))
+  }, [])
 
   if (!step) return null
 
@@ -192,45 +212,49 @@ export function LessonPlayer({
     <div className="mx-auto max-w-lg">
       <LessonProgressBar current={stepIndex} total={lesson.steps.length} />
 
-      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        {isConceptStep(step) && (
-          <ConceptStepView
+      <div className="mt-6 overflow-hidden rounded-3xl border border-night-900/10 bg-white p-6 shadow-sm sm:p-8">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
             key={step.id}
-            title={step.title}
-            content={step.content}
-            visual={step.visual}
-          />
-        )}
+            custom={direction}
+            variants={stepVariants}
+            initial={reduced ? false : 'enter'}
+            animate="center"
+            exit={reduced ? { opacity: 0 } : 'exit'}
+            transition={{ duration: reduced ? 0 : DUR.base, ease: EASE.standard }}
+          >
+            {isConceptStep(step) && (
+              <ConceptStepView
+                title={step.title}
+                content={step.content}
+                visual={step.visual}
+              />
+            )}
 
-        {isProblemStep(step) && (
-          <ProblemStepView
-            key={step.id}
-            step={step}
-            alreadySolved={solvedStepIds.has(step.id)}
-            onSolved={() => handleStepSolved(step.id)}
-            onAttemptSubmit={() => handleAttemptSubmit(step.id)}
-          />
-        )}
+            {isProblemStep(step) && (
+              <ProblemStepView
+                step={step}
+                alreadySolved={solvedStepIds.has(step.id)}
+                onSolved={() => handleStepSolved(step.id)}
+                onAttemptSubmit={() => handleAttemptSubmit(step.id)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+        <Button
+          variant="secondary"
+          onClick={goBack}
           disabled={stepIndex === 0}
-          className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
         >
           Back
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={!canContinue}
-          className="min-h-11 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
-        >
+        <Button onClick={goNext} disabled={!canContinue}>
           {isLast ? 'Finish lesson' : 'Continue'}
-        </button>
+        </Button>
       </div>
 
       <LessonCompleteModal

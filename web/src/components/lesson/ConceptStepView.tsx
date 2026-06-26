@@ -11,7 +11,7 @@ type ConceptStepViewProps = {
 export function ConceptStepView({ title, content, visual }: ConceptStepViewProps) {
   return (
     <div className="space-y-4">
-      {title && <h2 className="text-xl font-bold text-slate-900">{title}</h2>}
+      {title && <h2 className="text-xl font-bold text-ink">{title}</h2>}
       <MathContent>{content}</MathContent>
       {visual === 'chip-denominations' && <ChipDenominations />}
     </div>

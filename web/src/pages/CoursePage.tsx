@@ -50,11 +50,11 @@ export function CoursePage() {
             <span className="tnum">{completedCount}</span> of{' '}
             <span className="tnum">{total}</span> lessons complete
           </p>
-          <span className="tnum text-sm font-bold text-emerald-600">{percent}%</span>
+          <span className="tnum text-sm font-bold text-success-600">{percent}%</span>
         </div>
         <div className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-night-900/[0.06] ring-1 ring-inset ring-night-900/10">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-[width] duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-success-400 to-success-500 transition-[width] duration-700"
             style={{ width: `${Math.max(percent, completedCount > 0 ? 6 : 0)}%` }}
           />
         </div>

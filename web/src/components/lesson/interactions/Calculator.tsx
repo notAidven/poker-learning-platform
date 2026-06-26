@@ -56,8 +56,8 @@ type Variant = 'digit' | 'op' | 'equals' | 'clear' | 'util'
 const VARIANT_CLASS: Record<Variant, string> = {
   digit: 'border-slate-200 bg-white text-slate-800 hover:border-brand-300 hover:bg-slate-50',
   op: 'border-brand-200 bg-brand-50 text-brand-700 hover:border-brand-300 hover:bg-brand-100',
-  equals: 'border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600',
-  clear: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
+  equals: 'border-success-500 bg-success-500 text-white hover:bg-success-600',
+  clear: 'border-danger-200 bg-danger-50 text-danger-700 hover:border-danger-300 hover:bg-danger-100',
   util: 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100',
 }
 
@@ -247,7 +247,7 @@ export function Calculator() {
             Scratchpad only. It will not fill in or check your answer.
           </p>
           <div className="calc-display mb-3 rounded-xl px-4 py-3 text-right text-white shadow-inner">
-            <div className="h-4 text-xs font-medium text-emerald-100/70 tabular-nums" aria-hidden="true">
+            <div className="h-4 text-xs font-medium text-night-100/70 tabular-nums" aria-hidden="true">
               {runningExpr}
             </div>
             <output

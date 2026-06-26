@@ -9,6 +9,7 @@ import type { LessonXpBreakdown } from '../gamification'
 import {
   XP_BASE_LESSON,
   computeStreakAfterCompletion,
+  didStreakIncrease,
   getCalendarDayCAT,
   levelFromTotalXp,
 } from '../gamification'
@@ -153,6 +154,7 @@ export class InMemoryProgressBackend implements ProgressBackend {
     const xpToAdd = willAward ? xpAmount : 0
     const newTotalXp = user.totalXp + xpToAdd
     const newLevel = levelFromTotalXp(newTotalXp)
+    const streakIncreased = didStreakIncrease(user.streak, user.lastActivityDate, today)
     const streakUpdate = computeStreakAfterCompletion(user.streak, user.lastActivityDate, today)
 
     user.totalXp = newTotalXp
@@ -168,6 +170,7 @@ export class InMemoryProgressBackend implements ProgressBackend {
       level: newLevel,
       streak: streakUpdate.streak,
       leveledUp: newLevel > previousLevel,
+      streakIncreased,
     }
   }
 

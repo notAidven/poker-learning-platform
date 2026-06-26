@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { lessonNumber, type LessonMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
@@ -6,6 +6,8 @@ import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
 import { useProgress, skillCheckScorePercent, type LessonStats } from '../lib/progress'
 import { areAllLessonsComplete, isTableCleared } from '../lib/casinoProgress'
+import { Modal } from './ui/Modal'
+import { buttonVariants } from './ui/Button'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 
@@ -23,115 +25,62 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
   const inProgress = isLessonInProgress(lesson.id, 100)
   const hasContent = hasLessonContent(lesson.id)
   const closeRef = useRef<HTMLButtonElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    // Restore focus to whatever opened the modal once it closes (a11y parity with
-    // the lesson modals: WhyExplanationModal / ExitLessonModal / LessonCompleteModal).
-    const previouslyFocused = document.activeElement as HTMLElement | null
-    closeRef.current?.focus()
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-        return
-      }
-
-      if (e.key !== 'Tab' || !dialogRef.current) return
-
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      )
-      if (focusable.length === 0) return
-
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      previouslyFocused?.focus()
-    }
-  }, [open, onClose])
-
-  if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
-      role="presentation"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy="lesson-modal-title"
+      initialFocusRef={closeRef}
     >
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" aria-hidden />
-
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="lesson-modal-title"
-        className="relative w-full max-w-sm animate-[fadeIn_0.2s_ease-out] rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 rounded-lg p-1 text-night-400 hover:bg-night-100 hover:text-night-600"
+        aria-label="Close"
       >
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          aria-label="Close"
-        >
-          <CloseIcon />
-        </button>
+        <CloseIcon />
+      </button>
 
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-          {isTable ? 'Casino table' : `Lesson ${lessonNumber(lesson.id)}`}
-        </p>
-        <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-slate-900">
-          {lesson.title}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">{lesson.unit}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+        {isTable ? 'Casino table' : `Lesson ${lessonNumber(lesson.id)}`}
+      </p>
+      <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-ink">
+        {lesson.title}
+      </h2>
+      <p className="mt-1 text-sm text-night-600">{lesson.unit}</p>
 
-        <div className="mt-5">
-          {isTable ? (
-            <TableBody lesson={lesson} status={status} onClose={onClose} />
-          ) : (
-            <>
-              {status === 'locked' && <LockedBody />}
-              {status !== 'locked' && stats.completed && (
-                <CompletedBody stats={stats} lessonId={lesson.id} onClose={onClose} />
-              )}
-              {status !== 'locked' && !stats.completed && stats.lessonFinished && hasSkillCheck(lesson.id) && (
-                <SkillCheckPendingBody lessonId={lesson.id} onClose={onClose} />
-              )}
-              {status !== 'locked' && !stats.completed && !(stats.lessonFinished && hasSkillCheck(lesson.id)) && (
-                <StartBody
-                  lessonId={lesson.id}
-                  hasContent={hasContent}
-                  inProgress={inProgress}
-                  onClose={onClose}
-                />
-              )}
-            </>
-          )}
-        </div>
+      <div className="mt-5">
+        {isTable ? (
+          <TableBody lesson={lesson} status={status} onClose={onClose} />
+        ) : (
+          <>
+            {status === 'locked' && <LockedBody />}
+            {status !== 'locked' && stats.completed && (
+              <CompletedBody stats={stats} lessonId={lesson.id} onClose={onClose} />
+            )}
+            {status !== 'locked' && !stats.completed && stats.lessonFinished && hasSkillCheck(lesson.id) && (
+              <SkillCheckPendingBody lessonId={lesson.id} onClose={onClose} />
+            )}
+            {status !== 'locked' && !stats.completed && !(stats.lessonFinished && hasSkillCheck(lesson.id)) && (
+              <StartBody
+                lessonId={lesson.id}
+                hasContent={hasContent}
+                inProgress={inProgress}
+                onClose={onClose}
+              />
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
 function LockedBody() {
   return (
-    <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+    <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
       Complete the previous lesson and its skill check to unlock this one.
     </p>
   )
@@ -158,26 +107,26 @@ function TableBody({
           ? 'Finish all lessons to open the Casino Floor.'
           : 'Clear the previous coached table to unlock this one.'
     return (
-      <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{lockedMessage}</p>
+      <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">{lockedMessage}</p>
     )
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-night-700">
         {table?.feature === 'coached'
           ? 'Play full hands against rule-based opponents while an AI coach talks you through every decision.'
           : 'Take a seat against AI opponents. The always-on strategy hint has your back on every street.'}
       </p>
       {cleared && (
-        <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+        <p className="rounded-2xl bg-success-50 px-4 py-3 text-sm font-semibold text-success-700">
           Table cleared — pull up a chair any time.
         </p>
       )}
       <Link
         to={`/table/${lesson.id}`}
         onClick={onClose}
-        className="block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700"
+        className={buttonVariants({ variant: 'primary', className: 'w-full' })}
       >
         {cleared ? 'Play again' : 'Play the table'}
       </Link>
@@ -216,7 +165,7 @@ function CompletedBody({
         <Link
           to={`/lesson/${lessonId}`}
           onClick={onClose}
-          className="rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700"
+          className={buttonVariants({ variant: 'primary', className: 'w-full' })}
         >
           Review lesson
         </Link>
@@ -224,7 +173,7 @@ function CompletedBody({
           <Link
             to={`/lesson/${lessonId}/skill-check`}
             onClick={onClose}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className={buttonVariants({ variant: 'secondary', className: 'w-full' })}
           >
             Retake skill check
           </Link>
@@ -237,13 +186,13 @@ function CompletedBody({
 function SkillCheckPendingBody({ lessonId, onClose }: { lessonId: string; onClose: () => void }) {
   return (
     <div className="space-y-4">
-      <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <p className="rounded-2xl bg-gold-100 px-4 py-3 text-sm text-gold-900">
         Lesson complete! Take the 3-question skill check to finish and unlock the next lesson.
       </p>
       <Link
         to={`/lesson/${lessonId}/skill-check`}
         onClick={onClose}
-        className="block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700"
+        className={buttonVariants({ variant: 'primary', className: 'w-full' })}
       >
         Continue skill check
       </Link>
@@ -264,7 +213,7 @@ function StartBody({
 }) {
   if (!hasContent) {
     return (
-      <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
         Interactive content for this lesson is coming soon.
       </p>
     )
@@ -272,7 +221,7 @@ function StartBody({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-night-700">
         {inProgress
           ? 'Pick up where you left off, then finish with a short skill check.'
           : 'Work through interactive problems, then prove it with 3 no-hint questions.'}
@@ -280,7 +229,7 @@ function StartBody({
       <Link
         to={`/lesson/${lessonId}`}
         onClick={onClose}
-        className="block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700"
+        className={buttonVariants({ variant: 'primary', className: 'w-full' })}
       >
         {inProgress ? 'Continue lesson' : 'Start lesson'}
       </Link>
@@ -290,9 +239,9 @@ function StartBody({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 px-3 py-3 text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
+    <div className="rounded-2xl bg-night-50 px-3 py-3 text-center">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-night-600">{label}</p>
+      <p className="mt-1 text-lg font-bold text-ink">{value}</p>
     </div>
   )
 }
