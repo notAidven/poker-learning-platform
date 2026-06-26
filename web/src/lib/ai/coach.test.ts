@@ -4,7 +4,7 @@
  * a recommendation, and it must respect "playing the board".
  */
 import { describe, expect, it } from 'vitest'
-import { composeDeepRead, type DeepCoachContext } from './coach'
+import { composeDeepRead, roughWinPct, type DeepCoachContext } from './coach'
 import { analyzeSpot } from '../poker/hints'
 
 function deepContext(partial: Partial<DeepCoachContext>): DeepCoachContext {
@@ -60,6 +60,17 @@ describe('composeDeepRead — rule-based table + math breakdown', () => {
     expect(text.toLowerCase()).toContain('a call is justified')
   })
 
+  it('reads a combined flush + straight draw as a combo with the union out count', () => {
+    // 9H 8H on 7H 6S 2H is a flush draw + open-ender — 15 union outs, not a 15-out
+    // "straight draw". The deep read must surface the combo label and the right count.
+    const text = read(
+      deepContext({ hole: ['9H', '8H'], board: ['7H', '6S', '2H'], pot: 100, toCall: 40 }),
+    )
+    expect(text.toLowerCase()).toContain('flush draw + straight draw')
+    expect(text).toMatch(/about 15/i)
+    expect(text.toLowerCase()).toContain('a call is justified')
+  })
+
   it('does not sell a shared board pair and recommends folding to a big bet', () => {
     const text = read(
       deepContext({
@@ -87,5 +98,39 @@ describe('composeDeepRead — rule-based table + math breakdown', () => {
     )
     expect(text.toLowerCase()).toContain('no bet to call')
     expect(text.toLowerCase()).toContain('bet for value')
+  })
+})
+
+describe('roughWinPct — pairs are tiered, not a flat 50%', () => {
+  function analysisFor(ctx: DeepCoachContext) {
+    return analyzeSpot({
+      hole: ctx.hole,
+      board: ctx.board,
+      street: ctx.street,
+      pot: ctx.pot,
+      toCall: ctx.toCall,
+    })
+  }
+
+  it('rates a weak bottom pair well below a coin flip', () => {
+    const ctx = deepContext({ hole: ['4S', '7D'], board: ['KH', '9D', '4C'], pot: 100, toCall: 50 })
+    const a = analysisFor(ctx)
+    expect(a.madeCategory).toBe('pair')
+    expect(roughWinPct(ctx, a)).toBeLessThan(45)
+  })
+
+  it('still rates top pair with a strong kicker as a favorite', () => {
+    const ctx = deepContext({ hole: ['AS', 'KD'], board: ['KH', '9D', '4C'], pot: 100, toCall: 50 })
+    const a = analysisFor(ctx)
+    expect(a.madeCategory).toBe('pair')
+    expect(roughWinPct(ctx, a)).toBeGreaterThanOrEqual(55)
+  })
+
+  it('no longer endorses a loose bottom-pair call the old flat 50% would have', () => {
+    // 50 into 100 lays a 33% price. A flat-50% pair "calls"; a tiered bottom pair (~32%)
+    // correctly folds.
+    const ctx = deepContext({ hole: ['4S', '7D'], board: ['KH', '9D', '4C'], pot: 100, toCall: 50 })
+    const text = composeDeepRead(ctx, analysisFor(ctx))
+    expect(text.toLowerCase()).toContain('folding is likely best')
   })
 })

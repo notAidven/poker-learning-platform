@@ -90,7 +90,12 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
 
   const facingBet = toCall > 0
   const potOddsPct = facingBet ? Math.round((toCall / (pot + toCall)) * 100) : null
-  const bigBet = facingBet && pot > 0 && toCall >= pot * 0.66
+  // `pot` is bet-INCLUSIVE (it already contains the bet we are facing), so size the
+  // bet against the PRE-bet pot. A ~2/3-pot (or larger) bet trips the "big bet"
+  // / sunk-cost reminder; comparing against the raw pot would only fire near a 2x
+  // overbet.
+  const prePot = pot - toCall
+  const bigBet = facingBet && toCall >= prePot * 0.66
 
   const analysis: SpotAnalysis = {
     street,
@@ -137,11 +142,29 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
       const madeRank = HAND_CATEGORY_RANK[made.category]
 
       // Clean outs toward the two classic draws — only when not already there.
-      const flushOuts = madeRank < FLUSH_RANK ? safeOuts(hole, board, 'flush') : 0
-      const straightOuts = madeRank < STRAIGHT_RANK ? safeOuts(hole, board, 'straight') : 0
+      // NOTE: countOuts(..., 'straight') counts every unseen card that lifts the hand
+      // to >= straight, which INCLUDES flush-completing cards (a flush outranks a
+      // straight). Left raw that inflates the straight outs and hides combo draws, so
+      // we treat the flush outs as the flush-completing set and subtract it to get the
+      // PURE straight outs (cards that make a straight but not a flush).
+      const flushOutCards = madeRank < FLUSH_RANK ? safeOutCards(hole, board, 'flush') : []
+      const straightOutCards = madeRank < STRAIGHT_RANK ? safeOutCards(hole, board, 'straight') : []
+      const flushSet = new Set(flushOutCards)
+      const pureStraightCards = straightOutCards.filter((c) => !flushSet.has(c))
 
-      if (equityMultiplier > 0 && (flushOuts > 0 || straightOuts > 0)) {
-        if (flushOuts >= straightOuts && flushOuts > 0) {
+      const flushOuts = flushOutCards.length
+      const straightOuts = pureStraightCards.length
+      const hasFlushDraw = flushOuts > 0
+      const hasStraightDraw = straightOuts > 0
+
+      if (equityMultiplier > 0 && (hasFlushDraw || hasStraightDraw)) {
+        if (hasFlushDraw && hasStraightDraw) {
+          // Combined draw: count the UNION of both out sets. They are disjoint by
+          // construction (pure straight outs already exclude the flush cards), so the
+          // union is simply their sum — neither draw is double-counted or inflated.
+          analysis.drawName = 'flush draw + straight draw'
+          analysis.outs = flushOuts + straightOuts
+        } else if (hasFlushDraw) {
           analysis.drawName = 'flush draw'
           analysis.outs = flushOuts
         } else {
@@ -169,11 +192,12 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
   return analysis
 }
 
-function safeOuts(hole: [CardId, CardId], board: CardId[], target: HandCategory): number {
+/** The actual out cards toward `target`, or [] if the evaluator cannot run. */
+function safeOutCards(hole: [CardId, CardId], board: CardId[], target: HandCategory): CardId[] {
   try {
-    return countOuts(hole, board, target).count
+    return countOuts(hole, board, target).outs
   } catch {
-    return 0
+    return []
   }
 }
 

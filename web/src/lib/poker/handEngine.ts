@@ -35,7 +35,12 @@ export type SeatState = {
   holeCards: [CardId, CardId] | null
   folded: boolean
   allIn: boolean
-  /** Has acted since the last bet/raise this street (cleared when action re-opens). */
+  /**
+   * Has acted since the last *full* bet/raise this street. It is cleared only when
+   * the action is legitimately re-opened (an opening bet or a full-sized raise) —
+   * NOT by a short all-in raise. A seat may therefore `raise` only while
+   * `hasActed` is false; facing a short all-in it can only call or fold.
+   */
   hasActed: boolean
 }
 
@@ -257,6 +262,12 @@ function findNextToAct(state: HandState, fromIndex: number): number | null {
   return null
 }
 
+/**
+ * Re-open the betting after a legitimate aggressive action (an opening bet or a
+ * full-sized raise): every other live seat owes a fresh action and regains the
+ * right to raise. Must NOT be called for a short all-in raise, which does not
+ * re-open the action.
+ */
 function reopenAction(state: HandState, aggressorIndex: number): void {
   state.seats.forEach((seat, idx) => {
     if (idx !== aggressorIndex && !seat.folded && !seat.allIn) seat.hasActed = false
@@ -281,6 +292,11 @@ export function legalActions(state: HandState): LegalAction[] {
 
   const toCall = toCallFor(state, i)
   const maxTotal = seat.committed + seat.stack // all-in "to" amount
+  // A raise is only legal while the betting is still open to this seat — i.e. it has
+  // not yet acted since the last full bet/raise. A short all-in (an all-in raise
+  // smaller than a full raise) does NOT re-open the action, so a seat that already
+  // acted may only call or fold against it.
+  const canReopen = !seat.hasActed
   const out: LegalAction[] = []
 
   if (toCall === 0) {
@@ -289,7 +305,7 @@ export function legalActions(state: HandState): LegalAction[] {
     if (state.currentBet === 0) {
       // Opening bet (nobody has bet this street).
       out.push({ action: 'bet', min: Math.min(state.bb, seat.stack), max: seat.stack })
-    } else if (maxTotal > state.currentBet) {
+    } else if (maxTotal > state.currentBet && canReopen) {
       // Big-blind option: may raise even though nothing is owed.
       out.push({
         action: 'raise',
@@ -298,10 +314,12 @@ export function legalActions(state: HandState): LegalAction[] {
       })
     }
   } else {
-    // Facing a bet: fold + call always available; raise when chips allow.
+    // Facing a bet: fold + call always available; raise only when chips allow AND
+    // the action is still open to this seat (not facing a short all-in it must just
+    // call or fold).
     out.push({ action: 'fold' })
     out.push({ action: 'call' })
-    if (maxTotal > state.currentBet) {
+    if (maxTotal > state.currentBet && canReopen) {
       out.push({
         action: 'raise',
         min: Math.min(state.currentBet + state.minRaise, maxTotal),
@@ -365,12 +383,16 @@ export function applyAction(state: HandState, applied: AppliedAction): HandState
       const pay = total - seat.committed
       commitChips(next, seat, pay)
       const increment = seat.committed - prevBet
-      // A full-sized raise bumps the minimum; a short all-in raise does not re-set it.
-      if (increment >= next.minRaise) next.minRaise = increment
+      // A full-sized raise (increment ≥ the current minimum raise) bumps the minimum
+      // AND re-opens the betting for everyone who already acted. A short all-in raise
+      // (a smaller increment) does NEITHER: it does not re-set the minimum, and it
+      // does not re-open the action — players who already acted may only call or fold.
+      const isFullRaise = increment >= next.minRaise
+      if (isFullRaise) next.minRaise = increment
       next.currentBet = Math.max(next.currentBet, seat.committed)
       next.lastAggressorIndex = i
       seat.hasActed = true
-      reopenAction(next, i)
+      if (isFullRaise) reopenAction(next, i)
       next.log.push(`${seat.name} raises to ${seat.committed}${seat.allIn ? ' (all-in)' : ''}`)
       break
     }

@@ -11,6 +11,7 @@
 import type { CardId } from '../../types/lesson'
 import { HAND_CATEGORY_RANK, type BettingAction, type PokerStreet } from '../../types/poker'
 import { lookupGlossaryTerm } from '../../data/glossary'
+import { rankValue } from '../poker/handEvaluator'
 import { analyzeSpot, type HintContext, type SpotAnalysis } from '../poker/hints'
 import { generateText, isAIConfigured } from './aiClient'
 import { describeLegalActions, tidyModelText } from './aiText'
@@ -166,13 +167,44 @@ export async function getDeepCoachTip(ctx: DeepCoachContext): Promise<CoachTip> 
   return tidied.length > 0 ? { text: tidied, source: 'ai' } : fallback
 }
 
+/**
+ * A one-pair holding is worth wildly different equity depending on WHICH pair it is:
+ * an overpair or top-pair-top-kicker is a real favorite, while bottom pair with a
+ * weak kicker is a marginal bluff-catcher. A flat 50% over-values the weak ones and
+ * endorses loose calls, so tier the pair by overpair / top / middle / bottom and the
+ * kicker. Only meaningful when the pair is actually made with a hole card.
+ */
+function onePairWinPct(hole: [CardId, CardId], board: CardId[]): number {
+  if (board.length === 0) return 50
+  const holeVals = hole.map(rankValue)
+  const boardVals = board.map(rankValue).sort((a, b) => b - a)
+  const topBoard = boardVals[0]
+  const lowestBoard = boardVals[boardVals.length - 1]
+  const isPocketPair = holeVals[0] === holeVals[1]
+
+  // Overpair: a pocket pair larger than the entire board.
+  if (isPocketPair && holeVals[0] > topBoard) return 60
+
+  // The highest board rank a hole card pairs (null ⇒ a pocket pair under the board).
+  const pairedRank = boardVals.find((v) => holeVals.includes(v)) ?? null
+  if (pairedRank == null) return 40 // under-pair to the board
+
+  const kicker = Math.max(0, ...holeVals.filter((v) => v !== pairedRank))
+  if (pairedRank === topBoard) {
+    // Top pair — a big kicker (A/K) plays much better than a weak one.
+    return kicker >= 13 ? 58 : kicker >= 11 ? 54 : 50
+  }
+  if (pairedRank === lowestBoard) return 32 // bottom pair: a thin bluff-catcher
+  return 42 // middle pair
+}
+
 /** Rough chance (0..100) the hero holds the best hand now, for the EV teaching math. */
 export function roughWinPct(ctx: DeepCoachContext, analysis: SpotAnalysis): number {
   const madeRank = analysis.madeCategory ? HAND_CATEGORY_RANK[analysis.madeCategory] : 0
   const ownsMade = analysis.madeFromHole !== false
   let pct = 22
   if (ownsMade && madeRank >= HAND_CATEGORY_RANK['two-pair']) pct = 75
-  else if (ownsMade && analysis.madeCategory === 'pair') pct = 50
+  else if (ownsMade && analysis.madeCategory === 'pair') pct = onePairWinPct(ctx.hole, ctx.board)
   if (analysis.equityPct != null) pct = Math.max(pct, analysis.equityPct)
   const live = ctx.seats.filter((s) => !s.isHero && s.inHand).length
   if (live > 1) pct -= 8 * (live - 1) // multiway shades a marginal holding down

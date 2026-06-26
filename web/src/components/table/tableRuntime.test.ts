@@ -254,6 +254,50 @@ describe('casino table runtime — hand lifecycle helpers', () => {
     expect(next!.seed).not.toBe(afterHand.seed)
   })
 
+  it('createNextHand advances the button off a busted button to the next survivor', () => {
+    const base = createInitialHand(COACHED_CFG, 5, 'You') // hero(0), opp-0(1), opp-1(2)
+    // Button was on opp-1, who then busts; hero + opp-0 survive.
+    const afterHand: HandState = {
+      ...base,
+      buttonIndex: 2,
+      seats: base.seats.map((s) => (s.id === 'opp-1' ? { ...s, stack: 0 } : { ...s, stack: 300 })),
+    }
+    const next = createNextHand(afterHand, COACHED_CFG)
+    expect(next).not.toBeNull()
+    expect(next!.seats.map((s) => s.id)).toEqual(['hero', 'opp-0'])
+    // Advancing clockwise from the busted button (opp-1) lands on the hero — NOT the
+    // seat-0 fallback the old findIndex(-1) bug produced (which gave opp-0).
+    expect(next!.buttonIndex).toBe(0)
+  })
+
+  it('createNextHand skips multiple busted seats when rotating the button', () => {
+    const four = createHand({
+      seats: [
+        { id: 'hero', name: 'You', isHero: true, stack: 300 },
+        { id: 'opp-0', name: 'A', isHero: false, stack: 300 },
+        { id: 'opp-1', name: 'B', isHero: false, stack: 300 },
+        { id: 'opp-2', name: 'C', isHero: false, stack: 300 },
+      ],
+      buttonIndex: 1, // button on opp-0
+      smallBlind: 5,
+      bigBlind: 10,
+      seed: 1,
+    })
+    // Button (opp-0) and the next seat (opp-1) both bust; hero + opp-2 survive.
+    const afterHand: HandState = {
+      ...four,
+      buttonIndex: 1,
+      seats: four.seats.map((s) =>
+        s.id === 'opp-0' || s.id === 'opp-1' ? { ...s, stack: 0 } : { ...s, stack: 300 },
+      ),
+    }
+    const next = createNextHand(afterHand, COACHED_CFG)
+    expect(next).not.toBeNull()
+    expect(next!.seats.map((s) => s.id)).toEqual(['hero', 'opp-2'])
+    // From opp-0 → opp-1 (busted) → opp-2 (the next survivor) becomes the button.
+    expect(next!.buttonIndex).toBe(1)
+  })
+
   it('createNextHand returns null when fewer than two players remain', () => {
     const base = createInitialHand(COACHED_CFG, 9, 'You')
     const onlyHero = {
