@@ -27,10 +27,19 @@ service cloud.firestore {
       ]);
     }
 
-    // Identity fields can never change to a different value once set (M1).
-    function identityFieldsUnchanged(prev, next) {
-      return (!('email' in prev) || prev.email == null || next.email == prev.email)
-        && (!('username' in prev) || prev.username == null || next.username == prev.username);
+    // Identity fields are constrained on update (M1), but the owner may now
+    // change them through Account settings:
+    //  - email may only be set to the caller's VERIFIED auth-token email (Firebase
+    //    lowercases it) or left unchanged. So the app can reconcile users/{uid}.email
+    //    after a verifyBeforeUpdateEmail change, but a profile can NEVER point at an
+    //    address the user has not proven they own.
+    //  - username may change to any string (or stay null); uniqueness + ownership are
+    //    enforced by the usernames/{name} index docs (create-if-absent + delete-if-owner).
+    function identityFieldsValid(prev, next) {
+      return (!('email' in next)
+          || next.email == request.auth.token.email
+          || (('email' in prev) && next.email == prev.email))
+        && (!('username' in next) || next.username == null || next.username is string);
     }
 
     match /users/{userId} {
@@ -41,7 +50,7 @@ service cloud.firestore {
       allow update: if isOwner(userId)
         && validUserFields(request.resource.data)
         && validGamificationFields(request.resource.data)
-        && identityFieldsUnchanged(resource.data, request.resource.data);
+        && identityFieldsValid(resource.data, request.resource.data);
 
       match /lessonProgress/{lessonId} {
         allow read, write: if isOwner(userId);
@@ -56,12 +65,27 @@ service cloud.firestore {
     match /usernames/{username} {
       allow get: if true;
       allow list: if false;
+      // Claim a free username: it must not already exist and must point to the
+      // caller's own uid + verified token email (C1/M2). Used by signup AND by an
+      // Account-settings username change (which deletes the old doc in the same op).
       allow create: if request.auth != null
         && !exists(/databases/$(database)/documents/usernames/$(username))
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.keys().hasOnly(['uid', 'email']);
-      allow update, delete: if false;
+      // Reconcile the stored email after a verified email change. Owner-only, the
+      // uid can never change, and the email can only be set to the caller's own
+      // verified token email — so the username -> email sign-in lookup stays valid
+      // without ever letting someone point a name at an address they don't own.
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(['uid', 'email']);
+      // Release a username you own (so it can be re-claimed during a rename). A
+      // user may ONLY delete a usernames doc that points to their own uid.
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
     }
   }
 }

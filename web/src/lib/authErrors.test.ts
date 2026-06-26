@@ -36,6 +36,32 @@ describe('getAuthErrorMessage: account-linking + reauth cases', () => {
   })
 })
 
+describe('getAuthErrorMessage: reauth context', () => {
+  it('says "Incorrect password" for a wrong current password (no username in play)', () => {
+    expect(getAuthErrorMessage(fbError('auth/wrong-password'), 'reauth')).toBe(
+      'Incorrect password. Please try again.',
+    )
+    expect(getAuthErrorMessage(fbError('auth/invalid-credential'), 'reauth')).toBe(
+      'Incorrect password. Please try again.',
+    )
+  })
+
+  it('keeps the generic login copy when no reauth context is given', () => {
+    expect(getAuthErrorMessage(fbError('auth/wrong-password'))).toBe(
+      'Incorrect username or password.',
+    )
+  })
+
+  it('still maps non-password codes normally inside the reauth context', () => {
+    expect(getAuthErrorMessage(fbError('auth/popup-closed-by-user'), 'reauth')).toBe(
+      'Sign-in was cancelled.',
+    )
+    expect(getAuthErrorMessage(fbError('auth/email-already-in-use'), 'reauth')).toBe(
+      'An account with this email already exists.',
+    )
+  })
+})
+
 describe('getAuthErrorMessage: never leaks raw Firebase strings', () => {
   it('falls back to a generic message for unmapped coded errors', () => {
     const message = getAuthErrorMessage(fbError('auth/some-future-code'))

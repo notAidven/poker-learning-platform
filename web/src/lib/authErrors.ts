@@ -1,8 +1,27 @@
-export function getAuthErrorMessage(error: unknown): string {
+/**
+ * Where the error happened, so a shared code can read more naturally per flow.
+ * `'reauth'` is used when confirming the CURRENT password (no username in play),
+ * so a wrong entry should say "Incorrect password." not "username or password".
+ */
+export type AuthErrorContext = 'reauth'
+
+export function getAuthErrorMessage(
+  error: unknown,
+  context?: AuthErrorContext,
+): string {
   const code =
     typeof error === 'object' && error !== null && 'code' in error
       ? String((error as { code: string }).code)
       : ''
+
+  // Re-authentication asks only for the current password, so the generic
+  // login-style "username or password" copy would be confusing here.
+  if (
+    context === 'reauth' &&
+    (code === 'auth/wrong-password' || code === 'auth/invalid-credential')
+  ) {
+    return 'Incorrect password. Please try again.'
+  }
 
   switch (code) {
     case 'auth/email-already-in-use':
