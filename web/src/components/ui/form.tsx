@@ -1,19 +1,32 @@
 import { type InputHTMLAttributes, type ReactNode, useId } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { cx } from './cx'
+import { buttonVariants } from './Button'
+import { DUR, EASE } from '../../lib/motion'
+import { usePrefersReducedMotion } from '../lesson/interactions/usePrefersReducedMotion'
 import { WarningIcon } from '../icons'
 
+/** Default (valid) input styling — a plain literal so it stays a constant export. */
 export const fieldInputClass =
-  'w-full rounded-xl border border-night-900/12 bg-night-900/[0.03] px-4 py-3 text-sm text-ink shadow-[inset_0_1px_2px_rgba(7,21,15,0.06)] outline-none transition placeholder:text-night-700/40 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/15'
+  'w-full rounded-control border border-night-900/12 bg-night-900/[0.03] px-4 py-3 text-sm text-ink shadow-[inset_0_1px_2px_rgba(7,21,15,0.06)] outline-none transition placeholder:text-night-700/40 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/15'
+
+/** Invalid state: clay-red border/ring, swapped in atomically so utilities don't clash. */
+const fieldInvalidClass =
+  'w-full rounded-control border border-danger-400 bg-danger-50/50 px-4 py-3 text-sm text-ink shadow-[inset_0_1px_2px_rgba(7,21,15,0.06)] outline-none transition placeholder:text-night-700/40 focus:border-danger-500 focus:bg-white focus:ring-4 focus:ring-danger-500/20'
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string
   hint?: string
+  /** Inline validation message; swaps in for the hint with a height/opacity transition. */
+  error?: string
 }
 
-export function Field({ label, hint, id, className, ...props }: FieldProps) {
+export function Field({ label, hint, error, id, className, ...props }: FieldProps) {
+  const reduced = usePrefersReducedMotion()
   const generatedId = useId()
   const fieldId = id ?? generatedId
-  const hintId = hint ? `${fieldId}-hint` : undefined
+  const messageId = error || hint ? `${fieldId}-msg` : undefined
+  const message = error ?? hint
   return (
     <div>
       <label htmlFor={fieldId} className="block text-sm font-medium text-night-800">
@@ -21,28 +34,47 @@ export function Field({ label, hint, id, className, ...props }: FieldProps) {
       </label>
       <input
         id={fieldId}
-        aria-describedby={hintId}
-        className={cx('mt-1.5', fieldInputClass, className)}
+        aria-describedby={messageId}
+        aria-invalid={error ? true : undefined}
+        className={cx('mt-1.5', error ? fieldInvalidClass : fieldInputClass, className)}
         {...props}
       />
-      {hint && (
-        <span id={hintId} className="mt-1.5 block text-xs text-night-700/60">
-          {hint}
-        </span>
-      )}
+      <AnimatePresence initial={false} mode="wait">
+        {message && (
+          <motion.span
+            key={error ? 'error' : 'hint'}
+            id={messageId}
+            role={error ? 'alert' : undefined}
+            className={cx(
+              'block overflow-hidden text-xs',
+              error ? 'mt-1.5 font-medium text-danger-700' : 'mt-1.5 text-night-700/60',
+            )}
+            initial={reduced ? false : { opacity: 0, height: 0, y: -2 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0, y: -2 }}
+            transition={{ duration: reduced ? 0 : DUR.quick, ease: EASE.standard }}
+          >
+            {message}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
 export function FormError({ children }: { children: ReactNode }) {
+  const reduced = usePrefersReducedMotion()
   return (
-    <p
+    <motion.p
       role="alert"
-      className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700"
+      className="flex items-start gap-2 rounded-control border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700"
+      initial={reduced ? false : { opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? 0 : DUR.base, ease: EASE.deal }}
     >
-      <WarningIcon className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+      <WarningIcon className="mt-0.5 h-4 w-4 shrink-0 text-danger-500" />
       <span>{children}</span>
-    </p>
+    </motion.p>
   )
 }
 
@@ -70,7 +102,11 @@ export function GoogleButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-night-900/12 bg-white px-4 py-3 text-sm font-semibold text-night-800 shadow-sm transition hover:-translate-y-0.5 hover:border-night-900/20 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      className={buttonVariants({
+        variant: 'secondary',
+        size: 'lg',
+        className: 'w-full gap-2.5',
+      })}
     >
       <GoogleIcon />
       {label}

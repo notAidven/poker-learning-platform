@@ -54,7 +54,7 @@ export function SetPasswordCard() {
     return (
       <NightPanel className="p-6 sm:p-8">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-500/15 text-gold-300 ring-1 ring-inset ring-gold-500/30">
+          <span className="anim-pop flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-500/15 text-gold-300 ring-1 ring-inset ring-gold-500/30">
             <CheckIcon className="h-5 w-5" />
           </span>
           <div>

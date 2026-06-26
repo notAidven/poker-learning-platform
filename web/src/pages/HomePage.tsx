@@ -48,9 +48,10 @@ export function HomePage() {
 
   return (
     <div className="space-y-10">
+      <style>{upNextKeyframes}</style>
       <NightPanel className="p-6 sm:p-9 lg:p-10">
         <div className="grid items-center gap-8 lg:grid-cols-[1.35fr_1fr]">
-          <div className="anim-fade-up">
+          <Stagger delay={0.05} step={0.09} y={16}>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-gold-300 ring-1 ring-inset ring-gold-400/25">
               <span aria-hidden>&spades;</span>
               {course.eyebrow}
@@ -71,7 +72,7 @@ export function HomePage() {
                 View the path
               </Link>
             </div>
-          </div>
+          </Stagger>
 
           <div
             className="anim-deal rounded-2xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-5"
@@ -141,7 +142,7 @@ export function HomePage() {
           <p className="mt-1 text-sm text-night-700/70">{course.courseSummary}</p>
         </div>
 
-        <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" delay={0.05} step={0.05} y={14}>
           {lessonNodes.map((lesson, index) => (
             <LessonCard
               key={lesson.id}
@@ -171,7 +172,7 @@ function LessonCard({ lesson, unlocked, done, isNext, hasContent }: LessonCardPr
     <span
       className={cx(
         'grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-lg font-bold',
-        done && 'bg-emerald-500 text-white shadow-[0_2px_0_#047353]',
+        done && 'bg-success-500 text-white shadow-[0_2px_0_var(--color-success-700)]',
         !done && unlocked && 'bg-brand-600 text-white shadow-[0_2px_0_var(--color-brand-800)]',
         !done && !unlocked && 'bg-night-900/5 text-night-700/40 ring-1 ring-inset ring-night-900/10',
       )}
@@ -188,15 +189,15 @@ function LessonCard({ lesson, unlocked, done, isNext, hasContent }: LessonCardPr
   )
 
   const badge = done ? (
-    <Badge tone="emerald">Completed</Badge>
+    <Badge tone="success">Completed</Badge>
   ) : isNext ? (
     <Badge tone="gold">Up next</Badge>
   ) : unlocked ? (
     <Badge tone="brand">Open</Badge>
   ) : hasContent ? (
-    <Badge tone="slate">Locked</Badge>
+    <Badge tone="neutral">Locked</Badge>
   ) : (
-    <Badge tone="slate">Coming soon</Badge>
+    <Badge tone="neutral">Coming soon</Badge>
   )
 
   const inner = (
@@ -216,7 +217,7 @@ function LessonCard({ lesson, unlocked, done, isNext, hasContent }: LessonCardPr
     </>
   )
 
-  const baseCard = 'flex h-full flex-col rounded-2xl border p-5 shadow-card'
+  const baseCard = 'relative flex h-full flex-col rounded-2xl border p-5 shadow-card'
 
   if (unlocked) {
     return (
@@ -225,13 +226,51 @@ function LessonCard({ lesson, unlocked, done, isNext, hasContent }: LessonCardPr
         className={cx(
           baseCard,
           'group border-night-900/10 bg-white transition hover:-translate-y-1 hover:border-brand-300 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2',
+          isNext && 'border-gold-400/70',
         )}
       >
+        {isNext && <UpNextEmphasis />}
         {inner}
       </Link>
     )
   }
 
   return <article className={cx(baseCard, 'border-night-900/10 bg-white/55')}>{inner}</article>
-
 }
+
+/** Breathing ring + a slow brass shimmer sweep that pulls the eye to the next lesson.
+ *  CSS-only, so the global reduced-motion kill-switch freezes it to a static gold ring. */
+function UpNextEmphasis() {
+  return (
+    <>
+      <span
+        className="suited-upnext-ring pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-inset ring-gold-400/70"
+        aria-hidden
+      />
+      <span
+        className="suited-upnext-shimmer pointer-events-none absolute inset-0 overflow-hidden rounded-2xl"
+        aria-hidden
+      />
+    </>
+  )
+}
+
+const upNextKeyframes = `
+@keyframes suitedUpNextRing {
+  0%, 100% { opacity: 0.35; box-shadow: 0 0 0 0 rgba(212, 173, 87, 0); }
+  50% { opacity: 1; box-shadow: 0 0 26px -4px rgba(212, 173, 87, 0.5); }
+}
+@keyframes suitedUpNextSweep {
+  0% { transform: translateX(-130%); }
+  60%, 100% { transform: translateX(130%); }
+}
+.suited-upnext-ring { animation: suitedUpNextRing 3.2s ease-in-out infinite; }
+.suited-upnext-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 38%, rgba(212, 173, 87, 0.16) 50%, transparent 62%);
+  transform: translateX(-130%);
+  animation: suitedUpNextSweep 3.6s var(--ease-standard) infinite;
+}
+`

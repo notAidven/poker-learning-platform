@@ -67,8 +67,13 @@ export function Logo({
   tone = 'dark',
 }: LogoProps) {
   return (
-    <span className={cx('flex min-w-0 items-center gap-2.5', className)}>
-      <BrandMark className={cx('h-9 w-9', markClassName)} />
+    <span className={cx('group flex min-w-0 items-center gap-2.5', className)}>
+      <BrandMark
+        className={cx(
+          'h-9 w-9 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-[1.06]',
+          markClassName,
+        )}
+      />
       {withWordmark && (
         <span className="min-w-0 leading-tight">
           <span
