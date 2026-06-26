@@ -67,7 +67,7 @@ export function SkillCheckPage() {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-xl font-bold">{meta.title}</h1>
-        <p className="mt-2 text-sm text-slate-600">Skill check coming soon.</p>
+        <p className="mt-2 text-sm text-night-700">Skill check coming soon.</p>
         <Link to="/course" className="mt-4 inline-block text-brand-600">
           ← Back to course
         </Link>
@@ -77,7 +77,7 @@ export function SkillCheckPage() {
 
   if (skillCheckLoading || !skillCheck) {
     return (
-      <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-500" aria-live="polite">
+      <div className="mx-auto max-w-lg p-8 text-center text-sm text-night-600" aria-live="polite">
         Loading skill check…
       </div>
     )
@@ -87,7 +87,7 @@ export function SkillCheckPage() {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-xl font-bold">Finish the lesson first</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-night-700">
           Complete all steps in <span className="font-semibold">{meta.title}</span> before the skill
           check.
         </p>
@@ -114,8 +114,8 @@ export function SkillCheckPage() {
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
             Lesson {lessonNumber(meta.id)} · Skill check
           </p>
-          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{meta.title}</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-xl font-bold text-ink sm:text-2xl">{meta.title}</h1>
+          <p className="mt-1 text-sm text-night-700">
             3 interactive challenges — no hints. Pass with 2 of 3.
           </p>
         </div>

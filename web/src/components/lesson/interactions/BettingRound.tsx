@@ -227,8 +227,8 @@ function optionClass(submitted: boolean, isSelected: boolean, isCorrect: boolean
   const base =
     'relative flex min-h-11 flex-col items-center justify-center rounded-xl border-2 px-3 py-2.5 text-center transition disabled:cursor-not-allowed'
   if (submitted) {
-    if (isCorrect) return `${base} border-emerald-500 bg-emerald-50 text-emerald-800`
-    if (isSelected) return `${base} border-rose-400 bg-rose-50 text-rose-700`
+    if (isCorrect) return `${base} border-success-500 bg-success-50 text-success-800`
+    if (isSelected) return `${base} border-danger-400 bg-danger-50 text-danger-700`
     return `${base} border-slate-200 bg-white text-slate-500 opacity-70`
   }
   if (isSelected) return `${base} border-brand-500 bg-brand-50 text-brand-800 shadow-sm`
@@ -371,14 +371,14 @@ export function BettingRound({
       <CardKitStyles />
 
       {/* The table */}
-      <div className="br-felt rounded-3xl border border-emerald-900/40 p-4 text-white shadow-inner">
+      <div className="br-felt rounded-3xl border border-night-900/40 p-4 text-white shadow-inner">
         {/* Villain */}
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/80">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-night-100/80">
               Opponent
             </p>
-            <div className="mt-1 text-emerald-50">
+            <div className="mt-1 text-night-50">
               <ChipCount value={villainStackNow} tone="rose" />
             </div>
           </div>
@@ -397,14 +397,14 @@ export function BettingRound({
 
         {/* Pot: chips and amount sit side by side in a felt badge so the chip pile never covers the readout */}
         <div className="my-4 flex justify-center">
-          <div className="relative inline-flex items-center gap-3 rounded-full bg-emerald-950/30 px-4 py-1.5 shadow-inner">
+          <div className="relative inline-flex items-center gap-3 rounded-full bg-night-950/30 px-4 py-1.5 shadow-inner">
             <PotPile key={potTarget} pop={!reduceMotion && submitted} />
             <span
-              className="flex items-baseline gap-1.5 text-emerald-50"
+              className="flex items-baseline gap-1.5 text-night-50"
               role="status"
               aria-live="polite"
             >
-              <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/80">
+              <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-night-100/80">
                 Pot
               </span>
               <span className="text-2xl font-bold tabular-nums">{displayPot.toLocaleString()}</span>
@@ -416,14 +416,14 @@ export function BettingRound({
         <div className="flex flex-col items-center gap-1.5">
           <div className="flex items-end gap-1.5">
             {config.board.length === 0 ? (
-              <span className="text-xs italic text-emerald-100/70">No community cards yet</span>
+              <span className="text-xs italic text-night-100/70">No community cards yet</span>
             ) : (
               config.board.map((card, i) => (
                 <CardFace key={card} id={card} size="md" animate={wantsDeal} delay={i * 90} />
               ))
             )}
           </div>
-          <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/70">
+          <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-night-100/70">
             {STREET_LABEL[config.street]}
           </span>
         </div>
@@ -431,10 +431,10 @@ export function BettingRound({
         {/* Hero */}
         <div className="mt-4 flex items-end justify-between gap-2">
           <div>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/80">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-night-100/80">
               You
             </p>
-            <div className="mt-1 text-emerald-50">
+            <div className="mt-1 text-night-50">
               <ChipCount value={heroStackNow} tone="blue" />
             </div>
           </div>

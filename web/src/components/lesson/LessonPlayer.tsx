@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
+import { DUR, EASE } from '../../lib/motion'
+import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
 import {
   clearLessonSession,
   loadLessonSession,
@@ -29,6 +32,13 @@ type LessonPlayerProps = {
   allowNavigation?: () => void
 }
 
+/** Directional slide-fade between keyed steps (forward → from the right, back → from the left). */
+const stepVariants = {
+  enter: (dir: number) => ({ x: dir >= 0 ? 28 : -28, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir >= 0 ? -28 : 28, opacity: 0 }),
+}
+
 export function LessonPlayer({
   lesson,
   onProgressChange,
@@ -36,7 +46,10 @@ export function LessonPlayer({
   allowNavigation,
 }: LessonPlayerProps) {
   const navigate = useNavigate()
+  const reduced = usePrefersReducedMotion()
   const [showLessonCompleteModal, setShowLessonCompleteModal] = useState(false)
+  // +1 when advancing, -1 when stepping back, so the slide-fade points the right way.
+  const [direction, setDirection] = useState(1)
   const problemSteps = useMemo(
     () => lesson.steps.filter(isProblemStep),
     [lesson.steps],
@@ -194,8 +207,14 @@ export function LessonPlayer({
       finishLesson()
       return
     }
+    setDirection(1)
     setStepIndex((i) => i + 1)
   }, [canContinue, finishLesson, isLast])
+
+  const goBack = useCallback(() => {
+    setDirection(-1)
+    setStepIndex((i) => Math.max(0, i - 1))
+  }, [])
 
   if (!step) return null
 
@@ -203,31 +222,41 @@ export function LessonPlayer({
     <div className="mx-auto max-w-lg">
       <LessonProgressBar current={stepIndex} total={lesson.steps.length} />
 
-      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        {isConceptStep(step) && (
-          <ConceptStepView
+      <div className="mt-6 overflow-hidden rounded-3xl border border-night-900/10 bg-white p-6 shadow-sm sm:p-8">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
             key={step.id}
-            title={step.title}
-            content={step.content}
-            visual={step.visual}
-          />
-        )}
+            custom={direction}
+            variants={stepVariants}
+            initial={reduced ? false : 'enter'}
+            animate="center"
+            exit={reduced ? { opacity: 0 } : 'exit'}
+            transition={{ duration: reduced ? 0 : DUR.base, ease: EASE.standard }}
+          >
+            {isConceptStep(step) && (
+              <ConceptStepView
+                title={step.title}
+                content={step.content}
+                visual={step.visual}
+              />
+            )}
 
-        {isProblemStep(step) && (
-          <ProblemStepView
-            key={step.id}
-            step={step}
-            alreadySolved={solvedStepIds.has(step.id)}
-            onSolved={() => handleStepSolved(step.id)}
-            onAttemptSubmit={() => handleAttemptSubmit(step.id)}
-          />
-        )}
+            {isProblemStep(step) && (
+              <ProblemStepView
+                step={step}
+                alreadySolved={solvedStepIds.has(step.id)}
+                onSolved={() => handleStepSolved(step.id)}
+                onAttemptSubmit={() => handleAttemptSubmit(step.id)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4">
         <Button
           variant="secondary"
-          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+          onClick={goBack}
           disabled={stepIndex === 0}
         >
           Back

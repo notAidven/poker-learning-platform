@@ -54,10 +54,10 @@ const CARD_STYLES = `
 .cd-card:not(:disabled):active { transform: translateY(-1px) scale(0.96); }
 .cd-card--active {
   transform: translateY(-7px) scale(1.06);
-  box-shadow: 0 11px 22px rgba(29, 78, 216, 0.3);
+  box-shadow: 0 11px 22px rgba(155, 44, 68, 0.3);
   z-index: 2;
 }
-.cd-card--ok { box-shadow: 0 9px 18px rgba(16, 185, 129, 0.3); }
+.cd-card--ok { box-shadow: 0 9px 18px rgba(31, 141, 87, 0.3); }
 .cd-card--bad { opacity: 0.5; }
 .cd-pile-card {
   box-shadow:
@@ -305,8 +305,8 @@ function SelectAllMode({
                     const index = CARD_SUITS.indexOf(suit) * 13 + ri
 
                     let stateCls = 'border-slate-200 hover:border-brand-300'
-                    if (showOk) stateCls = 'border-emerald-500 cd-card--ok'
-                    else if (showBad) stateCls = 'border-rose-400 cd-card--bad'
+                    if (showOk) stateCls = 'border-success-500 cd-card--ok'
+                    else if (showBad) stateCls = 'border-danger-400 cd-card--bad'
                     else if (active) stateCls = 'border-brand-500 cd-card--active'
 
                     return (

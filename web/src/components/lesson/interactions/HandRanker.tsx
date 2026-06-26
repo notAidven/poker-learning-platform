@@ -108,8 +108,8 @@ const STYLES = `
   .hr-card--active:not(:disabled):hover { transform: translateY(-7px) scale(1.05); }
 }
 .hr-card:not(:disabled):active { transform: translateY(-1px) scale(0.96); }
-.hr-card--active { transform: translateY(-6px) scale(1.05); box-shadow: 0 11px 22px rgba(29, 78, 216, 0.3); z-index: 2; }
-.hr-card--ok { box-shadow: 0 9px 18px rgba(16, 185, 129, 0.3); }
+.hr-card--active { transform: translateY(-6px) scale(1.05); box-shadow: 0 11px 22px rgba(155, 44, 68, 0.3); z-index: 2; }
+.hr-card--ok { box-shadow: 0 9px 18px rgba(31, 141, 87, 0.3); }
 .hr-card--bad { opacity: 0.5; }
 .hr-reveal { animation: hr-reveal 0.28s ease backwards; }
 @keyframes hr-reveal {
@@ -188,8 +188,8 @@ function SelectCard({
   onClick: () => void
 }) {
   let stateCls = 'border-slate-200 hover:border-brand-300'
-  if (state === 'ok') stateCls = 'border-emerald-500 hr-card--ok'
-  else if (state === 'bad') stateCls = 'border-rose-400 hr-card--bad'
+  if (state === 'ok') stateCls = 'border-success-500 hr-card--ok'
+  else if (state === 'bad') stateCls = 'border-danger-400 hr-card--bad'
   else if (state === 'active') stateCls = 'border-brand-500 hr-card--active'
 
   const dealing = !reduceMotion && dealIndex !== undefined
@@ -431,8 +431,8 @@ function IdentifyCategory({
           const active = choice === cat
           const isAnswer = cat === expected
           let cls = 'border-slate-200 bg-white hover:border-brand-300'
-          if (submitted && isAnswer) cls = 'border-emerald-500 bg-emerald-50'
-          else if (submitted && active) cls = 'border-rose-400 bg-rose-50'
+          if (submitted && isAnswer) cls = 'border-success-500 bg-success-50'
+          else if (submitted && active) cls = 'border-danger-400 bg-danger-50'
           else if (active) cls = 'border-brand-500 bg-brand-50 shadow-sm'
           return (
             <button
@@ -456,7 +456,7 @@ function IdentifyCategory({
           role="status"
           aria-live="polite"
         >
-          This hand is a <span className="text-emerald-700">{evaluated.label}</span>.
+          This hand is a <span className="text-success-700">{evaluated.label}</span>.
         </p>
       )}
 
@@ -525,8 +525,8 @@ function OrderCategories({
         {order.map((cat, i) => {
           const rowOk = submitted ? order[i] === expected[i] : null
           let cls = 'border-slate-200 bg-white'
-          if (rowOk === true) cls = 'border-emerald-400 bg-emerald-50'
-          else if (rowOk === false) cls = 'border-rose-300 bg-rose-50'
+          if (rowOk === true) cls = 'border-success-400 bg-success-50'
+          else if (rowOk === false) cls = 'border-danger-300 bg-danger-50'
           return (
             <SortableRow
               key={cat}
@@ -655,8 +655,8 @@ function OrderHands({
           const hand = handById.get(id) as HandRankerHand
           const ok = submitted ? rowOk(i) : null
           let cls = 'border-slate-200 bg-white'
-          if (ok === true) cls = 'border-emerald-400 bg-emerald-50'
-          else if (ok === false) cls = 'border-rose-300 bg-rose-50'
+          if (ok === true) cls = 'border-success-400 bg-success-50'
+          else if (ok === false) cls = 'border-danger-300 bg-danger-50'
           return (
             <SortableRow
               key={id}
