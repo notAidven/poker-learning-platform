@@ -134,3 +134,34 @@ export function queueSessionClearFirestoreWrite(lessonId: string, stats: LessonS
     console.warn(`Failed to clear lesson session for ${lessonId}:`, err)
   })
 }
+
+/**
+ * Durable fallback for a FAILED atomic lesson award (see lib/lessonProgress.ts).
+ *
+ * `awardLessonCompletion` normally persists the progress doc (completed:true +
+ * xpAwarded:true) in one transaction. If that transaction fails, the completion
+ * lives only in local storage and the NEXT `applyRemoteProgress` sync would
+ * silently revert it (remote still says not-completed). This best-effort write
+ * lands `completed:true` straight in the progress doc (and clears any stale
+ * session) so the completion survives a resync.
+ *
+ * It deliberately does NOT stamp `xpAwarded`: a merge write of the plain
+ * `LessonStats` never overwrites an `xpAwarded:true` that a (falsely-rejected but
+ * actually-committed) award already set, and because `awardLessonCompletion`
+ * treats an existing `completed:true` as "already awarded", any later award or
+ * retake stays idempotent and never double-grants XP.
+ */
+export function queueCompletionFallbackWrite(lessonId: string, stats: LessonStats) {
+  const uid = syncUid ?? auth.currentUser?.uid
+  if (!uid) return
+
+  const existing = sessionWriteTimers.get(lessonId)
+  if (existing) {
+    clearTimeout(existing)
+    sessionWriteTimers.delete(lessonId)
+  }
+
+  void writeLessonProgress(uid, lessonId, { stats, session: null }).catch((err) => {
+    console.warn(`Failed to persist fallback lesson completion for ${lessonId}:`, err)
+  })
+}

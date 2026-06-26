@@ -4,8 +4,10 @@ import {
   createUserWithEmailAndPassword,
   linkWithCredential,
   onAuthStateChanged,
+  onIdTokenChanged,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -55,6 +57,15 @@ type AuthContextValue = {
   signInWithUsername: (username: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   /**
+   * Send a password-reset email for a username-based account. Resolves the
+   * username to its email first (the same lookup as sign-in), then calls
+   * Firebase `sendPasswordResetEmail`. Intentionally generic: it NEVER reveals
+   * whether the username/email exists (a no-match is a silent success), so the
+   * UI can show one "if an account exists, we emailed a link" message either way
+   * and login enumeration (L1) stays closed.
+   */
+  resetPassword: (username: string) => Promise<void>
+  /**
    * Link an Email/Password credential to the signed-in account so the user can
    * subsequently sign in with their email + this password (Google stays linked
    * too). Re-authenticates with Google automatically if Firebase requires a
@@ -90,6 +101,20 @@ function isRecentLoginError(error: unknown): boolean {
     error !== null &&
     'code' in error &&
     (error as { code?: unknown }).code === 'auth/requires-recent-login'
+  )
+}
+
+/**
+ * A reset-email failure that would CONFIRM the account does not exist. Swallowed
+ * by `resetPassword` so the response stays generic (enumeration safety, L1); any
+ * other failure (e.g. `auth/too-many-requests`, network) is surfaced instead.
+ */
+function isUserNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'auth/user-not-found'
   )
 }
 
@@ -152,7 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+    // onAuthStateChanged drives the heavy init. It fires on sign-in, sign-out,
+    // and full app load (a new uid), but NOT on a silent background token refresh.
+    const unsubscribeAuth = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser)
       setProviderIds(getProviderIds(nextUser))
       // Guard the whole init sequence: if a Firestore read (profile fetch /
@@ -176,7 +203,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     })
-    return unsubscribe
+
+    // After `verifyBeforeUpdateEmail`, the auth email claim can flip on a silent
+    // background token refresh — onIdTokenChanged fires for that, onAuthStateChanged
+    // does NOT. Without this, users/{uid}.email + usernames/{name}.email stay stale
+    // until the next full sign-in/reload, locking the account out of username login
+    // on other devices in the meantime. We reconcile here on the refresh window.
+    //
+    // No double-run / race with onAuthStateChanged: the two listeners handle
+    // DISJOINT events. `lastToken` (a per-subscription closure var) lets us act
+    // ONLY when the SAME uid arrives with a CHANGED email — i.e. a pure token
+    // refresh. A uid transition (sign-in/out/first load) or an unchanged email is
+    // left entirely to onAuthStateChanged, and an hourly refresh that didn't change
+    // the email is a no-op (no extra Firestore read).
+    let lastToken: { uid: string; email: string | null } | null = null
+    const unsubscribeToken = onIdTokenChanged(auth, async (nextUser) => {
+      const prev = lastToken
+      const nextEmail = nextUser?.email ? nextUser.email.toLowerCase() : null
+      lastToken = nextUser ? { uid: nextUser.uid, email: nextEmail } : null
+
+      if (!nextUser || !nextEmail) return
+      if (!prev || prev.uid !== nextUser.uid) return // sign-in/out → onAuthStateChanged owns it
+      if (prev.email === nextEmail) return // unchanged email (normal refresh) → nothing to do
+
+      try {
+        const data = await getUserProfile(nextUser.uid)
+        setProfile(await reconcileProfileEmail(nextUser, data))
+      } catch (err) {
+        console.warn('Could not reconcile the updated email after a token refresh:', err)
+      }
+    })
+
+    return () => {
+      unsubscribeAuth()
+      unsubscribeToken()
+    }
   }, [])
 
   useEffect(() => {
@@ -203,6 +264,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     await signInWithPopup(auth, googleProvider)
+  }, [])
+
+  const resetPassword = useCallback(async (username: string) => {
+    const trimmed = username.trim()
+    if (!trimmed) {
+      throw new Error('Enter your username to reset your password.')
+    }
+    // Login is username-based, so resolve the account email first (the SAME
+    // public lookup sign-in uses).
+    const email = await getEmailForUsername(trimmed)
+    // Enumeration safety (L1): a username with no match is a SILENT success — we
+    // send nothing and let the caller show the same generic confirmation as a real
+    // send, so the response can never be used to probe which usernames exist.
+    if (!email) return
+    try {
+      await sendPasswordResetEmail(auth, email)
+    } catch (err) {
+      // Swallow only the code that would confirm the account is gone; surface
+      // everything else (rate limiting, network) so the user gets real feedback.
+      if (isUserNotFoundError(err)) return
+      throw err
+    }
   }, [])
 
   const linkEmailPassword = useCallback(async (password: string) => {
@@ -318,6 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithEmail,
       signInWithUsername,
       signInWithGoogle,
+      resetPassword,
       linkEmailPassword,
       reauthenticate,
       changeEmail,
@@ -334,6 +418,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithEmail,
       signInWithUsername,
       signInWithGoogle,
+      resetPassword,
       linkEmailPassword,
       reauthenticate,
       changeEmail,

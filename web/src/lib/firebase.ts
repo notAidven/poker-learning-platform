@@ -23,11 +23,19 @@ function assertFirebaseConfig() {
   ] as const
 
   const missing = required.filter((key) => !import.meta.env[key])
-  if (missing.length > 0) {
-    console.warn(
-      `Firebase config incomplete. Missing: ${missing.join(', ')}. Copy web/.env.example to web/.env.local and add your Web app config from the Firebase console.`,
-    )
+  if (missing.length === 0) return
+
+  const message = `Firebase config incomplete. Missing: ${missing.join(', ')}. Copy web/.env.example to web/.env.local and add your Web app config from the Firebase console.`
+
+  // Fail fast in PRODUCTION: a build shipped without real Firebase config can't
+  // reach Auth/Firestore at all, so a loud throw on startup beats a silently
+  // broken app. In dev/test we only warn, so local tooling and unit tests keep
+  // running before web/.env.local is filled in. (`vite build` never executes this
+  // module, so the throw can't break the build itself.)
+  if (import.meta.env.PROD) {
+    throw new Error(message)
   }
+  console.warn(message)
 }
 
 assertFirebaseConfig()
