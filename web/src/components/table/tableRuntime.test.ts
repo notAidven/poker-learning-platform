@@ -24,8 +24,11 @@ import {
 } from '../../lib/poker/handEngine'
 import { getTable } from '../../data/tables'
 import {
+  boardThreatOf,
   buildLLMContext,
+  coachResultReaction,
   composeCoachReaction,
+  composeCoachResultReaction,
   createInitialHand,
   createNextHand,
   decideRuleAction,
@@ -34,9 +37,11 @@ import {
   liveOpponents,
   makeTier3Fallback,
   positionFor,
+  readPassiveThenAggressive,
   roleFor,
   summarizeHand,
   toRuntimeConfig,
+  type HandResultRead,
   type TableRuntimeConfig,
 } from './tableRuntime'
 import type { SpotAnalysis } from '../../lib/poker/hints'
@@ -369,6 +374,299 @@ describe('coach reaction (Room 1, rule-based, AI off)', () => {
         expect(text).not.toContain('\u2014')
       }
     }
+  })
+})
+
+describe('result-aware end-of-hand reflection (Room 1, rule-based, AI off)', () => {
+  function read(partial: Partial<HandResultRead>): HandResultRead {
+    return {
+      reachedShowdown: true,
+      heroWon: false,
+      bigPot: false,
+      heroCategory: null,
+      heroLabel: null,
+      heroStrong: false,
+      villainCategory: null,
+      villainLabel: null,
+      boardThreat: null,
+      pricedIn: false,
+      heroHadDraw: false,
+      passiveThenAggressive: false,
+      ...partial,
+    }
+  }
+
+  // (a) The user's exact spot: a loose call into a completed flush holding one
+  // pair, lost. Must be corrective + fold-suggesting, and must NOT say "good call".
+  it('corrects a loose call into a completed flush (the reported bug)', () => {
+    const text = composeCoachResultReaction(
+      read({
+        heroWon: false,
+        bigPot: true,
+        heroCategory: 'pair',
+        heroLabel: 'Pair of Kings',
+        heroStrong: false,
+        villainCategory: 'flush',
+        villainLabel: 'Flush, Ace-high',
+        boardThreat: 'flush',
+        pricedIn: false,
+        heroHadDraw: false,
+        passiveThenAggressive: true,
+      }),
+    )
+    const lower = text.toLowerCase()
+    expect(lower).toContain('consider folding')
+    expect(lower).toContain('passive')
+    expect(lower).toContain('flush')
+    expect(lower).not.toContain('good call')
+  })
+
+  // (b) A well-priced draw that bricked is variance, not a leak — frame it positively
+  // and never suggest folding it.
+  it('frames a well-priced draw that bricked as variance, not a leak', () => {
+    const text = composeCoachResultReaction(
+      read({
+        heroWon: false,
+        heroCategory: 'high-card',
+        heroLabel: 'Ace-high',
+        pricedIn: true,
+        heroHadDraw: true,
+        boardThreat: null,
+      }),
+    )
+    const lower = text.toLowerCase()
+    expect(lower).toContain('variance')
+    expect(lower).toContain('right price')
+    expect(lower).not.toContain('consider folding')
+    expect(lower).not.toContain('good call')
+  })
+
+  // (c) Winning with a strong made hand earns positive, value-oriented reinforcement.
+  it('reinforces a win with a strong made hand', () => {
+    const text = composeCoachResultReaction(
+      read({
+        heroWon: true,
+        bigPot: true,
+        heroCategory: 'two-pair',
+        heroLabel: 'Two pair, Kings and Sevens',
+        heroStrong: true,
+      }),
+    )
+    const lower = text.toLowerCase()
+    expect(lower).toContain('value')
+    expect(text).toContain('two pair')
+    expect(lower).not.toContain('consider folding')
+  })
+
+  // (d) A winning loose call gets a light "that one got there" nudge toward
+  // selectivity — winning is not treated as proof the call was good.
+  it('gives a winning loose call a light "got there" nudge', () => {
+    const text = composeCoachResultReaction(
+      read({
+        heroWon: true,
+        heroCategory: 'pair',
+        heroLabel: 'Pair of Sixes',
+        heroStrong: false,
+        pricedIn: false,
+        heroHadDraw: false,
+      }),
+    )
+    const lower = text.toLowerCase()
+    expect(lower).toContain('got there')
+    expect(lower).toContain('selective')
+    expect(lower).not.toContain('consider folding')
+  })
+
+  // Pedagogy guard: a well-priced call is never condemned just because a scary card
+  // landed and it lost.
+  it('does not condemn a well-priced call even when a scary draw completed', () => {
+    const text = composeCoachResultReaction(
+      read({
+        heroWon: false,
+        heroCategory: 'pair',
+        heroLabel: 'Pair of Tens',
+        villainCategory: 'flush',
+        villainLabel: 'Flush, King-high',
+        boardThreat: 'flush',
+        pricedIn: true,
+        heroHadDraw: true,
+      }),
+    )
+    expect(text.toLowerCase()).toContain('variance')
+    expect(text.toLowerCase()).not.toContain('consider folding')
+  })
+
+  // Losing with a genuinely strong hand reads as a cooler, not a leak.
+  it('treats a strong hand that lost as a cooler, not a leak', () => {
+    const text = composeCoachResultReaction(
+      read({
+        heroWon: false,
+        heroCategory: 'trips',
+        heroLabel: 'Three of a kind, Nines',
+        heroStrong: true,
+        villainCategory: 'flush',
+        villainLabel: 'Flush, Queen-high',
+        boardThreat: 'flush',
+      }),
+    )
+    const lower = text.toLowerCase()
+    expect(lower).toContain('cooler')
+    expect(lower).not.toContain('consider folding')
+  })
+
+  it('congratulates taking a pot down without a showdown', () => {
+    const text = composeCoachResultReaction(read({ reachedShowdown: false, heroWon: true }))
+    expect(text.toLowerCase()).toContain('without a showdown')
+    expect(text).not.toContain('\u2014')
+  })
+
+  it('never emits an empty or em-dash-laden recap across the result space', () => {
+    const bool = [false, true]
+    const threats = [null, 'flush', 'straight', 'board-pair'] as const
+    for (const reachedShowdown of bool)
+      for (const heroWon of bool)
+        for (const heroStrong of bool)
+          for (const pricedIn of bool)
+            for (const heroHadDraw of bool)
+              for (const passiveThenAggressive of bool)
+                for (const boardThreat of threats) {
+                  const text = composeCoachResultReaction(
+                    read({
+                      reachedShowdown,
+                      heroWon,
+                      heroStrong,
+                      pricedIn,
+                      heroHadDraw,
+                      passiveThenAggressive,
+                      boardThreat,
+                      heroCategory: heroStrong ? 'two-pair' : 'pair',
+                      heroLabel: heroStrong ? 'Two pair, Aces and Kings' : 'Pair of Kings',
+                      villainCategory: 'flush',
+                      villainLabel: 'Flush, Ace-high',
+                    }),
+                  )
+                  expect(text.length).toBeGreaterThan(0)
+                  expect(text).not.toContain('\u2014')
+                }
+  })
+
+  it('reads completed-draw threats off the final board', () => {
+    expect(boardThreatOf(['KS', '7H', '2H', '9H', '3C'])).toBe('flush') // 3 hearts
+    expect(boardThreatOf(['9S', '8D', '7C', '6H', '2S'])).toBe('straight') // 4 to a straight
+    expect(boardThreatOf(['KS', 'KD', '7C', '2H', '3S'])).toBe('board-pair') // paired board
+    expect(boardThreatOf(['KS', 'QD', '7C', '2H'])).toBeNull() // dry, uncoordinated
+  })
+
+  it('detects a passive-then-aggressive opponent line from the hand log', () => {
+    const passiveThenBet = [
+      'You posts SB 5',
+      'Villain posts BB 10',
+      'Flop: KS 7H 2H',
+      'Villain checks',
+      'You bets 40',
+      'Villain calls 40',
+      'Turn: 9H',
+      'Villain checks',
+      'You checks',
+      'River: 3C',
+      'Villain bets 200',
+      'You calls 200',
+    ]
+    expect(readPassiveThenAggressive(passiveThenBet, 'Villain')).toBe(true)
+
+    const aggressorFromTheStart = [
+      'Flop: KS 7H 2H',
+      'Villain bets 40',
+      'You calls 40',
+      'Turn: 9H',
+      'Villain bets 90',
+    ]
+    expect(readPassiveThenAggressive(aggressorFromTheStart, 'Villain')).toBe(false)
+  })
+
+  // End-to-end on a hand-engine state: hero calls a passive-then-big river bet with
+  // one pair into a 3-flush board and loses → corrective recap (NOT "good call").
+  it('produces a corrective recap from a finished hand state (heads-up, one pair vs a flush)', () => {
+    const finalState: HandState = {
+      seats: [
+        {
+          id: 'hero',
+          name: 'You',
+          isHero: true,
+          stack: 230,
+          committed: 0,
+          totalCommitted: 270,
+          holeCards: ['KC', 'QS'],
+          folded: false,
+          allIn: false,
+          hasActed: true,
+        },
+        {
+          id: 'opp-0',
+          name: 'Villain',
+          isHero: false,
+          stack: 770,
+          committed: 0,
+          totalCommitted: 270,
+          holeCards: ['AH', '5H'],
+          folded: false,
+          allIn: false,
+          hasActed: true,
+        },
+      ],
+      buttonIndex: 0,
+      sb: 5,
+      bb: 10,
+      phase: 'complete',
+      board: ['KS', '7H', '2H', '9H', '3C'],
+      deck: [],
+      burns: [],
+      pot: 540,
+      currentBet: 0,
+      minRaise: 10,
+      toActIndex: null,
+      lastAggressorIndex: 1,
+      seed: 1,
+      log: [
+        'You posts SB 5',
+        'Villain posts BB 10',
+        'Flop: KS 7H 2H',
+        'Villain checks',
+        'You bets 40',
+        'Villain calls 40',
+        'Turn: 9H',
+        'Villain checks',
+        'You checks',
+        'River: 3C',
+        'Villain bets 200',
+        'You calls 200',
+        'Villain wins 540',
+      ],
+    }
+
+    // The hero really did lose this pot to a flush.
+    const summary = summarizeHand(finalState)
+    expect(summary.reachedShowdown).toBe(true)
+    expect(summary.winnerIds).toEqual(['opp-0'])
+
+    const text = coachResultReaction(finalState, 0)
+    const lower = text.toLowerCase()
+    expect(lower).toContain('consider folding')
+    expect(lower).toContain('passive')
+    expect(lower).toContain('flush')
+    expect(lower).not.toContain('good call')
+    expect(text).not.toContain('\u2014')
+  })
+
+  it('returns no recap when the hero folded earlier (the in-the-moment note stands)', () => {
+    const base = createInitialHand(COACHED_CFG, 31, 'You')
+    const heroFolded: HandState = {
+      ...base,
+      phase: 'complete',
+      toActIndex: null,
+      seats: base.seats.map((s) => (s.isHero ? { ...s, folded: true } : s)),
+    }
+    expect(coachResultReaction(heroFolded, 0)).toBe('')
   })
 })
 

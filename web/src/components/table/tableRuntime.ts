@@ -13,8 +13,8 @@
  * deterministic Tier-3 `decideAI` fallback — so a hand still plays start to finish
  * with AI un-provisioned. Nothing here imports React, so it is unit-testable.
  */
-import type { CardId } from '../../types/lesson'
-import type { BettingAction, HandCategory, PokerStreet } from '../../types/poker'
+import { parseCardId, type CardId } from '../../types/lesson'
+import type { BettingAction, EvaluatedHand, HandCategory, PokerStreet } from '../../types/poker'
 import {
   createHand,
   legalActions,
@@ -26,6 +26,7 @@ import {
   type PotResult,
   type SeatState,
 } from '../../lib/poker/handEngine'
+import { compareHands, evaluateHoldem, rankValue } from '../../lib/poker/handEvaluator'
 import { decideAI, type AIDecisionInput, type AITier } from '../../lib/poker/opponentAI'
 import { decideWithLLM, type LLMOpponentContext, type OppDecision } from '../../lib/ai/llmOpponent'
 import type { CoachContext } from '../../lib/ai/coach'
@@ -509,6 +510,286 @@ export function composeCoachReaction(
     default:
       return 'Nice. Keep weighing your hand strength against the price before each move.'
   }
+}
+
+// ---------------------------------------------------------------------------
+// Result-aware end-of-hand coach reflection (Room 1) — a supportive "what just
+// happened" recap shown once the hand is OVER (showdown or everyone folded).
+//
+// Where `coachReactionFor` reacts to a single action in the moment, this factors
+// in HOW the hand ended: did the hero win or lose, how big was the pot, what was
+// the hero's final hand, and — at showdown — the hand that beat them plus whether
+// an obvious draw completed on the board (a 3-flush, a 4-card straight, or a
+// paired board). It is deliberately NOT results-oriented: a well-priced call that
+// lost is framed as variance ("keep making it"), while a loose call into a danger
+// board is gently corrected ("a spot to consider folding"). Pure + AI-free; the
+// formatter is exported and unit-tested directly.
+// ---------------------------------------------------------------------------
+
+/** A completed-draw threat visible on the final board. */
+export type BoardThreat = 'flush' | 'straight' | 'board-pair' | null
+
+/** Structured, result-aware read of a finished hand (the formatter's input). */
+export type HandResultRead = {
+  /** Did the hand reach showdown, so the opponents' cards are revealed? */
+  reachedShowdown: boolean
+  /** Did the hero win any pot? */
+  heroWon: boolean
+  /** A meaningful pot relative to the blinds (wording emphasis only). */
+  bigPot: boolean
+  /** Hero's final hand category + label (null when it cannot be read). */
+  heroCategory: HandCategory | null
+  heroLabel: string | null
+  /** Hero's final hand is two pair or better. */
+  heroStrong: boolean
+  /** At showdown: the hand that beat the hero (best non-hero shown hand). */
+  villainCategory: HandCategory | null
+  villainLabel: string | null
+  /** A scary draw visibly completed on the board, or the board paired. */
+  boardThreat: BoardThreat
+  /** The hero's continue was defensible on price/equity (a real, live draw). */
+  pricedIn: boolean
+  /** The hero was chasing a genuine flush / open-ended straight draw. */
+  heroHadDraw: boolean
+  /** A previously passive opponent suddenly bet or raised on the turn / river. */
+  passiveThenAggressive: boolean
+}
+
+/** Pot >= this many big blinds reads as "a big pot" for wording emphasis. */
+const BIG_POT_BB = 25
+
+/** Read the most salient completed-draw threat off the final board (pure). */
+export function boardThreatOf(board: CardId[]): BoardThreat {
+  if (board.length < 3) return null
+
+  // Flush threat: three or more of a single suit already sit on the board.
+  const suitCounts = new Map<string, number>()
+  for (const c of board) {
+    const { suit } = parseCardId(c)
+    suitCounts.set(suit, (suitCounts.get(suit) ?? 0) + 1)
+  }
+  if ([...suitCounts.values()].some((n) => n >= 3)) return 'flush'
+
+  // Straight threat: four board cards fall inside some 5-rank window (Ace high/low).
+  const present = new Set<number>()
+  for (const c of board) {
+    const v = rankValue(c)
+    present.add(v)
+    if (v === 14) present.add(1)
+  }
+  for (let low = 1; low <= 10; low++) {
+    let inWindow = 0
+    for (let k = 0; k < 5; k++) if (present.has(low + k)) inWindow++
+    if (inWindow >= 4) return 'straight'
+  }
+
+  // Paired board: a rank appears at least twice among the community cards.
+  const rankCounts = new Map<number, number>()
+  for (const c of board) {
+    const v = rankValue(c)
+    rankCounts.set(v, (rankCounts.get(v) ?? 0) + 1)
+  }
+  if ([...rankCounts.values()].some((n) => n >= 2)) return 'board-pair'
+
+  return null
+}
+
+/**
+ * Best-effort read of the hero's decisive continue: did they hold a genuine, live
+ * draw (a flush draw or an open-ended straight draw) on the flop or turn? Such a
+ * draw makes a call defensible on price even when it ultimately bricks, which is
+ * the difference between variance and a leak. The engine deals the board in order,
+ * so a prefix of the final board reconstructs an earlier street; `analyzeSpot`
+ * then reports the draw. We treat 8+ clean outs as "priced in" for typical bets.
+ */
+export function readHeroContinue(
+  hole: [CardId, CardId],
+  board: CardId[],
+): { heroHadDraw: boolean; pricedIn: boolean } {
+  let heroHadDraw = false
+  for (const len of [3, 4] as const) {
+    if (board.length < len) break
+    const a = analyzeSpot({
+      hole,
+      board: board.slice(0, len),
+      street: len === 3 ? 'flop' : 'turn',
+      pot: 0,
+      toCall: 0,
+    })
+    const liveDraw = a.drawName === 'flush draw' || a.drawName === 'open-ended straight draw'
+    if (liveDraw && a.outs != null && a.outs >= 8) heroHadDraw = true
+  }
+  return { heroHadDraw, pricedIn: heroHadDraw }
+}
+
+/** The strongest non-hero seat still in at showdown — i.e. the hand that won. */
+function bestVillainAtShowdown(state: HandState, heroId: string): SeatState | null {
+  let best: SeatState | null = null
+  let bestHand: EvaluatedHand | null = null
+  for (const seat of state.seats) {
+    if (seat.id === heroId || seat.folded || !seat.holeCards) continue
+    let hand: EvaluatedHand
+    try {
+      hand = evaluateHoldem(seat.holeCards, state.board)
+    } catch {
+      continue
+    }
+    if (!bestHand || compareHands(hand, bestHand) > 0) {
+      bestHand = hand
+      best = seat
+    }
+  }
+  return best
+}
+
+/**
+ * Did `villainName` play passively (only checks/calls) and THEN fire a bet or raise
+ * on the turn or river? Parses the engine's stable log lines; deterministic.
+ */
+export function readPassiveThenAggressive(log: string[], villainName: string): boolean {
+  let street: PokerStreet = 'preflop'
+  let sawPassive = false
+  const prefix = `${villainName} `
+  for (const line of log) {
+    if (line.startsWith('Flop:')) street = 'flop'
+    else if (line.startsWith('Turn:')) street = 'turn'
+    else if (line.startsWith('River:')) street = 'river'
+    else if (line.startsWith(prefix)) {
+      const rest = line.slice(prefix.length)
+      if (rest.startsWith('checks') || rest.startsWith('calls')) {
+        sawPassive = true
+      } else if (rest.startsWith('bets') || rest.startsWith('raises')) {
+        if (sawPassive && (street === 'turn' || street === 'river')) return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * Build a result-aware reflection for a finished hand. `finalState` is the settled
+ * hand (phase 'complete'); `heroIndex` is the hero's seat. Returns '' when there is
+ * nothing to reflect on (no hero, or the hero folded earlier so the in-the-moment
+ * fold note already stands). Pure + AI-free.
+ */
+export function coachResultReaction(finalState: HandState, heroIndex: number): string {
+  const hero = finalState.seats[heroIndex]
+  if (!hero) return ''
+  // The hero gave the hand up earlier; let the in-the-moment fold note be the word.
+  if (hero.folded) return ''
+
+  const summary = summarizeHand(finalState)
+  const board = finalState.board
+  const heroWon = summary.winnerIds.includes(hero.id)
+  const bigPot = finalState.pot >= BIG_POT_BB * Math.max(1, finalState.bb)
+
+  let heroCategory: HandCategory | null = null
+  let heroLabel: string | null = null
+  if (hero.holeCards && board.length >= 3) {
+    try {
+      const e = evaluateHoldem(hero.holeCards, board)
+      heroCategory = e.category
+      heroLabel = e.label
+    } catch {
+      // Leave null and fall back to generic wording.
+    }
+  }
+  const heroStrong = heroCategory ? STRONG_MADE.has(heroCategory) : false
+
+  const villain = summary.reachedShowdown ? bestVillainAtShowdown(finalState, hero.id) : null
+  let villainCategory: HandCategory | null = null
+  let villainLabel: string | null = null
+  if (villain?.holeCards) {
+    try {
+      const e = evaluateHoldem(villain.holeCards, board)
+      villainCategory = e.category
+      villainLabel = e.label
+    } catch {
+      // Leave null.
+    }
+  }
+
+  const boardThreat = summary.reachedShowdown ? boardThreatOf(board) : null
+  const { heroHadDraw, pricedIn } = hero.holeCards
+    ? readHeroContinue(hero.holeCards, board)
+    : { heroHadDraw: false, pricedIn: false }
+  const passiveThenAggressive = villain
+    ? readPassiveThenAggressive(finalState.log, villain.name)
+    : false
+
+  return composeCoachResultReaction({
+    reachedShowdown: summary.reachedShowdown,
+    heroWon,
+    bigPot,
+    heroCategory,
+    heroLabel,
+    heroStrong,
+    villainCategory,
+    villainLabel,
+    boardThreat,
+    pricedIn,
+    heroHadDraw,
+    passiveThenAggressive,
+  })
+}
+
+/** Pure formatter for the end-of-hand reflection (exported for tests). */
+export function composeCoachResultReaction(r: HandResultRead): string {
+  const heroHand = r.heroLabel ? lowerFirst(r.heroLabel) : 'your hand'
+  const beat = r.villainLabel ? lowerFirst(r.villainLabel) : 'a stronger hand'
+  const potBit = r.bigPot ? 'a big pot' : 'the pot'
+  const villainStrong = r.villainCategory ? STRONG_MADE.has(r.villainCategory) : false
+
+  // --- Hero won --------------------------------------------------------------
+  if (r.heroWon) {
+    if (!r.reachedShowdown) {
+      return 'You took it down without a showdown. Getting opponents to fold is a great way to win pots, so nice work applying pressure.'
+    }
+    if (r.heroStrong) {
+      return `Great result. Your ${heroHand} was the best hand and took down ${potBit}. When you are ahead like that, keep betting for value so you get paid off.`
+    }
+    if (r.pricedIn && r.heroHadDraw) {
+      return `Nice, your draw got there and won ${potBit}. That was a fair price to chase, so keep taking those when the odds are right.`
+    }
+    // Won with a weak, loose holding: celebrate it, but nudge toward selectivity.
+    return `That one got there for you. Winning ${potBit} feels good, but ${heroHand} was on the thin side to put chips in with, so try to be a little more selective with weak hands next time.`
+  }
+
+  // --- Hero lost, no showdown (they were still contesting but missed) ---------
+  if (!r.reachedShowdown) {
+    return 'That one did not go your way, and with no showdown there is nothing to read into it. Shake it off and bring the same focus to the next hand.'
+  }
+
+  // --- Hero lost at showdown -------------------------------------------------
+  // A loose call into a danger board is a real leak to gently correct. Note it is
+  // the danger signals + a weak hand that make it a leak, NOT the loss by itself.
+  if (!r.heroStrong && r.boardThreat && villainStrong && !r.pricedIn) {
+    const completed =
+      r.boardThreat === 'flush'
+        ? 'a flush completes'
+        : r.boardThreat === 'straight'
+          ? 'a straight completes'
+          : 'the board pairs'
+    const lead = r.passiveThenAggressive
+      ? `When a player who has been passive suddenly bets big and ${completed}, `
+      : `When ${completed} and you hold one pair, `
+    return `${lead}one pair is usually beaten. You held ${heroHand} and ran into ${beat}, so that is a good spot to consider folding and saving those chips for a better one.`
+  }
+
+  // A well-priced continue that simply lost is variance, not a mistake.
+  if (r.pricedIn) {
+    return r.heroHadDraw
+      ? 'Tough one, but no mistake. Your draw was getting the right price, it just did not get there this time. That is variance, not a leak, so keep making that call when the odds are right.'
+      : `Tough beat, but no mistake. You had the right price to call and simply ran into ${beat}. Keep making that call and the math pays off over time.`
+  }
+
+  // Lost with a genuinely strong hand: a cooler, not a leak.
+  if (r.heroStrong) {
+    return `Nothing you could do there. Your ${heroHand} ran into ${beat}, which is just a cooler. No leak, so keep playing your strong hands strongly.`
+  }
+
+  // Lost with a weak hand on a quieter board: a gentle reminder, no scolding.
+  return `You ran into ${beat} there. One pair can be tricky to call big bets with, so weigh how likely you are already beaten before putting in more chips.`
 }
 
 // ---------------------------------------------------------------------------

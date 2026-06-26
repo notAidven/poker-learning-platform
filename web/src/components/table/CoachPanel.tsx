@@ -14,6 +14,12 @@ type CoachPanelProps = {
    * with AI off because it is derived from the rule logic.
    */
   reaction?: string | null
+  /**
+   * A result-aware "what just happened" recap shown once the hand is OVER (Room 1
+   * only). Unlike `reaction`, it factors in who won and what the opponent held, so
+   * an in-the-moment "good call" is never the last word on a hand the hero lost.
+   */
+  resultReflection?: string | null
 }
 
 type Tip = { text: string; source: 'ai' | 'fallback' }
@@ -27,7 +33,7 @@ type Tip = { text: string; source: 'ai' | 'fallback' }
  * Everything works with AI off: the tip falls back to the rule-based hint, and the
  * reaction is always rule-derived.
  */
-export function CoachPanel({ context, turnKey, active, reaction }: CoachPanelProps) {
+export function CoachPanel({ context, turnKey, active, reaction, resultReflection }: CoachPanelProps) {
   const [entry, setEntry] = useState<{ key: string; tip: Tip } | null>(null)
   const [nonce, setNonce] = useState(0)
 
@@ -47,8 +53,10 @@ export function CoachPanel({ context, turnKey, active, reaction }: CoachPanelPro
     }
   }, [requestKey, active, context])
 
-  // After the hero acts it is no longer their turn, so show the supportive reaction.
-  const showReaction = !active && Boolean(reaction)
+  // Once the hand is over the recap wins; while opponents act, show the reaction to
+  // the hero's last move. Both only appear when it is no longer the hero's turn.
+  const showRecap = !active && Boolean(resultReflection)
+  const showReaction = !active && !showRecap && Boolean(reaction)
 
   return (
     <section className="flex flex-col rounded-2xl border border-brand-200 bg-brand-50/60 p-4 shadow-card">
@@ -66,6 +74,11 @@ export function CoachPanel({ context, turnKey, active, reaction }: CoachPanelPro
             {tip.source === 'ai' ? 'AI' : 'Built-in'}
           </span>
         )}
+        {showRecap && (
+          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-indigo-700">
+            Hand recap
+          </span>
+        )}
         {showReaction && (
           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-emerald-700">
             Your move
@@ -74,15 +87,17 @@ export function CoachPanel({ context, turnKey, active, reaction }: CoachPanelPro
       </div>
 
       <p className="min-h-[3rem] text-sm leading-relaxed text-slate-700" aria-live="polite">
-        {showReaction
-          ? reaction
-          : !active
-            ? 'Your coach will weigh in when it is your turn, and react after you act.'
-            : loading
-              ? 'Reading the spot…'
-              : tip
-                ? tip.text
-                : 'Thinking about your spot…'}
+        {showRecap
+          ? resultReflection
+          : showReaction
+            ? reaction
+            : !active
+              ? 'Your coach will weigh in when it is your turn, and react after you act.'
+              : loading
+                ? 'Reading the spot…'
+                : tip
+                  ? tip.text
+                  : 'Thinking about your spot…'}
       </p>
 
       <button

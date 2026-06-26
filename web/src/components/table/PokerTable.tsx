@@ -26,6 +26,7 @@ import {
   buildCoachContext,
   buildHintContext,
   coachReactionFor,
+  coachResultReaction,
   createInitialHand,
   createNextHand,
   decideLLMAction,
@@ -250,6 +251,15 @@ export function PokerTable({
   const toActName = hand.toActIndex != null ? hand.seats[hand.toActIndex]?.name : undefined
   const logGroups = useMemo(() => groupHandLog(hand.log), [hand.log])
   const liveReaction = reaction?.handIndex === handIndex ? reaction.text : null
+  // Room 1: a result-aware recap derived from the finished (settled) hand. Pure and
+  // deterministic, so it needs no state and works fully with AI off.
+  const liveRecap = useMemo(
+    () =>
+      config.support === 'coach' && handOver && heroIndex >= 0
+        ? coachResultReaction(hand, heroIndex) || null
+        : null,
+    [config.support, handOver, hand, heroIndex],
+  )
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -396,6 +406,7 @@ export function PokerTable({
               turnKey={turnKey}
               active={isHeroTurn}
               reaction={liveReaction}
+              resultReflection={liveRecap}
             />
           ) : (
             <HintBar context={hintContext} active={isHeroTurn} />
