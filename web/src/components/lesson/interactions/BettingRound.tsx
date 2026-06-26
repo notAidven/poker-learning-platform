@@ -106,7 +106,7 @@ function buildTableReveal(
 
   if (heroAction === 'fold') {
     lines.push('You fold and give up the hand.')
-    lines.push(`Villain takes the pot of ${pot}.`)
+    lines.push(`Opponent takes the pot of ${pot}.`)
   } else if (heroAction === 'check') {
     lines.push('You check. No chips in, action passes.')
     // Scripted: the opponent only bets back when the lesson explicitly scripts it.
@@ -115,10 +115,10 @@ function buildTableReveal(
       villainStack -= amt
       pot += amt
       villainAction = 'bet'
-      lines.push(`Villain bets ${amt}, so now there is a bet back to you.`)
+      lines.push(`Opponent bets ${amt}, so now there is a bet back to you.`)
     } else {
       villainAction = 'check'
-      lines.push('Villain checks behind. The round is checked through and the next card is free.')
+      lines.push('Opponent checks behind. The round is checked through and the next card is free.')
     }
   } else if (heroAction === 'call') {
     const amt = Math.min(facing, heroStack)
@@ -140,7 +140,7 @@ function buildTableReveal(
     const villToCall = heroAction === 'raise' ? Math.max(0, total - facing) : total
     if (scripted === 'fold') {
       villainAction = 'fold'
-      lines.push(`Villain folds. You win the pot of ${pot} with no showdown.`)
+      lines.push(`Opponent folds. You win the pot of ${pot} with no showdown.`)
     } else if (scripted === 'raise') {
       const amt = Math.min(
         config.villainAmount ?? Math.round((startPot + 2 * total) * 0.6) + villToCall,
@@ -149,14 +149,14 @@ function buildTableReveal(
       villainStack -= amt
       pot += amt
       villainAction = 'raise'
-      lines.push(`Villain re-raises to ${amt}. The decision comes back to you.`)
+      lines.push(`Opponent re-raises to ${amt}. The decision comes back to you.`)
     } else {
       // Default scripted response: the opponent calls the price laid.
       const amt = Math.min(villToCall, villainStack)
       villainStack -= amt
       pot += amt
       villainAction = 'call'
-      lines.push(`Villain calls ${amt}. The pot is now ${pot}.`)
+      lines.push(`Opponent calls ${amt}. The pot is now ${pot}.`)
     }
   }
 
@@ -322,6 +322,19 @@ export function BettingRound({
     return parseSignedNumber(evInput) !== null
   }
 
+  const disabledReason =
+    task === 'choose-action'
+      ? action === null
+        ? 'Choose an action'
+        : undefined
+      : task === 'choose-size'
+        ? sizeIdx === null
+          ? 'Choose a bet size'
+          : undefined
+        : parseSignedNumber(evInput) === null
+          ? 'Enter the EV in chips'
+          : undefined
+
   function handleSubmit() {
     if (locked) return
     const correct = isCorrect()
@@ -359,7 +372,7 @@ export function BettingRound({
     (task === 'ev-of-call'
       ? `There is ${pot} in the pot and it costs ${facing} to call. To decide whether to call, work out the EV below.`
       : isFacingBet
-        ? `Villain bets ${facing} into a pot of ${pot - facing}. You can call, raise, or fold.`
+        ? `Opponent bets ${facing} into a pot of ${pot - facing}. You can call, raise, or fold.`
         : `No bet faces you (pot is ${pot}). You can check or bet.`)
 
   const showTableReveal = submitted && task !== 'ev-of-call' && reveal !== null
@@ -372,7 +385,7 @@ export function BettingRound({
 
       {/* The table */}
       <div className="br-felt rounded-3xl border border-emerald-900/40 p-4 text-white shadow-inner">
-        {/* Villain */}
+        {/* Opponent */}
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-100/80">
@@ -586,6 +599,7 @@ export function BettingRound({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={disabledReason}
       />
     </div>
   )

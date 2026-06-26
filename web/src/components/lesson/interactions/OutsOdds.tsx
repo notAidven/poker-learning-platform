@@ -370,6 +370,17 @@ export function OutsOdds({
   const decisionReady = !asked('decision') || decisionChoice != null
   const canSubmit = outsReady && equityReady && potOddsReady && decisionReady && !locked
 
+  const disabledReason =
+    asked('outs') && !outsReady
+      ? 'Enter the number of outs'
+      : asked('equity') && !equityReady
+        ? 'Enter your equity estimate'
+        : asked('potOdds') && !potOddsReady
+          ? 'Enter the equity you need to call'
+          : asked('decision') && !decisionReady
+            ? 'Choose call or fold'
+            : undefined
+
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
@@ -665,6 +676,7 @@ export function OutsOdds({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={disabledReason}
       />
     </div>
   )

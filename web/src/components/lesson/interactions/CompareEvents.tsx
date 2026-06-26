@@ -244,6 +244,7 @@ export function CompareEvents({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={choice === null ? 'Pick an option' : undefined}
       />
     </div>
   )
