@@ -43,9 +43,9 @@ type FeedMsg = { id: string; label: string; tone: FeedTone; text: string }
 
 const TONE_CLASS: Record<FeedTone, string> = {
   ai: 'bg-brand-600 text-white',
-  rule: 'bg-slate-200 text-slate-600',
-  reaction: 'bg-emerald-100 text-emerald-700',
-  recap: 'bg-indigo-100 text-indigo-700',
+  rule: 'bg-night-100 text-night-700',
+  reaction: 'bg-success-100 text-success-700',
+  recap: 'bg-brand-100 text-brand-800',
 }
 
 /**
@@ -104,7 +104,7 @@ function CoachMessageFeed({ message, placeholder }: { message: FeedMsg | null; p
       className="flex max-h-44 flex-col gap-2 overflow-y-auto pr-1"
     >
       {feed.length === 0 ? (
-        <p className="min-h-[3rem] text-sm leading-relaxed text-slate-500">{placeholder}</p>
+        <p className="min-h-[3rem] text-sm leading-relaxed text-night-600">{placeholder}</p>
       ) : (
         feed.map((m, i) => {
           const newest = i === feed.length - 1
@@ -115,7 +115,7 @@ function CoachMessageFeed({ message, placeholder }: { message: FeedMsg | null; p
               >
                 {m.label}
               </span>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{m.text}</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-night-800">{m.text}</p>
             </div>
           )
         })
@@ -210,7 +210,7 @@ export function CoachPanel({
         <h3 className="flex items-center gap-2 text-sm font-bold text-brand-800">
           <span aria-hidden>&clubs;</span> Coach
         </h3>
-        {loading && <span className="text-[0.65rem] font-semibold text-slate-400">reading the spot…</span>}
+        {loading && <span className="text-[0.65rem] font-semibold text-night-400">reading the spot…</span>}
       </div>
 
       <CoachMessageFeed
@@ -249,14 +249,14 @@ export function CoachPanel({
             {deep.tip && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${
-                  deep.tip.source === 'ai' ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-600'
+                  deep.tip.source === 'ai' ? 'bg-brand-600 text-white' : 'bg-night-100 text-night-700'
                 }`}
               >
                 {deep.tip.source === 'ai' ? 'AI' : 'Rule-based'}
               </span>
             )}
           </div>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">
+          <p className="whitespace-pre-line text-sm leading-relaxed text-night-800">
             {deep.loading ? 'Crunching the numbers…' : (deep.tip?.text ?? '')}
           </p>
         </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'motion/react'
 import {
   applyAction,
   type AppliedAction,
@@ -8,6 +9,7 @@ import {
 import { isAIConfigured } from '../../lib/ai/aiClient'
 import { getTableTalk } from '../../lib/ai/llmOpponent'
 import { STARTING_BANKROLL } from '../../lib/bankroll'
+import { DUR, EASE } from '../../lib/motion'
 import { usePrefersReducedMotion } from '../lesson/interactions/usePrefersReducedMotion'
 import {
   BurnCard,
@@ -77,6 +79,76 @@ function ovalPositions(count: number): { x: number; y: number }[] {
   return positions
 }
 
+// ---------------------------------------------------------------------------
+// Chip movement — chips physically rake bet → pot, then pot → winner. Percent
+// coordinates share the same felt box as the seats (see ovalPositions).
+// ---------------------------------------------------------------------------
+
+type Point = { x: number; y: number }
+
+/** A batch of chips gliding from one felt point to another. */
+type ChipFlightSpec = {
+  id: number
+  from: Point
+  to: Point
+  count: number
+  kind: 'bet' | 'win'
+}
+
+/** Where the pot sits on the felt (the chip pile atop the centered board column). */
+const POT_ANCHOR: Point = { x: 50, y: 46 }
+
+/** Chips to show for a bet: scaled by size in big blinds, kept readable (1–4). */
+function betChipCount(amount: number, bb: number): number {
+  return Math.max(1, Math.min(4, Math.round(amount / Math.max(1, bb))))
+}
+
+/** Chips to show raking a won pot to a seat: a little fuller than a bet (3–6). */
+function winChipCount(pot: number, bb: number): number {
+  return Math.max(3, Math.min(6, Math.round(pot / Math.max(1, bb))))
+}
+
+/**
+ * One batch of `.poker-chip`s sliding `from → to` with `EASE.rake`. Each chip is
+ * lightly fanned and staggered so a bet reads as a small handful of chips, not a
+ * single sprite. Self-removes via the last chip's `onAnimationComplete`. Only ever
+ * rendered when motion is allowed (the parent gates on reduced motion).
+ */
+function ChipFlight({ flight, onDone }: { flight: ChipFlightSpec; onDone: (id: number) => void }) {
+  const { from, to, count, kind } = flight
+  const duration = kind === 'win' ? DUR.celebrate : DUR.deal
+  // A won pot waits a beat so the final bet settles in before the rake pulls out.
+  const baseDelay = kind === 'win' ? 0.3 : 0
+  const size = 13
+
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => {
+        const off = i - (count - 1) / 2
+        const fromX = from.x + off * 1.7
+        const toX = to.x + off * 1.4
+        const fromY = from.y + Math.abs(off) * 0.6
+        return (
+          <motion.span
+            key={i}
+            className="poker-chip absolute"
+            style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }}
+            initial={{ left: `${fromX}%`, top: `${fromY}%`, opacity: 0, scale: 0.5 }}
+            animate={{
+              left: `${toX}%`,
+              top: `${to.y}%`,
+              opacity: [0, 1, 1, 0],
+              scale: [0.5, 1, 1, 0.85],
+            }}
+            transition={{ duration, delay: baseDelay + i * 0.05, ease: EASE.rake }}
+            onAnimationComplete={i === count - 1 ? () => onDone(flight.id) : undefined}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 export function PokerTable({
   config,
   heroName = 'You',
@@ -100,6 +172,16 @@ export function PokerTable({
 
   const clearedRef = useRef(false)
   const reportedHandRef = useRef(-1)
+
+  // Chips in flight (bet → pot, pot → winner). Self-removing once landed.
+  const [flights, setFlights] = useState<ChipFlightSpec[]>([])
+  const flightIdRef = useRef(0)
+  const prevCommitRef = useRef<Map<string, number>>(new Map())
+  const prevHandIndexRef = useRef(-1)
+  const winRakeRef = useRef(-1)
+  const removeFlight = useCallback((id: number) => {
+    setFlights((cur) => cur.filter((f) => f.id !== id))
+  }, [])
 
   const heroIndex = hand.seats.findIndex((s) => s.isHero)
   const heroSeat = heroIndex >= 0 ? hand.seats[heroIndex] : undefined
@@ -192,6 +274,72 @@ export function PokerTable({
       cancelled = true
     }
   }, [handOver, hand, aiOff, personaForSeat])
+
+  // --- Chip rake (bet → pot): when a seat commits more chips, slide a small stack
+  //     from that seat into the pot. We diff each seat's running `totalCommitted`
+  //     (monotonic within a hand) so every voluntary bet/call/raise animates, while
+  //     forced blinds and the fresh deal at the start of a hand do not. setState
+  //     only fires asynchronously (never synchronously in the effect body). --------
+  useEffect(() => {
+    if (reduceMotion) {
+      prevCommitRef.current = new Map(hand.seats.map((s) => [s.id, s.totalCommitted]))
+      prevHandIndexRef.current = handIndex
+      return
+    }
+    const newHand = prevHandIndexRef.current !== handIndex
+    const prevMap = prevCommitRef.current
+    const pos = ovalPositions(hand.seats.length)
+    const spawned: ChipFlightSpec[] = []
+    const nextMap = new Map<string, number>()
+    hand.seats.forEach((s, i) => {
+      nextMap.set(s.id, s.totalCommitted)
+      if (newHand) return
+      const delta = s.totalCommitted - (prevMap.get(s.id) ?? 0)
+      if (delta > 0) {
+        spawned.push({
+          id: ++flightIdRef.current,
+          from: pos[i],
+          to: POT_ANCHOR,
+          count: betChipCount(delta, hand.bb),
+          kind: 'bet',
+        })
+      }
+    })
+    prevCommitRef.current = nextMap
+    prevHandIndexRef.current = handIndex
+    // A fresh hand clears any chips still raking in from the previous one.
+    if (newHand) {
+      const t = window.setTimeout(() => setFlights([]), 0)
+      return () => window.clearTimeout(t)
+    }
+    if (spawned.length === 0) return
+    const t = window.setTimeout(() => setFlights((cur) => [...cur, ...spawned]), 0)
+    return () => window.clearTimeout(t)
+  }, [hand, handIndex, reduceMotion])
+
+  // --- Pot rake (pot → winner): once per finished hand, slide the pot out to each
+  //     winning seat. Guarded so it fires a single time per hand. ------------------
+  useEffect(() => {
+    if (!handOver || winRakeRef.current === handIndex) return
+    winRakeRef.current = handIndex
+    if (reduceMotion || !results) return
+    const pos = ovalPositions(hand.seats.length)
+    const spawned: ChipFlightSpec[] = []
+    hand.seats.forEach((s, i) => {
+      if (results.winnerIds.includes(s.id)) {
+        spawned.push({
+          id: ++flightIdRef.current,
+          from: POT_ANCHOR,
+          to: pos[i],
+          count: winChipCount(hand.pot, hand.bb),
+          kind: 'win',
+        })
+      }
+    })
+    if (spawned.length === 0) return
+    const t = window.setTimeout(() => setFlights((cur) => [...cur, ...spawned]), 0)
+    return () => window.clearTimeout(t)
+  }, [handOver, handIndex, hand, results, reduceMotion])
 
   const heroAct = useCallback(
     (applied: AppliedAction) => {
@@ -299,7 +447,7 @@ export function PokerTable({
           <div className="flex items-center gap-1.5">
             {aiOff && (
               <span
-                className="rounded-full bg-slate-800 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-amber-200"
+                className="rounded-full bg-night-900 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-gold-200"
                 title="Firebase AI Logic is not provisioned; opponents and tips use the built-in strategy."
               >
                 AI offline · built-in strategy
@@ -319,7 +467,7 @@ export function PokerTable({
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
         {/* Round felt */}
         <div className="pck-scene relative mx-auto w-full max-w-2xl">
-          <div className="pck-felt relative aspect-square w-full overflow-visible rounded-[44%] border border-emerald-900/40 shadow-xl ring-1 ring-black/25 sm:aspect-[7/5]">
+          <div className="pck-felt relative aspect-square w-full overflow-visible rounded-[44%] border border-night-950/40 shadow-xl ring-1 ring-black/25 sm:aspect-[7/5]">
             {/* Inner felt line */}
             <div
               className="pointer-events-none absolute inset-[7%] rounded-[44%] ring-2 ring-white/10"
@@ -330,7 +478,7 @@ export function PokerTable({
             <div className="absolute left-1/2 top-1/2 flex max-w-[64%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
               <div className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-1">
                 <PotPile pop={handOver} />
-                <span className="flex items-center gap-1.5 text-sm font-bold text-amber-100">
+                <span className="flex items-center gap-1.5 text-sm font-bold text-gold-100">
                   <Chip size={14} tone="gold" />
                   <span className="tabular-nums">Pot {hand.pot.toLocaleString()}</span>
                 </span>
@@ -382,6 +530,15 @@ export function PokerTable({
                 </div>
               )
             })}
+
+            {/* Chips in flight (bet → pot, pot → winner), atop the felt. */}
+            {animate && flights.length > 0 && (
+              <div className="pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
+                {flights.map((f) => (
+                  <ChipFlight key={f.id} flight={f} onDone={removeFlight} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -495,7 +652,7 @@ function ResultsPanel({
         </h2>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-            heroWon ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+            heroWon ? 'bg-success-100 text-success-700' : 'bg-night-100 text-night-700'
           }`}
         >
           {heroWon ? 'You won a pot' : 'You did not win'}
@@ -512,7 +669,7 @@ function ResultsPanel({
               {summary.pots.length > 1 ? (i === 0 ? 'Main pot' : `Side pot ${i}`) : 'Pot'}
               <span className="ml-2 tabular-nums text-ink">{pot.amount.toLocaleString()}</span>
             </span>
-            <span className="text-right font-semibold text-emerald-700">
+            <span className="text-right font-semibold text-success-700">
               {pot.winnerSeatIds.length > 0
                 ? `${pot.winnerSeatIds.map(nameFor).join(', ')}${
                     pot.winnerSeatIds.length > 1 ? ' (split)' : ''
@@ -524,13 +681,13 @@ function ResultsPanel({
       </ul>
 
       {heroBusted && (
-        <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+        <p className="rounded-xl bg-danger-50 px-3 py-2 text-sm font-semibold text-danger-700">
           You are out of chips. Rebuy for {STARTING_BANKROLL.toLocaleString()} play-money chips to
           keep playing, or leave the table.
         </p>
       )}
       {tableCleared && (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+        <p className="rounded-xl bg-success-50 px-3 py-2 text-sm font-semibold text-success-700">
           You busted every opponent. Table cleared!
         </p>
       )}
