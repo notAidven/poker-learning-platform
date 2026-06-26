@@ -1,149 +1,44 @@
 import type { LessonDefinition } from '../../types/lesson'
 
 /**
- * Lesson 7: "Expected Value (EV)" (Section 3 · The Math).
+ * Lesson 7: "Fold Equity & Bluffing" (Section 3 · The Math).
  *
- * EV of a call = p·(chips won) − (1−p)·(chips called); positive → call, negative →
- * fold. This is the same break-even as pot odds (Lesson 6), now in chips. Then the
- * idea of **fold equity**: a bet can win two ways (best hand OR everyone folds),
- * which makes a semibluff profitable. Built on the `betting-round` widget:
- * `ev-of-call` grades the entered EV (the widget recovers equity from it), and
- * `choose-action` grades the action.
+ * The EV of a CALL (and the call/fold decision) now lives entirely in Lesson 6, so
+ * this lesson is rewritten to teach the genuinely new idea: **fold equity**. When you
+ * BET you can win two ways (everyone folds now, OR you make the best hand later), which
+ * is what makes a **semibluff** and a well-chosen **bluff** profitable, and why a bluff
+ * fails when the opponent cannot fold. Built entirely on the `betting-round` widget
+ * with `choose-action`, so nothing re-drills the Lesson 6 call decision.
  *
- * Pot convention (matches the widget): `config.pot` is the pot the hero would scoop
- * if they call and win (already including the villain's bet); `facing.amount` is the
- * call. So EV = equity·pot − (1−equity)·call.
- *
- * Ratio: 5 problems / 7 steps ≈ 71% interactive. Concepts never run back-to-back.
- * Keep `id: '7'` / export `lesson7`.
+ * Every "correct" action is set up to be unambiguous (a strong draw to semibluff, a
+ * busted hand vs a folding opponent, a hand with no fold equity). Scripted opponent
+ * responses (`villainAction`) make each reveal match the lesson point. Ratio:
+ * 4 problems / 6 steps = 67% interactive. Keep `id: '7'` / export `lesson7`.
  */
 export const lesson7: LessonDefinition = {
   id: '7',
-  title: 'Expected Value',
+  title: 'Fold Equity & Bluffing',
   steps: [
     {
       type: 'concept',
       id: 'c1',
-      title: 'Expected value of a call',
-      content: `**Expected value (EV)** is what a call is worth on average:
+      title: 'Two ways to win',
+      content: `In Pot Odds you used **expected value** to price a call. A call can only win one way: at **showdown**, by having the best hand.
 
-$$\\text{EV} = p \\cdot (\\text{chips you win}) - (1 - p) \\cdot (\\text{chips you call})$$
+When **you** are the one betting, you add a second way to win: everyone **folds**. That extra chance is **fold equity**.
 
-where $p$ is your equity (your chance to win). If EV is **positive**, calling makes money over the long run; if it is **negative**, fold.
-
-This is the same break-even as **pot odds**, just measured in chips instead of a percent.`,
+So a bet can win **two ways**: opponents fold now, **or** you go on to make the best hand. That is what makes betting a strong draw, a **semibluff**, so powerful, and it is the whole engine behind bluffing.`,
     },
     {
       type: 'problem',
       showCalculator: true,
       id: 'p1',
       prompt:
-        'Suppose you have **30% equity**. The pot already holds 100 chips and it costs you 20 to call. What is the EV of calling, in chips?',
+        'You hold the Q and J of diamonds on a 10-8 flop with two diamonds: a **flush draw** plus a straight draw, but no **made hand** yet. No one has bet. What is the best action?',
       interaction: 'betting-round',
       config: {
-        hole: ['QH', 'JH'],
-        board: ['10H', '7H', '2C', '3S'],
-        street: 'turn',
-        pot: 100,
-        heroStack: 300,
-        villainStack: 300,
-        facing: { action: 'bet', amount: 20 },
-        seed: 77,
-        task: 'ev-of-call',
-      },
-      answer: { evChips: 16, evTolerance: 1 },
-      feedback: {
-        correct: 'Yes. EV $= 0.30 \\times 100 - 0.70 \\times 20 = +16$ chips. A positive EV means calling profits over time.',
-        incorrect:
-          'EV = (win chance) × (chips won) − (lose chance) × (chips called). Try $0.30 \\times 100 - 0.70 \\times 20$.',
-        hints: [
-          'You win 100 chips 30% of the time, and lose 20 chips the other 70%.',
-          'EV $= 0.30 \\times 100 - 0.70 \\times 20$.',
-          'Work out each part, then subtract the loss side from the win side.',
-        ],
-        why: 'The chips you can win are the 100 already in the pot; the chips you risk are the 20 call.\n\n$$\\text{EV} = 0.30 \\times 100 - 0.70 \\times 20 = +16$$\n\nA positive EV means a profitable call, and it matches pot odds: a 20-into-100 call needs only $\\frac{20}{120} \\approx 16.7\\%$, and 30% clears that.',
-      },
-    },
-    {
-      type: 'problem',
-      showCalculator: true,
-      id: 'p2',
-      prompt:
-        'Now suppose your equity is only **15%**. The pot holds 100 chips and it costs 20 to call. What is the EV of calling, in chips? (Use a negative number if it loses.)',
-      interaction: 'betting-round',
-      config: {
-        hole: ['9D', '6C'],
-        board: ['AH', 'KS', '4C', '2H'],
-        street: 'turn',
-        pot: 100,
-        heroStack: 300,
-        villainStack: 300,
-        facing: { action: 'bet', amount: 20 },
-        seed: 88,
-        task: 'ev-of-call',
-      },
-      answer: { evChips: -2, evTolerance: 1 },
-      feedback: {
-        correct: 'Right. EV $= 0.15 \\times 100 - 0.85 \\times 20 = -2$ chips. A negative EV means you should fold.',
-        incorrect: 'EV $= 0.15 \\times 100 - 0.85 \\times 20$. That comes out below zero, a losing call.',
-        hints: [
-          'You win 100 chips 15% of the time, and lose 20 chips 85% of the time.',
-          'EV $= 0.15 \\times 100 - 0.85 \\times 20$.',
-          'Work out each part, then subtract; a negative result means a losing call.',
-        ],
-        why: 'You win the 100 only 15% of the time and lose your 20 call the other 85%:\n\n$$\\text{EV} = 0.15 \\times 100 - 0.85 \\times 20 = -2$$\n\nThe call loses 2 chips on average, so **fold**. In pot-odds terms you needed ~16.7%, and 15% falls short.',
-      },
-    },
-    {
-      type: 'problem',
-      showCalculator: true,
-      id: 'p3',
-      prompt:
-        'With **25% equity**, the pot holds 100 chips and it costs 20 to call. What is the EV of calling, in chips?',
-      interaction: 'betting-round',
-      config: {
-        hole: ['JS', '10S'],
-        board: ['9D', '4C', '2H', 'QS'],
-        street: 'turn',
-        pot: 100,
-        heroStack: 300,
-        villainStack: 300,
-        facing: { action: 'bet', amount: 20 },
-        seed: 73,
-        task: 'ev-of-call',
-      },
-      answer: { evChips: 10, evTolerance: 1 },
-      feedback: {
-        correct: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = +10$ chips, a clearly profitable call.',
-        incorrect: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = 25 - 15 = +10$ chips.',
-        hints: [
-          'You win 100 chips 25% of the time, and lose 20 chips 75% of the time.',
-          'EV $= 0.25 \\times 100 - 0.75 \\times 20$.',
-          'Work out each part, then subtract to find the EV.',
-        ],
-        why: 'EV $= 0.25 \\times 100 - 0.75 \\times 20 = +10$. Comfortably positive, because 25% is well above the ~16.7% break-even this price needs.',
-      },
-    },
-    {
-      type: 'concept',
-      id: 'c2',
-      title: 'Fold equity',
-      content: `So far you only win by having the best hand. But when **you** are the one betting, you can also win when **everyone folds**. That extra chance is **fold equity**.
-
-A bet can win **two ways**: opponents fold now, **or** you go on to make the best hand. A **semibluff** (betting a strong draw) uses both: it can take the pot immediately, and if called you still have your outs.
-
-A bluff only works when your opponent *can* fold. With no fold equity, betting a weak hand just burns chips.`,
-    },
-    {
-      type: 'problem',
-      showCalculator: true,
-      id: 'p4',
-      prompt:
-        'You have a flush draw (no made hand yet) on the flop and no one has bet. Betting can win two ways. What is the best action?',
-      interaction: 'betting-round',
-      config: {
-        hole: ['AH', '4H'],
-        board: ['KH', '9H', '2C'],
+        hole: ['QD', 'JD'],
+        board: ['10D', '8D', '3C'],
         street: 'flop',
         pot: 60,
         heroStack: 400,
@@ -151,26 +46,71 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
         sizingOptions: [0.5, 0.75, 1],
         seed: 71,
         task: 'choose-action',
+        helperText: 'No bet faces you, so your choices are check or bet.',
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Yes. **Bet** as a semibluff. You can win now if they fold, and you still have your flush outs if they call.',
+        correct: 'Yes. **Bet** as a **semibluff**. You can win now if they fold, and you still have your big draw if they call.',
         incorrect:
-          'A strong draw with no bet yet is the classic **semibluff**: betting wins two ways (a fold now, or your flush later). Bet.',
+          'A strong draw with no bet yet is the classic **semibluff**: betting wins two ways (a fold now, or your draw landing later). Bet.',
         hints: [
           'No bet faces you, so your choices are check or bet.',
           'A strong draw can win two ways: opponents folding now, or the draw completing later.',
           'Betting a draw like this is called a semibluff.',
         ],
-        why: 'A **semibluff** bet has **fold equity** (opponents may fold now) **plus** your ~35% flush equity if called: two ways to win. That combination makes betting the draw profitable, where betting pure air would not.',
+        why: 'A **semibluff** bet has **fold equity** (opponents may fold now) **plus** the equity of a big flush-and-straight draw if called: two ways to win. That combination makes betting the draw profitable, where betting pure air would not.',
+      },
+    },
+    {
+      type: 'concept',
+      id: 'c2',
+      title: 'Bluffs need fold equity',
+      content: `A **bluff** bets a weak hand to push a **better** hand into folding. It only works when your opponent *can* fold.
+
+Two sides of the same coin:
+
+- A missed draw on the river can become a profitable **bluff** when your opponent will often fold. Betting is then the only way that hand can win.
+- Against an opponent who **never folds**, there is no **fold equity**, so betting a weak hand just burns chips. Check instead and try to win at showdown.`,
+    },
+    {
+      type: 'problem',
+      showCalculator: true,
+      id: 'p2',
+      prompt:
+        'River. Your flush draw missed, so you have Jack-high and cannot win at showdown. This opponent has shown weakness and will usually fold to a bet. There is no bet yet. What is the best action?',
+      interaction: 'betting-round',
+      config: {
+        hole: ['JS', '10S'],
+        board: ['AD', 'KH', '7C', '4D', '2C'],
+        street: 'river',
+        pot: 80,
+        heroStack: 300,
+        villainStack: 300,
+        sizingOptions: [0.5, 0.75, 1],
+        villainAction: 'fold',
+        seed: 72,
+        task: 'choose-action',
+        helperText: 'No bet faces you, so your choices are check or bet.',
+      },
+      answer: { action: 'bet' },
+      feedback: {
+        correct: 'Right. **Bet** as a **bluff**. Jack-high cannot win at showdown, so a fold is the only way this hand wins, and the **fold equity** is there.',
+        incorrect:
+          'Checking gives up: Jack-high never wins at showdown here. Because the opponent folds often, a **bluff** has the **fold equity** to win the pot. Bet.',
+        hints: [
+          'Can Jack-high ever win this pot at showdown?',
+          'If you cannot win at showdown, the only way to win is to make them fold.',
+          'This opponent folds often, so a bluff has fold equity here.',
+        ],
+        why: 'When your hand has no showdown value, checking can never win. A **bluff** turns it into a winner whenever the opponent folds. The bet is profitable precisely because this opponent has enough **fold equity** (they fold often).',
       },
     },
     {
       type: 'problem',
       showCalculator: true,
-      id: 'p5',
+      id: 'p3',
       prompt:
-        'River. You hold Ace-high with no pair, and you know this opponent **never folds**. There is no bet yet. What is the best action?',
+        'River, a different opponent. You hold Ace-high with no pair, and you know this player **never folds**. There is no bet yet. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AS', 'QC'],
@@ -182,18 +122,53 @@ A bluff only works when your opponent *can* fold. With no fold equity, betting a
         sizingOptions: [0.5, 0.75, 1],
         seed: 79,
         task: 'choose-action',
+        helperText: 'No bet faces you, so your choices are check or bet.',
       },
       answer: { action: 'check' },
       feedback: {
-        correct: 'Right. **Check**. Against someone who never folds there is no fold equity, so a bluff cannot work; and your hand is too weak to bet for value.',
+        correct: 'Right. **Check**. Against someone who never folds there is no **fold equity**, so a **bluff** cannot work, and your hand is too weak to bet for value.',
         incorrect:
-          'A bluff needs fold equity. If the opponent never folds, betting Ace-high only loses chips, so **check** and try to win at showdown.',
+          'A bluff needs **fold equity**. If the opponent never folds, betting Ace-high only loses chips, so **check** and try to win at showdown.',
         hints: [
           'A bluff only works if the opponent can fold.',
           'This opponent never folds, so betting has no fold equity.',
-          'Ace-high is too weak to bet for value, and against someone who never folds a bluff cannot work either.',
+          'Ace-high is too weak to bet for value, and a bluff cannot work either.',
         ],
-        why: 'Betting wins two ways only when fold equity exists. Against a player who **never folds**, the "they fold" path is gone, and Ace-high is too weak to value bet. So a bet has no way to profit. **Check** and keep your showdown chance.',
+        why: 'Betting wins two ways only when **fold equity** exists. Against a player who **never folds**, the "they fold" path is gone, and Ace-high is too weak to value bet. So a bet has no way to profit. **Check** and keep your showdown chance.',
+      },
+    },
+    {
+      type: 'problem',
+      showCalculator: true,
+      id: 'p4',
+      prompt:
+        'You hold the A and K of clubs on a Q-J flop with two clubs: a **monster** draw (a flush draw plus a Broadway straight draw). A small bet comes to you. To win the pot now AND keep your draw if called, what is the most aggressive action?',
+      interaction: 'betting-round',
+      config: {
+        hole: ['AC', 'KC'],
+        board: ['QC', 'JD', '3C'],
+        street: 'flop',
+        pot: 80,
+        heroStack: 400,
+        villainStack: 400,
+        facing: { action: 'bet', amount: 20 },
+        sizingOptions: [0.5, 0.75, 1],
+        villainAction: 'fold',
+        seed: 74,
+        task: 'choose-action',
+        helperText: 'The Opponent bets 20 into a pot of 60. You can call, raise, or fold.',
+      },
+      answer: { action: 'raise' },
+      feedback: {
+        correct: 'Yes. **Raise** as a **semibluff**. Raising adds **fold equity** (they may fold now), and if called you still hold a huge draw.',
+        incorrect:
+          'Calling is fine, but it passes up **fold equity**. A monster draw is the perfect hand to **raise** as a semibluff: win now if they fold, or hit your draw if they call.',
+        hints: [
+          'A bet faces you, so you can call, raise, or fold.',
+          'A flush draw plus a Broadway straight draw is a monster draw, often a favorite even if called.',
+          'Raising adds a second way to win (they fold now) on top of your draw.',
+        ],
+        why: 'A **semibluff** raise stacks two edges: the **fold equity** of an aggressive raise, plus the huge equity of a combined flush-and-straight draw if called. With a draw this big, raising is more profitable than just calling.',
       },
     },
   ],

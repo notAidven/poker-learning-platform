@@ -3,14 +3,17 @@ import type { LessonDefinition } from '../../types/lesson'
 /**
  * Lesson 5: "Outs & Equity" (Section 3 · The Math).
  *
- * Count outs (flush draw = 9, open-ended = 8, gutshot = 4) → convert to a rough win
- * chance with the Rule of 2 & 4. Outs are validated by the evaluator (`countOuts`)
- * inside the `outs-odds` widget, never hard-coded. One flush draw (A♥K♥) is carried
- * from flop to turn so learners feel equity shrink street to street. Pot odds and the
- * call/fold decision live in the next lesson (Lesson 6).
+ * Count outs (flush draw = 9, open-ended = 8, gutshot = 4, and combined draws) then
+ * convert to a rough win chance with the Rule of 2 & 4. Outs are validated by the
+ * evaluator (`countOuts`) inside the `outs-odds` widget, never hard-coded. The draws
+ * are deliberately varied (different suits, ranks, and a big combo draw) so learners
+ * do not just memorize one board. One flush draw (A-Q of diamonds) IS carried from
+ * flop to turn so they feel equity shrink street to street. Pot odds and the call/fold
+ * decision live in the next lesson (Lesson 6).
  *
- * Ratio: 6 problems / 8 steps = 75% interactive. Concepts never run back-to-back.
- * Keep `id: '5'` / export `lesson5`.
+ * Ratio: 7 problems / 9 steps ≈ 78% interactive. Concepts never run back-to-back.
+ * This is the Math section, so KaTeX is used for the formulas. Keep `id: '5'` /
+ * export `lesson5`.
  */
 export const lesson5: LessonDefinition = {
   id: '5',
@@ -22,7 +25,7 @@ export const lesson5: LessonDefinition = {
       title: 'Outs',
       content: `An **out** is an unseen card that improves your hand.
 
-Say you hold two hearts and two more land on the board: a **flush draw**. A suit has 13 cards and you can already see 4, so the rest are still out there:
+Say you hold two clubs and two more land on the board: a **flush draw**. A suit has 13 cards and you can already see 4, so the rest are still out there:
 
 $$\\text{flush outs} = 13 - 4 = 9$$
 
@@ -32,22 +35,22 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
       type: 'problem',
       showCalculator: true,
       id: 'p1',
-      prompt: 'You hold two hearts and two more land on the flop, a flush draw. How many cards complete your flush?',
+      prompt: 'You hold the K and Q of clubs, and two more clubs land on the flop, a **flush draw**. How many cards complete your flush?',
       interaction: 'outs-odds',
       config: {
-        hole: ['AH', 'KH'],
-        board: ['QH', '7H', '2C'],
+        hole: ['KC', 'QC'],
+        board: ['9C', '5C', '2D'],
         drawLabel: 'a flush',
         street: 'flop',
         ask: ['outs'],
       },
       answer: { outs: 9 },
       feedback: {
-        correct: 'A suit holds 13 cards and you can see 4, so **9** hearts remain. Nine outs.',
-        incorrect: 'Count the hearts you can already see (4), then subtract from 13.',
+        correct: 'A suit holds 13 cards and you can see 4 clubs, so **9** clubs remain. Nine outs.',
+        incorrect: 'Count the clubs you can already see (4), then subtract from 13.',
         hints: [
           'A flush needs five cards of one suit.',
-          'You can see four hearts: two in your hand, two on the board.',
+          'You can see four clubs: two in your hand, two on the board.',
           'A suit holds 13 cards; subtract the ones you can already see.',
         ],
         why: 'A flush draw is always **9 outs**: a suit has 13 cards; with 2 in your hand and 2 on the board you have seen 4, leaving $13 - 4 = 9$ unseen cards that complete the flush.',
@@ -57,11 +60,11 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
       type: 'problem',
       showCalculator: true,
       id: 'p2',
-      prompt: 'Your 9-8 sits on a 7-6-2 flop, giving you 9-8-7-6, an open-ended straight draw. How many cards complete the straight?',
+      prompt: 'You hold J-10 and the flop is 9-8-3, giving you J-10-9-8, an **open-ended straight draw**. How many cards complete the straight?',
       interaction: 'outs-odds',
       config: {
-        hole: ['9C', '8D'],
-        board: ['7H', '6S', '2C'],
+        hole: ['JD', '10C'],
+        board: ['9H', '8S', '3C'],
         drawLabel: 'an open-ended straight',
         street: 'flop',
         ask: ['outs'],
@@ -69,39 +72,66 @@ Any one of those **9 outs** completes the flush. Counting outs turns a draw into
       answer: { outs: 8 },
       feedback: {
         correct:
-          'Either end fills it: any **10** (four of them) makes 10-9-8-7-6, any **5** (four) makes 9-8-7-6-5. That is $4 + 4 = 8$ outs.',
-        incorrect: 'An open-ended draw fills at **both** ends, so count four 10s plus four 5s.',
+          'Either end fills it: any **Queen** (four of them) makes Q-J-10-9-8, any **7** (four) makes J-10-9-8-7. That is $4 + 4 = 8$ outs.',
+        incorrect: 'An open-ended draw fills at **both** ends, so count four Queens plus four 7s.',
         hints: [
-          'You already have four in a row: 9-8-7-6.',
+          'You already have four in a row: J-10-9-8.',
           'A card at either end completes the straight.',
           'Count the cards that complete each end, then add the two ends together.',
         ],
-        why: 'An **open-ended** straight draw (four in a row, open at both ends) has **8 outs**: four cards complete each end.',
+        why: 'An **open-ended straight draw** (four in a row, open at both ends) has **8 outs**: four cards complete each end.',
       },
     },
     {
       type: 'problem',
       showCalculator: true,
       id: 'p3',
-      prompt: 'Same 9-8, but now the flop is 7-5-2: you hold 9-8-7 and 5, an inside (gutshot) straight draw missing the 6. How many cards complete the straight?',
+      prompt: 'You hold Q-J and the flop is 10-8-3: you have Q-J-10 and 8, an inside (**gutshot**) straight draw missing the 9. How many cards complete the straight?',
       interaction: 'outs-odds',
       config: {
-        hole: ['9C', '8D'],
-        board: ['7H', '5S', '2C'],
+        hole: ['QH', 'JS'],
+        board: ['10D', '8C', '3H'],
         drawLabel: 'an inside (gutshot) straight',
         street: 'flop',
         ask: ['outs'],
       },
       answer: { outs: 4 },
       feedback: {
-        correct: 'Only a **6** fills the gap (9-8-7-6-5), and there are four of them: **4 outs**.',
-        incorrect: 'A gutshot is missing one middle rank. Only that one rank completes it, so count how many of it remain.',
+        correct: 'Only a **9** fills the gap (Q-J-10-9-8), and there are four of them: **4 outs**.',
+        incorrect: 'A gutshot is missing one middle rank. Only that one rank completes it, so count how many remain.',
         hints: [
-          'You have 9-8-7 and a 5. What single rank is missing in the middle?',
+          'You have Q-J-10 and an 8. What single rank is missing in the middle?',
           'Only the one missing middle rank completes the straight.',
           'Count how many cards of that one rank remain.',
         ],
         why: 'A **gutshot** (inside) straight draw needs one specific middle rank, so it has just **4 outs**, half of the open-ended draw\'s 8. Same two cards in your hand; one different board card turns 8 outs into 4.',
+      },
+    },
+    {
+      type: 'problem',
+      showCalculator: true,
+      id: 'p4',
+      prompt: 'Draws can combine. You hold J-10 of hearts on a 9-8-2 board with two hearts: that is BOTH a flush draw and an open-ended straight draw at once. How many cards improve you to a flush or a straight?',
+      interaction: 'outs-odds',
+      config: {
+        hole: ['JH', '10H'],
+        board: ['9H', '8C', '2H'],
+        drawLabel: 'a flush plus an open-ended straight',
+        street: 'flop',
+        ask: ['outs'],
+      },
+      answer: { outs: 15 },
+      feedback: {
+        correct:
+          'Nine hearts complete the flush, and a Queen or 7 completes the straight. Six of those (the Queens and 7s that are not hearts) are new, so $9 + 6 = 15$ outs, a huge draw.',
+        incorrect:
+          'Count the flush outs (9 hearts) and the straight outs (Queens and 7s), but do not double-count the Queen and 7 of hearts, which you already counted as flush outs.',
+        hints: [
+          'First count the flush outs: hearts you cannot see.',
+          'Then the straight outs: a Queen or a 7 on either end.',
+          'The Queen and 7 of hearts belong to both, so count them once.',
+        ],
+        why: 'A combined flush plus open-ended draw is about **15 outs**: 9 hearts for the flush, plus the 6 non-heart Queens and 7s for the straight. With this many outs you are often a favorite even with no made hand yet.',
       },
     },
     {
@@ -119,12 +149,12 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     {
       type: 'problem',
       showCalculator: true,
-      id: 'p4',
-      prompt: 'Back to your flush draw: 9 outs on the flop, two cards still to come. Estimate your chance to complete the flush by the river.',
+      id: 'p5',
+      prompt: 'You hold the A and Q of diamonds with two more diamonds on the flop: a 9-out flush draw, two cards still to come. Estimate your chance to complete the flush by the river.',
       interaction: 'outs-odds',
       config: {
-        hole: ['AH', 'KH'],
-        board: ['QH', '7H', '2C'],
+        hole: ['AD', 'QD'],
+        board: ['10D', '6D', '3C'],
         drawLabel: 'a flush',
         street: 'flop',
         ask: ['equity'],
@@ -148,12 +178,12 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     {
       type: 'problem',
       showCalculator: true,
-      id: 'p5',
-      prompt: 'A blank hits the turn. You still hold the 9-out flush draw, but now only the river is left. Estimate your equity now.',
+      id: 'p6',
+      prompt: 'A **blank** hits the turn (the 8 of spades, which helps no one). You still hold the same 9-out diamond flush draw, but now only the river is left. Estimate your equity now.',
       interaction: 'outs-odds',
       config: {
-        hole: ['AH', 'KH'],
-        board: ['QH', '7H', '2C', '3S'],
+        hole: ['AD', 'QD'],
+        board: ['10D', '6D', '3C', '8S'],
         drawLabel: 'a flush',
         street: 'turn',
         ask: ['equity'],
@@ -176,12 +206,12 @@ Two caveats: the $\\times 4$ figure assumes you will see **both** cards (your al
     {
       type: 'problem',
       showCalculator: true,
-      id: 'p6',
-      prompt: 'Back to the open-ended straight draw (8 outs) on the flop, two cards to come. Estimate your equity by the river.',
+      id: 'p7',
+      prompt: 'A different draw: 10-9 on an 8-7-2 flop is an **open-ended straight draw** (8 outs), two cards to come. Estimate your equity by the river.',
       interaction: 'outs-odds',
       config: {
-        hole: ['9C', '8D'],
-        board: ['7H', '6S', '2C'],
+        hole: ['10D', '9C'],
+        board: ['8H', '7S', '2C'],
         drawLabel: 'an open-ended straight',
         street: 'flop',
         ask: ['equity'],

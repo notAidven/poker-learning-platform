@@ -104,14 +104,14 @@ export const lessons: LessonMeta[] = [
     title: 'Pot Odds',
     section: 'math',
     unit: 'The Math · Pot odds',
-    primaryInteraction: 'Price a call; call or fold',
+    primaryInteraction: 'Price a call; call or fold; EV in chips',
   },
   {
     id: '7',
-    title: 'Expected Value',
+    title: 'Fold Equity & Bluffing',
     section: 'math',
-    unit: 'The Math · EV',
-    primaryInteraction: 'EV of a call; fold equity',
+    unit: 'The Math · Fold equity',
+    primaryInteraction: 'Semibluffs, bluffs, and fold equity',
   },
   {
     id: '8',
