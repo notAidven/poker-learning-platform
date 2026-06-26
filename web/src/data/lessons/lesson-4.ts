@@ -206,7 +206,7 @@ You will not be quizzed on these, but the standard colors below are the ones you
 - Into a 100 pot, a **half-pot** bet is 50, a quarter-pot bet is 25, and a pot-sized bet is 100.
 - A bet can be small or large, and the chips you risk scale with the fraction you pick.
 
-For now, just get comfortable that a bet has a size. **Which** fraction to choose, and why, is its own skill, and that is all of Lesson 8.`,
+For now, just get comfortable that a bet has a size. **Which** fraction to choose, and why, is its own skill — the whole of the Bet Sizing lesson.`,
     },
     {
       type: 'problem',
@@ -234,7 +234,7 @@ For now, just get comfortable that a bet has a size. **Which** fraction to choos
           'Half-pot means half of the chips already in the middle.',
           'To size it, split the pot in two.',
         ],
-        why: 'A bet is sized as a **fraction of the pot**, so into an 80 pot a half-pot bet is 40. This is just the mechanic of entering a size. **Which** fraction to pick, and why (for value, for bluffs, for board texture), is the whole of Lesson 8.',
+        why: 'A bet is sized as a **fraction of the pot**, so into an 80 pot a half-pot bet is 40. This is just the mechanic of entering a size. **Which** fraction to pick, and why (for value, for bluffs, for board texture), is the whole of the Bet Sizing lesson.',
       },
     },
   ],

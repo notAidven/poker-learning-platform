@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { ExitLessonModal } from '../components/ExitLessonModal'
 import { LessonPlayer } from '../components/lesson/LessonPlayer'
 import { hasLessonContent, loadLesson } from '../data/lessonContent'
-import { lessons } from '../data/lessons'
+import { lessonNumber, lessons } from '../data/lessons'
 import type { LessonDefinition } from '../types/lesson'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
 import { useCompletedLessons } from '../hooks/useCompletedLessons'
@@ -143,7 +143,7 @@ export function LessonPage() {
             ← Course path
           </Link>
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
-            Lesson {meta.id}
+            Lesson {lessonNumber(meta.id)}
           </p>
           <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{meta.title}</h1>
         </div>

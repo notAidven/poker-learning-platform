@@ -22,7 +22,7 @@ export const lesson8: LessonDefinition = {
       type: 'concept',
       id: 'c1',
       title: 'Value bets and bluffs',
-      content: `Every bet has a purpose. You already met one in Lesson 7: a **bluff** bets a weak hand hoping a **better** hand folds (it only works when you have fold equity).
+      content: `Every bet has a purpose. You already met one in the Expected Value lesson: a **bluff** bets a weak hand hoping a **better** hand folds (it only works when you have fold equity).
 
 This lesson is about the other purpose:
 
@@ -127,13 +127,13 @@ The key test for value: *will worse hands call?* If nothing worse can call (wors
       type: 'concept',
       id: 'c2',
       title: 'Sizing to the board',
-      content: `In Lesson 4 you saw that a bet is a **fraction of the pot**. Now you choose **which** fraction. Size it to the **board and purpose, not your hand's strength** (always betting big with big hands gives you away).
+      content: `In the Betting Basics lesson you saw that a bet is a **fraction of the pot**. Now you choose **which** fraction. Size it to the **board and purpose, not your hand's strength** (always betting big with big hands gives you away).
 
 - **Small (about ⅓ pot):** dry, disconnected boards where little can call.
 - **Medium (½ pot):** the everyday default.
 - **Large (¾ pot):** wet, draw-heavy boards, to make draws pay.
 
-A bigger bet lays a worse price (the **pot odds** from Lesson 6), so sizing up on a wet board makes draws pay too much to chase. Use the **same** sizes for value bets and bluffs so opponents can never read your hand from your bet.`,
+A bigger bet lays a worse price (worse **pot odds**, from the Pot Odds lesson), so sizing up on a wet board makes draws pay too much to chase. Use the **same** sizes for value bets and bluffs so opponents can never read your hand from your bet.`,
     },
     {
       type: 'problem',

@@ -7,6 +7,6 @@ export const course = {
   heroDescription:
     'Nine hands-on lessons in three sections: Foundations, Playing a Hand, and The Math (outs, pot odds, EV, and bet sizing). Play money only, no real betting. Just sharper instincts.',
   pathDescription:
-    'Play each hand in order through three sections. Clear a lesson to turn the next card on the table.',
-  courseSummary: '9 lessons · 3 sections · play money',
+    'Play each hand in order through three sections, then onto the casino floor. Clear a lesson to turn the next card on the table.',
+  courseSummary: '9 lessons · 3 sections + casino floor · play money',
 } as const

@@ -357,7 +357,7 @@ export function BettingRound({
   const situationText =
     config.helperText ??
     (task === 'ev-of-call'
-      ? `Villain bets ${facing} into a pot of ${pot - facing}. To decide whether to call, work out the EV below.`
+      ? `There is ${pot} in the pot and it costs ${facing} to call. To decide whether to call, work out the EV below.`
       : isFacingBet
         ? `Villain bets ${facing} into a pot of ${pot - facing}. You can call, raise, or fold.`
         : `No bet faces you (pot is ${pot}). You can check or bet.`)

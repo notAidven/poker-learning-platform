@@ -178,11 +178,11 @@ function SelectAllMode({
   const locked = disabled || submitted
   const helperText =
     config.helperText ??
-    'Tap every card that belongs to the event. The whole deck is the sample space (|Ω| = 52).'
-  const selectionLabel = config.selectionLabel ?? 'Your selection (event A)'
-  const countLabel = config.countLabel ?? 'How many cards are in this event? Enter |A|.'
+    'Tap every card that fits the prompt. The full deck is 52 cards (4 suits of 13).'
+  const selectionLabel = config.selectionLabel ?? 'Your selection'
+  const countLabel = config.countLabel ?? 'How many cards did you tap?'
   const probabilityLabel =
-    config.probabilityLabel ?? 'What is P(A) = |A| / 52 as a reduced fraction?'
+    config.probabilityLabel ?? 'What fraction of the 52-card deck is that? Enter it as a reduced fraction.'
 
   const requiresCount = answer.count !== undefined
   const requiresProbability = answer.probability !== undefined
@@ -274,7 +274,7 @@ function SelectAllMode({
         <p className="text-sm font-semibold text-slate-700">
           Standard 52-card deck
           <span className="block text-xs font-normal text-slate-500">
-            Sample space Ω: {DECK_SIZE} equally likely cards
+            {DECK_SIZE} cards · 4 suits of 13
           </span>
         </p>
       </div>
