@@ -10,12 +10,26 @@
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
 const OPENAI_TIMEOUT_MS = 30_000
 
+/**
+ * Server-side model allow-list — the primary cost guardrail. Even a stolen or
+ * abused Firebase token can only ever invoke a model named here, so a caller can
+ * never run up a bill on an expensive model. To enable another model, add its
+ * exact id to this set (nothing else needs to change).
+ */
+export const ALLOWED_MODELS: ReadonlySet<string> = new Set<string>(['gpt-4o-mini'])
+
+/** Default when the client omits `model`; must itself be in ALLOWED_MODELS. */
 export const DEFAULT_MODEL = 'gpt-4o-mini'
+
 const DEFAULT_MAX_TOKENS = 1024
-const MAX_OUTPUT_TOKENS = 4096
-const MAX_MESSAGES = 50
-const MAX_CONTENT_CHARS = 24_000
-const MAX_MODEL_CHARS = 100
+// Output ceiling (cost guardrail). The client never sends max_tokens today, so it
+// uses DEFAULT_MAX_TOKENS; this only caps anyone who does. Lowered from 4096.
+const MAX_OUTPUT_TOKENS = 2048
+// Input caps tuned to this app's real prompts — the largest, the deep-table coach
+// read, is a few KB in a single message. Tightened from 50 x 24,000 to cut the
+// input-cost / abuse vector while leaving generous headroom.
+const MAX_MESSAGES = 12
+const MAX_CONTENT_CHARS = 8_000
 
 export type ChatRole = 'system' | 'user' | 'assistant'
 export type ChatMessage = { role: ChatRole; content: string }
@@ -94,8 +108,11 @@ function validateModel(value: unknown): string {
     throw new ValidationError('`model` must be a non-empty string.')
   }
   const model = value.trim()
-  if (model.length > MAX_MODEL_CHARS) {
-    throw new ValidationError('`model` is too long.')
+  // Allow-list, not just a length check: reject any model the proxy isn't
+  // explicitly permitted to call (the message intentionally does not echo the
+  // rejected value).
+  if (!ALLOWED_MODELS.has(model)) {
+    throw new ValidationError('`model` is not supported by this proxy.')
   }
   return model
 }

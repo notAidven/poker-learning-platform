@@ -15,6 +15,8 @@ never committed to this repo and never sent to the browser.
   - Validates input, calls `https://api.openai.com/v1/chat/completions`, and
     returns `{ text, model, finishReason }`.
   - Default model: `gpt-4o-mini`. Set `json: true` for a `json_object` response.
+  - Enforces a server-side **model allow-list** and **per-uid rate limits**; see
+    [Cost & abuse controls](#cost--abuse-controls).
 - `GET /` (or `/health`) — unauthenticated liveness probe → `{ "status": "ok" }`.
 - `OPTIONS` — CORS preflight.
 
@@ -42,12 +44,46 @@ Allowed origins: the production hosting domains
 (`http://localhost:5173`, `:5174`, `:5175`). Update `ALLOWED_ORIGINS` in
 `src/index.ts` if your origins differ.
 
+## Cost & abuse controls
+
+Auth and CORS gate **who** can reach the proxy; these controls gate **how much**
+it can cost, so a signed-in (or token-stealing) caller can't run up an OpenAI bill:
+
+- **Server-side model allow-list.** The proxy only ever calls a model on an
+  explicit allow-list (`ALLOWED_MODELS` in `src/openai.ts`), defaulting to
+  `gpt-4o-mini`. Any other `model` value is rejected with `400` — a client can
+  never select an off-list (e.g. expensive) model. Add a model to that set to
+  enable it.
+- **Per-uid rate limiting (Durable Object).** Every request is counted against the
+  verified `uid` via a Durable Object addressed per uid (`idFromName(uid)`), which
+  gives each user an isolated, strongly-consistent counter on the **free** plan.
+  Two fixed windows are enforced:
+  - a per-minute burst guard (`RATE_LIMITS.perMinute`, default `30`), and
+  - a daily cap (`RATE_LIMITS.perDay`, default `400`).
+
+  Over-limit requests get `429` with a `Retry-After` header. The web client treats
+  any non-2xx as a soft failure and falls back to its rule-based logic, so hitting
+  a limit degrades the AI gracefully rather than erroring. Tune the numbers in
+  `src/rateLimit.ts`.
+- **Tight input/output caps** (`src/openai.ts`): `MAX_MESSAGES` (`12`),
+  `MAX_CONTENT_CHARS` (`8,000`), and `MAX_OUTPUT_TOKENS` (`2,048`; the default
+  `max_tokens` stays `1,024`) — sized to this app's coach/opponent prompts to cut
+  the input-cost vector.
+
+**Why a Durable Object and not KV?** A DO gives a strongly-consistent counter (no
+eventual-consistency race) and isn't subject to KV's free-tier daily *write* cap,
+which a per-request counter would otherwise burn through. It is also simpler to
+operate: the DO is created automatically on `wrangler deploy` (via the
+`[[migrations]]` entry in `wrangler.toml`), so there is **no namespace to create**
+and nothing to paste back into config.
+
 ## Local development
 
 ```bash
 cd worker
 npm install
 npm run typecheck        # tsc --noEmit
+npm test                 # vitest run (unit tests: model allow-list + rate limits)
 npm run dry-run          # wrangler deploy --dry-run --outdir dist (builds, no deploy)
 
 # To run it locally with a key, create worker/.dev.vars (gitignored):
@@ -70,10 +106,17 @@ npx wrangler login
 npx wrangler secret put OPENAI_API_KEY
 #    (paste your sk-... key when prompted)
 
-# 3) Deploy. Note the printed Worker URL, e.g.
-#    https://suited-ai-proxy.<your-subdomain>.workers.dev
+# 3) Deploy. This also provisions the rate-limiter Durable Object automatically:
+#    the `[[migrations]]` entry in wrangler.toml runs on first deploy, so there is
+#    NO namespace to create and nothing to paste back into config. Note the printed
+#    Worker URL, e.g. https://suited-ai-proxy.<your-subdomain>.workers.dev
 npx wrangler deploy
 ```
+
+> Rate limits and the model allow-list are code/config, not account setup — they
+> ship with the deploy above. To change them, edit `src/rateLimit.ts` /
+> `src/openai.ts` (or `wrangler.toml`) and redeploy. See
+> [Cost & abuse controls](#cost--abuse-controls).
 
 ### Wire the client to the Worker
 
@@ -101,7 +144,10 @@ base Worker URL or the full `.../chat` URL both work).
 
 ## Files
 
-- `src/index.ts` — request routing, CORS, auth gating, OpenAI call orchestration.
+- `src/index.ts` — request routing, CORS, auth gating, rate-limit gate, OpenAI call.
 - `src/firebaseAuth.ts` — Firebase ID token verification (Web Crypto, zero deps).
-- `src/openai.ts` — request validation + OpenAI Chat Completions call.
-- `wrangler.toml` — Worker config (name, entry, compatibility date).
+- `src/openai.ts` — request validation, model allow-list, input caps, OpenAI call.
+- `src/rateLimit.ts` — pure per-uid fixed-window limit logic (unit-tested).
+- `src/rateLimiterDO.ts` — the `RateLimiterDO` Durable Object (per-uid counter).
+- `wrangler.toml` — Worker config (name, entry, DO binding + migration).
+- `test/rateLimit.test.ts` — unit tests for the allow-list and rate-limit logic.

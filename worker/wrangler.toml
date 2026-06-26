@@ -17,3 +17,17 @@ compatibility_date = "2025-09-01"
 # uses only standard fetch + Web Crypto).
 [observability]
 enabled = true
+
+# Per-uid rate limiting (per-minute burst + daily cap) lives in a Durable Object.
+# The Worker addresses one instance per uid (idFromName(uid)), giving each user a
+# strongly-consistent counter on the free plan. The DO is SQLite-backed (the only
+# free-tier storage backend) and is created automatically on `wrangler deploy` via
+# the migration below — there is NO namespace to provision and nothing to paste
+# back into this file.
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimiterDO"]
