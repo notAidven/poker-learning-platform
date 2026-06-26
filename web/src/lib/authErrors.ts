@@ -25,7 +25,7 @@ export function getAuthErrorMessage(
 
   switch (code) {
     case 'auth/email-already-in-use':
-      return 'An account with this email already exists.'
+      return 'An account with this email already exists. If you used Google to sign up, choose "Continue with Google" to sign in. You can add a password later from your profile.'
     case 'auth/invalid-email':
       return 'Please enter a valid email address.'
     case 'auth/weak-password':
@@ -47,7 +47,7 @@ export function getAuthErrorMessage(
     case 'auth/credential-already-in-use':
       return 'That email and password are already linked to another account.'
     case 'auth/account-exists-with-different-credential':
-      return 'This email is already registered with a different sign-in method. Sign in with that method, then set a password from your profile.'
+      return 'This email is already registered with a different sign-in method. Use "Continue with Google" to sign in, then set a password from your profile.'
     case 'auth/requires-recent-login':
       return 'Please confirm it\u2019s you and try again.'
     default:

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { lessonNumber, type LessonMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
@@ -28,14 +28,47 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
   const stats = getLessonStats(lesson.id)
   const inProgress = isLessonInProgress(lesson.id, 100)
   const hasContent = hasLessonContent(lesson.id)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+    // Restore focus to whatever opened the modal once it closes (a11y parity with
+    // the lesson modals: WhyExplanationModal / ExitLessonModal / LessonCompleteModal).
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    closeRef.current?.focus()
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+
+      if (e.key !== 'Tab' || !dialogRef.current) return
+
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      previouslyFocused?.focus()
+    }
   }, [open, onClose])
 
   if (!open) return null
@@ -49,6 +82,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" aria-hidden />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lesson-modal-title"
@@ -56,6 +90,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          ref={closeRef}
           type="button"
           onClick={onClose}
           className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"

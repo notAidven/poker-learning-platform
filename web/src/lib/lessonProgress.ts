@@ -16,6 +16,7 @@ import {
   type LessonStats,
 } from './lessonProgressStore'
 import {
+  queueCompletionFallbackWrite,
   queueSessionClearFirestoreWrite,
   queueStatsFirestoreWrite,
 } from './progressSync'
@@ -119,13 +120,19 @@ function applyLessonCompletion(
 
   const uid = auth.currentUser?.uid
   if (uid) {
-    // The transaction persists the progress doc (completion + xpAwarded), so we
-    // intentionally do NOT also queue a separate stats write here — that would
-    // race with the atomic award. XP is added only on the first completion;
+    // The transaction persists the progress doc (completion + xpAwarded), so on
+    // SUCCESS we intentionally do NOT also queue a separate stats write — that
+    // would race with the atomic award. XP is added only on the first completion;
     // a retake just refreshes stats and advances the streak.
     void awardLessonCompletion(uid, lessonId, xpBreakdown?.total ?? 0, nextStats).catch(
       (err) => {
-        console.warn('Failed to award lesson completion:', err)
+        // Durability: the atomic award didn't land, so the completion currently
+        // lives only in local storage and the next applyRemoteProgress sync would
+        // silently revert it. Best-effort persist completed:true to the remote
+        // progress doc. awardLessonCompletion's completed/xpAwarded guard keeps a
+        // later reconcile idempotent, so this never double-awards XP.
+        console.warn('Failed to award lesson completion; persisting completion as a fallback:', err)
+        queueCompletionFallbackWrite(lessonId, nextStats)
       },
     )
   }

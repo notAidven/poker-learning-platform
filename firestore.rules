@@ -31,26 +31,61 @@ service cloud.firestore {
       ]);
     }
 
-    // Identity fields are constrained on update (M1), but the owner may now
-    // change them through Account settings:
+    // True iff, AFTER this atomic commit, usernames/{key} exists and points at the
+    // caller. Uses *After (not get/exists) on purpose: signup (completeProfileSetup)
+    // and the Account-settings rename both write users/{uid}.username TOGETHER WITH
+    // the usernames index doc in ONE transaction, so the index claim is visible to
+    // getAfter/existsAfter. `key` is a plain variable (no method calls in the path).
+    function ownsUsernameKey(key) {
+      return existsAfter(/databases/$(database)/documents/usernames/$(key))
+        && getAfter(/databases/$(database)/documents/usernames/$(key)).data.uid == request.auth.uid;
+    }
+
+    // The display username maps to its index doc via lower-case (normalizeUsername in
+    // lib/userProfile.ts). A non-string username can never own an index doc, so it is
+    // rejected. A write that sets a display username the caller does NOT own in the
+    // index is denied (M3 impersonation / index desync).
+    function ownsUsername(name) {
+      return name is string && ownsUsernameKey(name.lower());
+    }
+
+    // Identity fields are constrained on update (M1), but the owner may change them
+    // through Account settings:
     //  - email may only be set to the caller's VERIFIED auth-token email (Firebase
     //    lowercases it) or left unchanged. So the app can reconcile users/{uid}.email
     //    after a verifyBeforeUpdateEmail change, but a profile can NEVER point at an
     //    address the user has not proven they own.
-    //  - username may change to any string (or stay null); uniqueness + ownership are
-    //    enforced by the usernames/{name} index docs (create-if-absent + delete-if-owner).
+    //  - username may be absent, null, UNCHANGED, or changed to a name the caller
+    //    OWNS in the usernames index after this commit. Previously any string was
+    //    accepted, letting a profile display a username it doesn't own in the index
+    //    (M3 impersonation / index desync). The "unchanged" branch keeps every other
+    //    profile write cheap — chips/bankrollGranted/gamification/email reconcile all
+    //    leave username untouched, so they never trigger the index lookup.
     function identityFieldsValid(prev, next) {
       return (!('email' in next)
           || next.email == request.auth.token.email
           || (('email' in prev) && next.email == prev.email))
-        && (!('username' in next) || next.username == null || next.username is string);
+        && (!('username' in next)
+          || next.username == null
+          || (('username' in prev) && next.username == prev.username)
+          || ownsUsername(next.username));
+    }
+
+    // On create there is no prior doc to compare, so a non-null username must be one
+    // the caller owns in the index after this commit (completeProfileSetup writes
+    // users/{uid} + usernames/{name} in the same transaction, so this passes).
+    function usernameOwnedOnCreate(data) {
+      return !('username' in data)
+        || data.username == null
+        || ownsUsername(data.username);
     }
 
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
         && validUserFields(request.resource.data)
-        && validGamificationFields(request.resource.data);
+        && validGamificationFields(request.resource.data)
+        && usernameOwnedOnCreate(request.resource.data);
       allow update: if isOwner(userId)
         && validUserFields(request.resource.data)
         && validGamificationFields(request.resource.data)

@@ -23,6 +23,15 @@ describe('getAuthErrorMessage: account-linking + reauth cases', () => {
     const message = getAuthErrorMessage(fbError('auth/account-exists-with-different-credential'))
     expect(message).toContain('different sign-in method')
     expect(message).toContain('set a password')
+    // Steer Google users to the provider they actually have (then add a password).
+    expect(message).toContain('Continue with Google')
+  })
+
+  it('steers a duplicate-email signup toward Continue with Google', () => {
+    const message = getAuthErrorMessage(fbError('auth/email-already-in-use'))
+    expect(message).toContain('already exists')
+    expect(message).toContain('Continue with Google')
+    expect(message).toContain('password')
   })
 
   it('asks for a fresh login on requires-recent-login', () => {
@@ -56,8 +65,13 @@ describe('getAuthErrorMessage: reauth context', () => {
     expect(getAuthErrorMessage(fbError('auth/popup-closed-by-user'), 'reauth')).toBe(
       'Sign-in was cancelled.',
     )
+    // The reauth branch only special-cases wrong-password / invalid-credential, so
+    // every other code maps identically with or without the context.
     expect(getAuthErrorMessage(fbError('auth/email-already-in-use'), 'reauth')).toBe(
-      'An account with this email already exists.',
+      getAuthErrorMessage(fbError('auth/email-already-in-use')),
+    )
+    expect(getAuthErrorMessage(fbError('auth/email-already-in-use'), 'reauth')).toContain(
+      'already exists',
     )
   })
 })
