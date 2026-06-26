@@ -24,6 +24,8 @@ import { Seat } from './Seat'
 import { ActionControls } from './ActionControls'
 import { CoachPanel } from './CoachPanel'
 import { HintBar } from './HintBar'
+import { FirstTableIntro } from './FirstTableIntro'
+import { hasSeenFirstTableIntro } from './tableIntro'
 import {
   buildCoachContext,
   buildDeepCoachContext,
@@ -169,6 +171,8 @@ export function PokerTable({
   const [talk, setTalk] = useState<Record<string, string>>({})
   // Room 1 only: a supportive, rule-based reaction to the hero's last move.
   const [reaction, setReaction] = useState<{ handIndex: number; text: string } | null>(null)
+  // A one-time "how this table works" intro, shown on the first casino entry only.
+  const [showIntro, setShowIntro] = useState(() => !hasSeenFirstTableIntro())
 
   const clearedRef = useRef(false)
   const reportedHandRef = useRef(-1)
@@ -420,6 +424,10 @@ export function PokerTable({
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <CardKitStyles />
+
+      {showIntro && (
+        <FirstTableIntro support={config.support} onClose={() => setShowIntro(false)} />
+      )}
 
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">

@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { course } from '../data/course'
 import { lessonNumber, lessons } from '../data/lessons'
 import { hasLessonContent } from '../data/lessonContent'
+import { tables } from '../data/tables'
 import { useAuth } from '../contexts/AuthContext'
 import { useProgress } from '../lib/progress'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
+import { isTableCleared, isTableUnlocked } from '../lib/casinoProgress'
 import { Badge } from '../components/ui/Badge'
 import { buttonVariants } from '../components/ui/Button'
 import { NightPanel } from '../components/ui/NightPanel'
@@ -13,6 +15,7 @@ import { Stagger } from '../components/ui/Stagger'
 import { cx } from '../components/ui/cx'
 import {
   CheckIcon,
+  ChipIcon,
   FlameIcon,
   LockIcon,
   SpadeIcon,
@@ -44,6 +47,13 @@ export function HomePage() {
   )
   const completedCount = lessonNodes.filter((l) => completedIds.includes(l.id)).length
   const startedJourney = completedCount > 0 || streak > 0 || totalXp > 0
+
+  // Casino Floor entry: Room 1 is the door to the felt. Its unlock (all lessons
+  // complete) and cleared state come straight from the shared progress helpers.
+  const room1 = tables[0]
+  const casinoUnlocked = room1 ? isTableUnlocked(room1, completedIds) : false
+  const casinoCleared = room1 ? isTableCleared(room1.id) : false
+  const lessonsRemaining = lessonNodes.length - completedCount
 
   return (
     <div className="space-y-10">
@@ -154,7 +164,92 @@ export function HomePage() {
           ))}
         </Stagger>
       </section>
+
+      {room1 && (
+        <section>
+          <CasinoCard
+            roomPath={`/table/${room1.id}`}
+            unlocked={casinoUnlocked}
+            cleared={casinoCleared}
+            lessonsRemaining={lessonsRemaining}
+          />
+        </section>
+      )}
     </div>
+  )
+}
+
+type CasinoCardProps = {
+  roomPath: string
+  unlocked: boolean
+  cleared: boolean
+  lessonsRemaining: number
+}
+
+function CasinoCard({ roomPath, unlocked, cleared, lessonsRemaining }: CasinoCardProps) {
+  const inner = (
+    <>
+      <span
+        className={cx(
+          'grid h-12 w-12 shrink-0 place-items-center rounded-xl',
+          unlocked ? 'bg-gold-400 text-night-900' : 'bg-white/10 text-white/40',
+        )}
+        aria-hidden
+      >
+        {unlocked ? <ChipIcon className="h-7 w-7" /> : <LockIcon className="h-6 w-6" />}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gold-300">
+          Casino Floor
+        </p>
+        <h3 className="mt-0.5 font-display text-lg font-bold text-white">
+          {unlocked ? 'Play real hands at the table' : 'The felt is waiting'}
+        </h3>
+        <p className="mt-1 text-sm leading-relaxed text-white/70">
+          {unlocked
+            ? 'Put it all together against AI opponents, with a coach in your corner.'
+            : lessonsRemaining > 0
+              ? `Finish your ${lessonsRemaining} remaining ${lessonsRemaining === 1 ? 'lesson' : 'lessons'} to take a seat.`
+              : 'Complete every lesson to take a seat.'}
+        </p>
+      </div>
+      {unlocked ? (
+        <span
+          className="hidden shrink-0 items-center gap-1.5 self-center rounded-xl bg-gold-400 px-4 py-2.5 text-sm font-bold text-night-900 transition group-hover:-translate-y-0.5 sm:inline-flex"
+          aria-hidden
+        >
+          {cleared ? 'Play again' : 'Play'} <span>&rarr;</span>
+        </span>
+      ) : (
+        <span className="shrink-0 self-center rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white/60 ring-1 ring-inset ring-white/15">
+          Locked
+        </span>
+      )}
+    </>
+  )
+
+  const cardBase =
+    'flex items-start gap-4 rounded-2xl border border-white/10 bg-night-900 p-5 shadow-card sm:items-center'
+
+  if (unlocked) {
+    return (
+      <Link
+        to={roomPath}
+        aria-label="Casino Floor: play real hands at the table"
+        className={cx(
+          cardBase,
+          'group transition hover:-translate-y-0.5 hover:border-gold-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-2',
+        )}
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <article className={cardBase} aria-label="Casino Floor (locked)">
+      {inner}
+    </article>
   )
 }
 

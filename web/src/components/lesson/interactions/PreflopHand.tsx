@@ -98,6 +98,15 @@ export function PreflopHand({
     return mode === 'classify' ? optionId !== null : side !== null
   }
 
+  const disabledReason =
+    mode === 'classify'
+      ? optionId === null
+        ? "Pick the hand's strength"
+        : undefined
+      : side === null
+        ? 'Pick the stronger hand'
+        : undefined
+
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
@@ -217,6 +226,7 @@ export function PreflopHand({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={disabledReason}
       />
     </div>
   )

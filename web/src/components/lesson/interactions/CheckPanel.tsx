@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { DUR, EASE } from '../../../lib/motion'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
@@ -11,6 +11,13 @@ type CheckPanelProps = {
   onRetry: () => void
   submitLabel?: string
   allowRetry?: boolean
+  /**
+   * One-line reason shown beneath the submit button while it is disabled, e.g.
+   * "Select 5 cards" or "Enter the count". Each interaction derives its own
+   * reason. Rendered only when the button is visible AND disabled, and announced
+   * politely so the learner always knows what is still needed.
+   */
+  disabledReason?: ReactNode
   /**
    * Hide the submit ("Check answer") button entirely. Use for genuinely
    * no-input / observational steps that auto-complete once the required action
@@ -37,10 +44,13 @@ export function CheckPanel({
   allowRetry = true,
   hideSubmit = false,
   confirmation,
+  disabledReason,
 }: CheckPanelProps) {
   const reduced = usePrefersReducedMotion()
   const submitRef = useRef<HTMLButtonElement>(null)
   const wasSubmitted = useRef(submitted)
+  const reasonId = useId()
+  const showReason = !canSubmit && Boolean(disabledReason)
 
   // After a wrong attempt is retried (submitted flips true -> false) the "Try again"
   // button unmounts and the submit button reappears. Move focus onto it so keyboard
@@ -57,15 +67,28 @@ export function CheckPanel({
   return (
     <div className="space-y-3">
       {!hideSubmit && !submitted && (
-        <button
-          ref={submitRef}
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          className="min-h-11 w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-40"
-        >
-          {submitLabel}
-        </button>
+        <div>
+          <button
+            ref={submitRef}
+            type="button"
+            onClick={onSubmit}
+            disabled={!canSubmit}
+            aria-describedby={showReason ? reasonId : undefined}
+            className="min-h-11 w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-40"
+          >
+            {submitLabel}
+          </button>
+          {showReason && (
+            <p
+              id={reasonId}
+              className="mt-2 text-center text-xs font-medium text-slate-500"
+              role="status"
+              aria-live="polite"
+            >
+              {disabledReason}
+            </p>
+          )}
+        </div>
       )}
       {confirmation && solved && (
         <p

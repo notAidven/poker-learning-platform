@@ -12,7 +12,8 @@ import type { LessonDefinition } from '../../types/lesson'
  * pot odds.
  *
  * Ratio: 6 problems / 9 steps = 67% interactive. Concepts never run back-to-back.
- * Money is written as plain chip counts so prose can reserve `$…$` for KaTeX; the
+ * This is a Playing-a-Hand lesson, so prose stays in plain words and reserves KaTeX
+ * for the Math section; money is written as plain chip counts, and the
  * chip-denominations page renders its dollar values in a self-contained visual.
  * Keep `id: '4'` / export `lesson4`.
  */
@@ -35,7 +36,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       type: 'problem',
       id: 'p1',
       prompt:
-        'You flop three Aces (top set) on a dry board and no one has bet yet. What is the best action?',
+        'You flop three Aces, the best hand possible right now, on a board unlikely to help anyone. No one has bet yet. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AS', 'AD'],
@@ -50,22 +51,23 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
       },
       answer: { action: 'bet' },
       feedback: {
-        correct: 'Yes. With a monster you **bet** to build the pot while you are far ahead.',
+        correct:
+          'Yes. Three of a kind made from your pocket pair and the top board card is called **top set**, about the best hand you can have here. With a hand this strong you **bet** to build the pot while you are far ahead.',
         incorrect:
-          'Checking a monster wins only the tiny pot already there. With the best hand by a mile, bet to grow it.',
+          'Checking wins only the few chips already in the middle. With the best hand by a mile, bet to grow the pot.',
         hints: [
           'Is there a bet to you? No, so your choices are check or bet.',
-          'You hold the near-nuts; you want chips in the pot.',
-          'With the best hand by far, you profit most by building the pot, not protecting it.',
+          'You hold three Aces, the best hand right now.',
+          'With the best hand by far, you make the most by building the pot, not by checking it.',
         ],
-        why: 'Top set on 7-2 has almost no way to lose here. Checking gives a free card and wins only what is already in the middle. **Betting for value** charges worse hands (a pair, a draw) to continue, growing the pot you will usually win.',
+        why: 'Three Aces on this board is so close to unbeatable that players call it **the nuts**, and a near-unbeatable hand like this is a **monster**. Checking would only win the small pot already there and hand out a free card. **Betting for value** charges weaker hands (a pair, a draw) to keep playing and grows the pot you will almost always win.',
       },
     },
     {
       type: 'problem',
       id: 'p2',
       prompt:
-        'You flop top set (three Kings). The villain bets 20 into a pot of 40. What is the best action?',
+        'You flop **top set** (three Kings). The Opponent bets 20 into a pot of 40. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['KS', 'KD'],
@@ -78,25 +80,26 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
         sizingOptions: [0.5, 0.75, 1],
         seed: 22,
         task: 'choose-action',
+        helperText: 'The Opponent bets 20 into a pot of 40. You can call, raise, or fold.',
       },
       answer: { action: 'raise' },
       feedback: {
         correct: 'Right. **Raise** for value. A set is crushing this board, so build the pot now.',
         incorrect:
-          'Calling keeps the pot small with the best hand; folding a monster is a disaster. **Raise** to get value.',
+          'Calling keeps the pot small with the best hand, and folding a **monster** is a disaster. **Raise** to get value.',
         hints: [
           'A bet faces you, so you can call, raise, or fold.',
           'Three Kings is almost certainly the best hand here.',
           'When you are far ahead, you want even more in the pot than simply matching the bet would add.',
         ],
-        why: 'Top set on K-9-4 is a huge favorite. Just calling lets the villain see cheap cards. **Raising for value** swells the pot you will usually win. (The minimum legal raise is the current bet plus the last raise increment, not simply "double it.")',
+        why: 'Top set on K-9-4 is a huge favorite. Just calling lets the Opponent see cheap cards. **Betting for value** with a raise swells the pot you will usually win. (The minimum legal raise is the current bet plus the last raise increment, not simply "double it.")',
       },
     },
     {
       type: 'problem',
       id: 'p3',
       prompt:
-        'You hold two hearts and two more land on the flop, a flush draw, but no made hand yet. The villain bets 15 into a pot of 60. What is the best action?',
+        'You hold two hearts and two more land on the flop, a **flush draw**, but no **made hand** yet. The Opponent bets 15 into a pot of 60. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'KH'],
@@ -109,6 +112,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
         sizingOptions: [0.5, 0.75, 1],
         seed: 31,
         task: 'choose-action',
+        helperText: 'The Opponent bets 15 into a pot of 60. You can call, raise, or fold.',
       },
       answer: { action: 'call' },
       feedback: {
@@ -121,7 +125,7 @@ A round **opens** on the first bet and **closes** once everyone still in has mat
           'You have a flush draw, strong but not a made hand yet.',
           'A strong draw is worth continuing for a small price, but it has not made anything yet to commit big with.',
         ],
-        why: 'A **call** simply matches the bet to stay in. With a strong draw and a small price, calling lets you continue toward your flush without bloating the pot. Folding gives up a great draw, and raising risks chips with a hand that still has to improve. (Exactly *when* a draw is worth the price is the pot-odds math coming up in The Math.)',
+        why: 'A **call** simply matches the bet to stay in. With a strong draw and a small price, calling lets you continue toward your flush (here the **nut flush**, since you hold the Ace of hearts) without bloating the pot. Folding gives up a great draw, and raising risks chips with a hand that still has to improve. (Exactly *when* a draw is worth the price is the pot-odds math coming up in The Math.)',
       },
     },
     {
@@ -140,7 +144,7 @@ You will not be quizzed on these, but the standard colors below are the ones you
       type: 'problem',
       id: 'p4',
       prompt:
-        'You hold 8-7 with no pair and no draw. On A-K-Q the villain fires a pot-sized bet of 90 into 90. What is the best action?',
+        'You hold 8-7 with no pair and no draw. On A-K-Q the Opponent fires a pot-sized bet of 90 into 90. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['8S', '7S'],
@@ -153,6 +157,7 @@ You will not be quizzed on these, but the standard colors below are the ones you
         sizingOptions: [0.5, 0.75, 1],
         seed: 33,
         task: 'choose-action',
+        helperText: 'The Opponent bets 90 into a pot of 90. You can call, raise, or fold.',
       },
       answer: { action: 'fold' },
       feedback: {
@@ -206,7 +211,7 @@ You will not be quizzed on these, but the standard colors below are the ones you
 - Into a 100 pot, a **half-pot** bet is 50, a quarter-pot bet is 25, and a pot-sized bet is 100.
 - A bet can be small or large, and the chips you risk scale with the fraction you pick.
 
-For now, just get comfortable that a bet has a size. **Which** fraction to choose, and why, is its own skill — the whole of the Bet Sizing lesson.`,
+For now, just get comfortable that a bet has a size. **Which** fraction to choose, and why, is its own skill, the whole of the Bet Sizing lesson.`,
     },
     {
       type: 'problem',

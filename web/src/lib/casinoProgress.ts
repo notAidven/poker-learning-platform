@@ -4,14 +4,14 @@
  * hero wins one); there is no XP and no skill check.
  *
  * Unlock gating (two-room model):
- *  - The whole Casino Floor opens only once EVERY lesson is complete.
- *  - Room 1 (coached) then opens immediately (its prereq is a lesson id).
+ *  - Room 1 (coached) opens once the first two sections (Foundations + Playing a
+ *    Hand) are complete — guided play before grinding The Math (prereq is a lesson id).
  *  - Room 2 (AI) opens only after Room 1 has been cleared (its prereq is Room 1).
  *
  * Consumers read these synchronously during render; a table is only ever cleared on
  * the table page (off the course path), so a fresh read on the next mount reflects it.
  */
-import { lessons } from '../data/lessons'
+import { lessons, type SectionId } from '../data/lessons'
 import { isTableId, tables, type TableConfig } from '../data/tables'
 
 const CLEARED_TABLES_KEY = 'cleared-table-ids'
@@ -20,6 +20,20 @@ const CLEARED_TABLES_KEY = 'cleared-table-ids'
 export function areAllLessonsComplete(completedLessonIds: string[]): boolean {
   return lessons
     .filter((l) => l.kind !== 'ai-table')
+    .every((l) => completedLessonIds.includes(l.id))
+}
+
+/** The sections a learner must finish to reach guided casino play (Room 1). */
+const GUIDED_PLAY_SECTIONS: ReadonlySet<SectionId> = new Set<SectionId>(['foundations', 'playing'])
+
+/**
+ * True once every interactive lesson in the first two sections (Foundations +
+ * Playing a Hand) is complete — the gate that opens the coached Room 1. A strict
+ * subset of `areAllLessonsComplete`, so a finished course keeps the casino open.
+ */
+export function areGuidedPlayLessonsComplete(completedLessonIds: string[]): boolean {
+  return lessons
+    .filter((l) => l.kind !== 'ai-table' && GUIDED_PLAY_SECTIONS.has(l.section))
     .every((l) => completedLessonIds.includes(l.id))
 }
 
@@ -59,12 +73,12 @@ export function markTableCleared(tableId: string): void {
 /**
  * Whether a casino room is unlocked (two-room model).
  *
- *  - Nothing in the casino opens until ALL lessons are complete.
- *  - Room 1's prereq is a lesson id (so the all-lessons gate alone opens it).
+ *  - Room 1's prereq is a lesson id, so the guided-play gate (Foundations +
+ *    Playing a Hand complete) alone opens it.
  *  - Room 2's prereq is Room 1 (a table id), so it opens once Room 1 is cleared.
  */
 export function isTableUnlocked(table: TableConfig, completedLessonIds: string[]): boolean {
-  if (!areAllLessonsComplete(completedLessonIds)) return false
+  if (!areGuidedPlayLessonsComplete(completedLessonIds)) return false
   if (!isTableId(table.prereqId)) return true
   return isTableCleared(table.prereqId)
 }

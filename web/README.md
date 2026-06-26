@@ -1,4 +1,4 @@
-# Suited — Texas Hold'em Poker (Web App)
+# Suited (web app)
 
 React + Vite + Tailwind + Firebase frontend for **Suited**, a learn-by-doing Texas
 Hold'em poker course: **nine interactive lessons across three sections** (Foundations →
@@ -11,40 +11,34 @@ only — no real wagering.
 > and the progress/gamification schema. **AI is built but opt-in** — every AI feature degrades
 > to deterministic rule-based logic when no provider is configured.
 
-## Setup
+## Where the docs live
+
+- [`../README.md`](../README.md) - product overview, features, tech stack, full setup,
+  environment variables, build and test commands, deployment, and the docs index.
+- [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) - architecture deep dive: the
+  lesson and skill-check content model, the poker engine, the casino runtime, the AI
+  layer, and the Firebase data model and security rules (including the progress schema).
+- [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) - the step-by-step deployment runbook
+  (Firebase Hosting and rules, plus the optional Cloudflare Worker AI proxy).
+
+## Quick start
 
 ```bash
 cd web
 npm install
-cp .env.example .env.local
-```
-
-Add your Firebase Web app config to `.env.local` from:
-[Firebase Console → brilliant-alpha-clone-54be9](https://console.firebase.google.com/project/brilliant-alpha-clone-54be9/overview)
-
-Register a **Web app** if one does not exist yet (Project settings → Your apps → Add app → Web).
-
-## Development
-
-```bash
+cp .env.example .env.local   # then add your Firebase web app config
 npm run dev
 ```
 
-Open **`http://localhost:5173`** (or whatever port Vite prints). Use `localhost`, not `127.0.0.1`, unless both are in Firebase authorized domains.
+With no AI provider configured, every AI feature uses the built-in rule-based fallback,
+so the app is fully functional out of the box.
 
-### Google sign-in (local dev)
-
-Firebase CLI **`firebase deploy --only auth` does not add authorized domains** — those must be set in the Firebase Console (or via `scripts/add-auth-domains.mjs`).
-
-1. [Authentication → Settings → Authorized domains](https://console.firebase.google.com/project/brilliant-alpha-clone-54be9/authentication/settings)
-2. Click **Add domain** and add **`localhost`**
-3. Optionally add **`127.0.0.1`** if you use that host instead
-4. Confirm **`brilliant-alpha-clone-54be9.firebaseapp.com`** and **`.web.app`** are listed
-
-Or from the repo root (requires `firebase login`):
+## Build and test
 
 ```bash
-node scripts/add-auth-domains.mjs
+npm run build                       # type-check (tsc -b) then bundle to web/dist
+npx vitest run                      # unit tests
+node scripts/mvp-logic-check.mjs    # auth-free logic checks
 ```
 
 Then redeploy Google OAuth redirect URIs:

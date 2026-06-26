@@ -109,14 +109,14 @@ The ladder below runs from the strongest hand down to the weakest. Start with th
           '"Feeling Flush beats a Straight": flush sits above straight.',
           'Two pair beats one pair, and both sit below a straight.',
         ],
-        why: 'By rarity: a full house ($3{,}744$ ways) is rarer than a flush ($5{,}108$), which is rarer than a straight ($10{,}200$), then two pair ($123{,}552$), then one pair ($1{,}098{,}240$). Rarer = stronger.',
+        why: 'By rarity: a full house (3,744 ways) is rarer than a flush (5,108), which is rarer than a straight (10,200), then two pair (123,552), then one pair (1,098,240). Rarer means stronger.',
       },
     },
     {
       type: 'concept',
       id: 'c2',
       title: 'Rarer = stronger',
-      content: `The ladder is ordered by **how hard each hand is to deal**. Of the $2{,}598{,}960$ different five-card hands, only $5{,}108$ are a flush ($\\approx 0.2\\%$) while $10{,}200$ are a straight ($\\approx 0.4\\%$). The flush is **rarer**, so it ranks **higher**.
+      content: `The ladder is ordered by **how hard each hand is to deal**. Of the 2,598,960 different five-card hands, only 5,108 are a flush (about 0.2%) while 10,200 are a straight (about 0.4%). The flush is **rarer**, so it ranks **higher**.
 
 Two hooks for the spots beginners miss most:
 
@@ -149,15 +149,15 @@ Fun fact: across **seven** cards, plain *high card* is actually rarer than one p
       answer: { more: 'a' },
       feedback: {
         correct:
-          'A straight ($10{,}200$ ways) is dealt about twice as often as a flush ($5{,}108$). Because the flush is **rarer**, it **outranks** the straight.',
+          'A straight (10,200 ways) is dealt about twice as often as a flush (5,108). Because the flush is **rarer**, it **outranks** the straight.',
         incorrect:
-          "Compare the counts: a straight has $10{,}200$ ways versus the flush's $5{,}108$. The straight is more common, which is exactly why the flush ranks higher.",
+          "Compare the counts: a straight has 10,200 ways versus the flush's 5,108. The straight is more common, which is exactly why the flush ranks higher.",
         hints: [
           'More ways to make a hand means it is more common, and therefore weaker.',
-          'Straights: $10{,}200$ ways. Flushes: $5{,}108$ ways.',
+          'Straights: 10,200 ways. Flushes: 5,108 ways.',
           'The bigger count is dealt more often.',
         ],
-        why: 'Out of $2{,}598{,}960$ five-card hands, $10{,}200$ are straights but only $5{,}108$ are flushes. The flush is rarer, so it ranks above the straight. Hook: **"Feeling Flush beats a Straight."**',
+        why: 'Out of 2,598,960 five-card hands, 10,200 are straights but only 5,108 are flushes. The flush is rarer, so it ranks above the straight. Hook: **"Feeling Flush beats a Straight."**',
       },
     },
     {

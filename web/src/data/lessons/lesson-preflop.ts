@@ -190,7 +190,7 @@ Keep the small edges in mind: a **suited** hand is a touch stronger than its **o
           'You are on the button, the best position.',
           'It is not premium, but is it really a fold from the button?',
         ],
-        why: 'A **suited** Ace can make the nut **flush** plus an Ace-high hand. It is not **premium**, but it is a fine playable hand, especially in late **position** where you act last. From an early seat you would be more cautious.',
+        why: 'A **suited** Ace can make the **nut flush** plus an Ace-high hand. It is not **premium**, but it is a fine playable hand, especially in late **position** where you act last. From an early seat you would be more cautious.',
       },
     },
     {

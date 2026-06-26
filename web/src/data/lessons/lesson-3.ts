@@ -21,7 +21,7 @@ export const lesson3: LessonDefinition = {
       title: 'Blinds, the button, and the deal',
       content: `Every hand starts with two forced bets called **blinds**. A marker, the **button**, shows who is "the dealer".
 
-The player just left of the button posts the **small blind (SB)**. The next player posts the **big blind (BB)**, usually twice the small blind ($\\text{SB} = \\tfrac{1}{2}\\,\\text{BB}$). The blinds go in **before any cards**. They seed the **pot** and start the action. Then each player gets their two **hole cards**.`,
+The player just left of the button posts the **small blind (SB)**. The next player posts the **big blind (BB)**, usually twice the small blind (so the small blind is half the big blind). The blinds go in **before any cards**. They seed the **pot** and start the action. Then each player gets their two **hole cards**.`,
     },
     {
       type: 'problem',
@@ -50,7 +50,7 @@ The player just left of the button posts the **small blind (SB)**. The next play
     {
       type: 'problem',
       id: 'p2',
-      prompt: `You hold **A♥ A♦**. Deal each street and pick your **best made hand** as it changes.`,
+      prompt: `You hold **A♥ A♦**. Deal each street and pick your best **made hand** as it changes.`,
       interaction: 'board-dealer',
       config: {
         hole: ['AH', 'AD'],
@@ -78,7 +78,7 @@ The player just left of the button posts the **small blind (SB)**. The next play
     {
       type: 'problem',
       id: 'p3',
-      prompt: `You hold **K♥ Q♥**. Four hearts is a *flush draw*, not yet a flush. Deal it out and name your best **made** hand each street.`,
+      prompt: `You hold **K♥ Q♥**. Four hearts is a **flush draw**, not yet a flush. Deal it out and name your best **made hand** each street.`,
       interaction: 'board-dealer',
       config: {
         hole: ['KH', 'QH'],

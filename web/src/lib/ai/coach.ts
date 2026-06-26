@@ -65,6 +65,7 @@ function buildCoachPrompt(ctx: CoachContext, analysis: SpotAnalysis): string {
     'Write ONE coaching tip of at most two short sentences. Requirements:',
     '- Name the single most relevant concept (pot odds, equity, position, or value betting).',
     '- Briefly explain the reasoning using the numbers provided below.',
+    '- The numbers below are already worked out. Use them as given; do NOT recompute pot odds or equity, and do NOT invent more precise figures.',
     '- Guide their thinking; do NOT just tell them the one "correct" action to take.',
     '- Plain, encouraging language. No markdown, no preamble, no quotes.',
     '',
@@ -212,17 +213,102 @@ export function roughWinPct(ctx: DeepCoachContext, analysis: SpotAnalysis): numb
 }
 
 /**
+ * Every teaching number for the deep read, worked out DETERMINISTICALLY in one
+ * place. Both the rule-based fallback (`composeDeepRead`) and the AI prompt
+ * (`buildDeepCoachPrompt`) read from here, so the figures can never drift apart -
+ * and, crucially, the LLM is only ever asked to PHRASE these, never to do the
+ * arithmetic itself (LLMs are unreliable at math and could hand a beginner a
+ * wrong price or EV).
+ *
+ * Pot odds is an exact price. Win chance is a rough estimate, so it is also
+ * surfaced as an equity BAND and the EV is given as a small range, to avoid
+ * false-precision point values.
+ */
+export type DeepReadNumbers = {
+  facingBet: boolean
+  /** Exact price to call as a percent, or null when there is no bet. */
+  potOddsPct: number | null
+  /** Rough point estimate of the hero's chance to hold the best hand. */
+  winPct: number
+  /** Rough equity band around `winPct` (percent). */
+  equityLowPct: number
+  equityHighPct: number
+  /** Rough EV of calling in chips (point estimate), or null with no bet. */
+  evChips: number | null
+  /** Rough EV band in chips, or null with no bet. */
+  evLowChips: number | null
+  evHighChips: number | null
+}
+
+const EQUITY_BAND_PCT = 7
+
+export function computeDeepReadNumbers(
+  ctx: DeepCoachContext,
+  analysis: SpotAnalysis,
+): DeepReadNumbers {
+  const facingBet = ctx.toCall > 0
+  const potOddsPct = facingBet ? Math.round((ctx.toCall / (ctx.pot + ctx.toCall)) * 100) : null
+  const winPct = roughWinPct(ctx, analysis)
+  const equityLowPct = Math.max(2, winPct - EQUITY_BAND_PCT)
+  const equityHighPct = Math.min(98, winPct + EQUITY_BAND_PCT)
+  const evAt = (p: number) => Math.round((p / 100) * ctx.pot - (1 - p / 100) * ctx.toCall)
+  return {
+    facingBet,
+    potOddsPct,
+    winPct,
+    equityLowPct,
+    equityHighPct,
+    evChips: facingBet ? evAt(winPct) : null,
+    evLowChips: facingBet ? evAt(equityLowPct) : null,
+    evHighChips: facingBet ? evAt(equityHighPct) : null,
+  }
+}
+
+/**
+ * The deterministic recommendation (without the "Recommendation:" prefix), shared
+ * by the fallback text and the AI prompt so both always agree with the math.
+ */
+function deepReadRecommendation(analysis: SpotAnalysis, nums: DeepReadNumbers): string {
+  const madeRank = analysis.madeCategory ? HAND_CATEGORY_RANK[analysis.madeCategory] : 0
+  const ownsMade = analysis.madeFromHole !== false
+
+  if (nums.facingBet && nums.potOddsPct != null) {
+    const ev = nums.evChips ?? 0
+    if (ownsMade && madeRank >= HAND_CATEGORY_RANK['trips']) {
+      return 'raise for value. You are very likely ahead, so build the pot.'
+    }
+    if (nums.winPct >= nums.potOddsPct || ev > 0) {
+      return `a call is justified. Your roughly ${nums.winPct}% to win clears the ${nums.potOddsPct}% price the pot is laying you.`
+    }
+    return `folding is likely best. Your roughly ${nums.winPct}% to win is short of the ${nums.potOddsPct}% price, so calling loses chips over time.`
+  }
+  if (ownsMade && madeRank >= HAND_CATEGORY_RANK['two-pair']) {
+    return 'bet for value. With a strong hand you want to build the pot while you are ahead.'
+  }
+  if (analysis.drawName) {
+    return 'a semi-bluff bet is reasonable. You can win it now or improve to the best hand.'
+  }
+  return 'checking is fine. Keep the pot small with a marginal hand and reassess.'
+}
+
+/** Format a rough chip range like "+42 to +64". */
+function fmtChipRange(low: number | null, high: number | null): string {
+  if (low == null || high == null) return ''
+  const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+  return `${sign(low)} to ${sign(high)}`
+}
+
+/**
  * The deterministic, rule-based deep read (also the AI fallback). Pure: it computes
  * and explains pot odds, outs -> equity, the EV of calling, and a recommendation,
  * and it respects "playing the board" (a shared board hand is not the hero's).
  */
 export function composeDeepRead(ctx: DeepCoachContext, analysis: SpotAnalysis): string {
-  const facingBet = ctx.toCall > 0
-  const potOdds = facingBet ? Math.round((ctx.toCall / (ctx.pot + ctx.toCall)) * 100) : null
+  const nums = computeDeepReadNumbers(ctx, analysis)
+  const facingBet = nums.facingBet
+  const potOdds = nums.potOddsPct
   const live = ctx.seats.filter((s) => !s.isHero && s.inHand)
-  const winPct = roughWinPct(ctx, analysis)
-  const madeRank = analysis.madeCategory ? HAND_CATEGORY_RANK[analysis.madeCategory] : 0
-  const ownsMade = analysis.madeFromHole !== false
+  const winPct = nums.winPct
 
   const handDesc = analysis.madeLabel
     ? analysis.madeFromHole === false
@@ -245,25 +331,11 @@ export function composeDeepRead(ctx: DeepCoachContext, analysis: SpotAnalysis): 
           .join(', ')
 
   let evLine = 'No bet to call right now, so there is nothing to price.'
-  let recommendation: string
-
   if (facingBet && potOdds != null) {
-    const ev = Math.round((winPct / 100) * ctx.pot - (1 - winPct / 100) * ctx.toCall)
+    const ev = nums.evChips ?? 0
     evLine = `EV of calling: you win about ${winPct}% of the ${ctx.pot} pot and lose the ${ctx.toCall} call the rest of the time, so roughly ${ev >= 0 ? '+' : ''}${ev} chips per call.`
-    if (ownsMade && madeRank >= HAND_CATEGORY_RANK['trips']) {
-      recommendation = 'Recommendation: raise for value. You are very likely ahead, so build the pot.'
-    } else if (winPct >= potOdds || ev > 0) {
-      recommendation = `Recommendation: a call is justified. Your roughly ${winPct}% to win clears the ${potOdds}% price the pot is laying you.`
-    } else {
-      recommendation = `Recommendation: folding is likely best. Your roughly ${winPct}% to win is short of the ${potOdds}% price, so calling loses chips over time.`
-    }
-  } else if (ownsMade && madeRank >= HAND_CATEGORY_RANK['two-pair']) {
-    recommendation = 'Recommendation: bet for value. With a strong hand you want to build the pot while you are ahead.'
-  } else if (analysis.drawName) {
-    recommendation = 'Recommendation: a semi-bluff bet is reasonable. You can win it now or improve to the best hand.'
-  } else {
-    recommendation = 'Recommendation: checking is fine. Keep the pot small with a marginal hand and reassess.'
   }
+  const recommendation = `Recommendation: ${deepReadRecommendation(analysis, nums)}`
 
   const lines = [
     'Deep read (rule-based):',
@@ -277,9 +349,10 @@ export function composeDeepRead(ctx: DeepCoachContext, analysis: SpotAnalysis): 
   return lines.join('\n')
 }
 
-function buildDeepCoachPrompt(ctx: DeepCoachContext, analysis: SpotAnalysis): string {
+export function buildDeepCoachPrompt(ctx: DeepCoachContext, analysis: SpotAnalysis): string {
   const board = ctx.board.length > 0 ? ctx.board.join(' ') : '(preflop, no board yet)'
-  const potOdds = ctx.toCall > 0 ? Math.round((ctx.toCall / (ctx.pot + ctx.toCall)) * 100) : null
+  const nums = computeDeepReadNumbers(ctx, analysis)
+  const recommendation = deepReadRecommendation(analysis, nums)
   const seats = ctx.seats
     .map(
       (s) =>
@@ -287,24 +360,44 @@ function buildDeepCoachPrompt(ctx: DeepCoachContext, analysis: SpotAnalysis): st
     )
     .join('\n')
 
+  // Authoritative, pre-computed figures. The model PHRASES these; it must never
+  // redo the arithmetic. Equity is a band and EV is a range on purpose, so the
+  // coach never reads a false-precision number to a beginner.
+  const computed = [
+    'Pre-computed numbers (these are correct; use them VERBATIM, do NOT recalculate or change them):',
+    nums.potOddsPct != null
+      ? `- Pot odds (exact price to call): ${nums.potOddsPct}%`
+      : '- Pot odds: not applicable (no bet to call)',
+    `- Hero rough equity (chance to hold the best hand): about ${nums.equityLowPct}-${nums.equityHighPct}%`,
+    analysis.drawName && analysis.outs != null
+      ? `- Outs for the ${analysis.drawName}: about ${analysis.outs}`
+      : '- Outs: no clean draw to count',
+    nums.evChips != null
+      ? `- EV of calling (rough estimate, not exact): around ${nums.evChips >= 0 ? '+' : ''}${nums.evChips} chips per call (roughly ${fmtChipRange(nums.evLowChips, nums.evHighChips)} chips depending on how it runs)`
+      : '- EV of calling: not applicable (no bet to call)',
+    `- Suggested line from the math: ${recommendation}`,
+  ].join('\n')
+
   return [
     "You are a friendly, expert Texas Hold'em coach giving a beginner a DEEPER read of the current spot.",
     '',
     'Write a structured analysis of at most 5 short sentences, covering in order:',
     '1) The board texture and what the hero actually holds. If the made hand is entirely on the board, say they are playing the board and it is shared by everyone.',
     '2) The opponents still in (their stacks and personas) and the hero position.',
-    '3) The math: pot odds, the hero outs and rough equity, and the EV of calling.',
+    '3) The math: restate the pot odds, the hero outs and rough equity, and the EV of calling using ONLY the pre-computed numbers below.',
     '4) A clear recommendation (fold, call, raise, bet, or check) and the reason.',
-    'Plain, encouraging language. No markdown, no preamble, no quotes.',
+    'Phrase the pre-computed numbers in plain words. Do NOT recompute or change them, and do NOT invent more precise figures: keep equity and EV as the rough range/estimate given. Plain, encouraging language. No markdown, no preamble, no quotes.',
     '',
     'Glossary (use these meanings):',
     glossaryBlock(analysis),
+    '',
+    computed,
     '',
     'Current spot:',
     `- Street: ${ctx.street}`,
     `- Hero hole cards: ${ctx.hole.join(', ')}`,
     `- Board: ${board}`,
-    `- Pot: ${ctx.pot}; To call: ${ctx.toCall}${potOdds != null ? ` (pot odds ${potOdds}%)` : ''}; Hero stack: ${ctx.heroStack}`,
+    `- Pot: ${ctx.pot}; To call: ${ctx.toCall}${nums.potOddsPct != null ? ` (pot odds ${nums.potOddsPct}%)` : ''}; Hero stack: ${ctx.heroStack}`,
     `- Hero position: ${ctx.position === 'ip' ? 'in position (acts last)' : 'out of position (acts first)'}`,
     'Seats:',
     seats,

@@ -120,6 +120,39 @@ const GLOSSARY: Record<string, string> = {
   'value bet': 'A bet with a strong hand, hoping a worse hand calls and pays you off.',
   'betting for value': 'Betting a strong hand so that worse hands call and pay you off.',
 
+  // --- hand strength relative to the board ---
+  'made hand':
+    'A complete hand right now, like a pair or better, as opposed to a draw that still needs another card.',
+  'top pair':
+    'A pair made by matching one of your two hole cards with the highest card on the board.',
+  'top set':
+    'The strongest three of a kind: a pocket pair that matches the highest card on the board (for example, pocket Kings on a King-high board).',
+  overpair:
+    'A pocket pair higher than every card on the board (for example, pocket Queens on a 9-6-2 board).',
+  monster: 'A huge hand that is almost certain to win, such as top set or better.',
+  nuts: 'The best possible hand on the current board. It cannot be beaten.',
+  'the nuts': 'The best possible hand on the current board. It cannot be beaten.',
+  'nut flush': 'The best possible flush, the one made with the Ace of the flush suit.',
+
+  // --- board texture ---
+  'dry board':
+    'A board with few straight or flush possibilities, so it is unlikely to have helped anyone (for example, K-7-2 of mixed suits).',
+  'wet board':
+    'A board with many straight and flush possibilities, so draws and strong hands are likely (for example, 9-8-7 with two of one suit).',
+  rainbow: 'A flop of three different suits, so no flush draw is possible yet.',
+  blank: 'A card that changes nothing and helps no one.',
+
+  // --- bluffing & bet purpose ---
+  bluff: 'A bet or raise with a weak hand, made to push a better hand into folding.',
+  semibluff:
+    'A bet or raise with a draw rather than a made hand. It can win now if everyone folds, or later if the draw completes.',
+  'semi-bluff':
+    'A bet or raise with a draw rather than a made hand. It can win now if everyone folds, or later if the draw completes.',
+  'fold equity':
+    'The value a bet gains from the chance your opponent folds. Without it, a bluff cannot work.',
+  'thin value':
+    'A value bet with a hand only a little ahead, made because just enough worse hands will still call.',
+
   // --- other useful terms that appear in the lessons ---
   'playing the board':
     "When the five community cards are your best hand and your hole cards don't help. You can only tie.",
@@ -166,3 +199,14 @@ export function lookupGlossaryTerm(raw: string): GlossaryEntry | null {
   }
   return null
 }
+
+/**
+ * Every glossary entry, sorted alphabetically by its canonical term. Derived
+ * directly from the GLOSSARY map above, so any term added there shows up here
+ * automatically (e.g. on the Glossary page) with no extra wiring. The keys are
+ * already the normalized canonical term; presentation (acronym casing, etc.) is
+ * left to the consumer.
+ */
+export const glossaryEntries: GlossaryEntry[] = Object.entries(GLOSSARY)
+  .map(([term, definition]) => ({ term, definition }))
+  .sort((a, b) => a.term.localeCompare(b.term))

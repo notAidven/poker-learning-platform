@@ -257,6 +257,14 @@ function SelectAllMode({
   const fractionReady = !requiresProbability || hasValidFractionInput(fractionNum, fractionDen)
   const canSubmit = manipulableReady && countReady && fractionReady && !locked
 
+  const disabledReason = !manipulableReady
+    ? 'Tap the cards that fit the prompt'
+    : !countReady
+      ? 'Enter how many cards you tapped'
+      : !fractionReady
+        ? 'Enter the probability as a fraction'
+        : undefined
+
   const showCount = requiresCount && manipulableReady
   // Show the required fraction field as soon as the learner has a selection — never
   // gate it behind a valid count. Combined with canSubmit (which still requires both a
@@ -401,6 +409,7 @@ function SelectAllMode({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={disabledReason}
       />
     </div>
   )

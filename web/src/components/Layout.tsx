@@ -19,9 +19,12 @@ const navItems = [
   {
     to: '/course',
     label: 'Course',
-    match: (p: string) =>
-      p.startsWith('/course') || p.startsWith('/lesson') || p.startsWith('/table'),
+    match: (p: string) => p.startsWith('/course') || p.startsWith('/lesson'),
   },
+  // The casino lives at `/table/:id`; Room 1 is the first table. The table route
+  // still enforces its own unlock gate, so a locked tap just returns to the path.
+  { to: '/table/room-1', label: 'Play', match: (p: string) => p.startsWith('/table') },
+  { to: '/glossary', label: 'Glossary', match: (p: string) => p.startsWith('/glossary') },
 ]
 
 export function Layout() {

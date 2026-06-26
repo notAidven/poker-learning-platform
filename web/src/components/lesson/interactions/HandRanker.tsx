@@ -467,6 +467,7 @@ function IdentifyCategory({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={choice === null ? 'Pick the hand category' : undefined}
       />
     </div>
   )
@@ -787,6 +788,14 @@ function CardSelectMode({
 
   const description = submitted ? describe(selected) : null
 
+  const remainingToPick = 5 - selected.length
+  const disabledReason =
+    selected.length === 0
+      ? 'Select 5 cards'
+      : selected.length < 5
+        ? `Select ${remainingToPick} more ${remainingToPick === 1 ? 'card' : 'cards'}`
+        : undefined
+
   return (
     <div className="space-y-4">
       {helperText && <p className="text-center text-sm text-slate-600">{helperText}</p>}
@@ -832,6 +841,7 @@ function CardSelectMode({
         onSubmit={handleSubmit}
         onRetry={handleRetry}
         allowRetry={allowRetry}
+        disabledReason={disabledReason}
       />
     </div>
   )
