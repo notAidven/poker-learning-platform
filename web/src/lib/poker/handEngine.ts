@@ -78,6 +78,13 @@ export type HandState = {
   /** Seat index to act, or null when the betting round is closed. */
   toActIndex: number | null
   lastAggressorIndex: number | null
+  /**
+   * Number of voluntary bets + raises made on the CURRENT betting street, reset to
+   * 0 at the start of each street. Forced blinds do not count. The opponent AI reads
+   * this to cap escalating re-raise wars (see `MAX_AI_RAISES_PER_STREET`); it never
+   * restricts the human hero, so it is policy input, not an engine rule.
+   */
+  streetRaiseCount: number
   seed: number
   /** Human-readable history. */
   log: string[]
@@ -182,6 +189,7 @@ export function createHand(config: HandConfig): HandState {
     minRaise: config.bigBlind,
     toActIndex: null,
     lastAggressorIndex: null,
+    streetRaiseCount: 0,
     seed: config.seed,
     log: [],
   }
@@ -370,6 +378,7 @@ export function applyAction(state: HandState, applied: AppliedAction): HandState
       next.currentBet = seat.committed
       next.minRaise = seat.committed
       next.lastAggressorIndex = i
+      next.streetRaiseCount += 1
       seat.hasActed = true
       reopenAction(next, i)
       next.log.push(`${seat.name} bets ${seat.committed}${seat.allIn ? ' (all-in)' : ''}`)
@@ -391,6 +400,7 @@ export function applyAction(state: HandState, applied: AppliedAction): HandState
       if (isFullRaise) next.minRaise = increment
       next.currentBet = Math.max(next.currentBet, seat.committed)
       next.lastAggressorIndex = i
+      next.streetRaiseCount += 1
       seat.hasActed = true
       if (isFullRaise) reopenAction(next, i)
       next.log.push(`${seat.name} raises to ${seat.committed}${seat.allIn ? ' (all-in)' : ''}`)
@@ -496,6 +506,7 @@ function resetForNewStreet(state: HandState): void {
   state.currentBet = 0
   state.minRaise = state.bb
   state.lastAggressorIndex = null
+  state.streetRaiseCount = 0
 }
 
 // ---------------------------------------------------------------------------

@@ -32,9 +32,24 @@ export type AIDecisionInput = {
   position?: 'ip' | 'oop'
   opponents?: number
   legalActions: LegalAction[]
+  /**
+   * Voluntary bets + raises already made on this street (the engine's
+   * `streetRaiseCount`). Once it reaches `MAX_AI_RAISES_PER_STREET` the AI stops
+   * (re-)raising and only calls or folds, so two bots cannot 3-bet/4-bet each other
+   * into an all-in raise-war. Defaults to 0 (no cap reached) when omitted.
+   */
+  raisesThisStreet?: number
   /** Seeded RNG for tie-breaks and rare bluffs. */
   rng: () => number
 }
+
+/**
+ * Cap on how many bets/raises the AI will add to a single betting street. Past this
+ * many escalations it only ever calls or folds when facing more aggression, so
+ * AI-vs-AI pots converge (a call or a fold) instead of escalating all-in. This is an
+ * AI policy: the human hero is never restricted (the engine still offers `raise`).
+ */
+export const MAX_AI_RAISES_PER_STREET = 3
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -218,20 +233,20 @@ function decideCallingStation(input: AIDecisionInput): AIDecision {
   const facingBet = input.toCall > 0
 
   if (!facingBet) {
-    // Only bets with two pair or better; otherwise checks.
+    // Only leads with two pair or better; otherwise checks. (A single value lead is
+    // fine — the per-street cap keeps even this from spiralling.)
     if (s.hasTwoPairPlus && has(input, 'bet')) {
       return { action: 'bet', amount: potFraction(input, 0.5), reason: 'Bet: two pair or better' }
     }
-    if (s.hasTwoPairPlus && has(input, 'raise')) {
+    if (s.hasTwoPairPlus && canRaise(input)) {
       return { action: 'raise', amount: raiseTo(input, 0.5), reason: 'Raised: two pair or better' }
     }
     return { action: 'check', reason: 'Checked it down' }
   }
 
-  // Facing a bet: a calling station never folds — it only raises with the nuts-ish.
-  if (s.hasTwoPairPlus && has(input, 'raise')) {
-    return { action: 'raise', amount: raiseTo(input, 0.5), reason: 'Raised: two pair or better' }
-  }
+  // Facing a bet: a loose-passive station just CALLS. It never folds a made hand or a
+  // live draw, but it also never re-raises — so two stations can't raise-war into an
+  // all-in. (Removing the old "raise two pair+" line is the core novice-tier fix.)
   if (has(input, 'call')) {
     if (s.hasPairPlus) return { action: 'call', reason: 'Called: never folds a made hand' }
     if (s.hasDraw) return { action: 'call', reason: 'Called: chasing the draw' }
@@ -285,7 +300,7 @@ function decideTag(input: AIDecisionInput, params: TagParams): AIDecision {
         reason: 'Value bet with a strong made hand',
       }
     }
-    if (wantsValue && has(input, 'raise')) {
+    if (wantsValue && canRaise(input)) {
       return { action: 'raise', amount: raiseTo(input, params.betSize), reason: 'Value raise' }
     }
     // Semi-bluff a draw, or pure-bluff air, occasionally.
@@ -298,12 +313,14 @@ function decideTag(input: AIDecisionInput, params: TagParams): AIDecision {
 
   // Facing a bet — compare equity to the price.
   if (s.equity >= threshold) {
-    // Raise the strongest hands for value (sometimes), otherwise call and realise equity.
-    if (s.hasTripsPlus && has(input, 'raise') && input.rng() > 0.35) {
+    // Raise the strongest hands for value (sometimes), otherwise call and realise
+    // equity. Capped: once the street has been (re-)raised enough, even a monster just
+    // calls instead of extending the war (the chips go in at showdown either way).
+    if (s.hasTripsPlus && canRaise(input) && input.rng() > 0.35) {
       return { action: 'raise', amount: raiseTo(input, params.betSize), reason: 'Raised for value' }
     }
     // Preflop, re-raise premium holdings (QQ+/AK) for value rather than flat-calling.
-    if (input.board.length < 3 && has(input, 'raise') && isPremiumPreflop(input.hole)) {
+    if (input.board.length < 3 && canRaise(input) && isPremiumPreflop(input.hole)) {
       return { action: 'raise', amount: raiseTo(input, params.betSize), reason: 'Re-raised a premium hand preflop' }
     }
     if (has(input, 'call')) {
@@ -314,9 +331,10 @@ function decideTag(input: AIDecisionInput, params: TagParams): AIDecision {
     }
   }
 
-  // Not priced in: fold, but mix in an occasional bluff-raise when cheap.
+  // Not priced in: fold, but mix in an occasional bluff-raise when cheap (and only
+  // while under the per-street raise cap — never as part of an escalating war).
   if (
-    has(input, 'raise') &&
+    canRaise(input) &&
     required < 0.45 &&
     s.equity < threshold &&
     input.rng() < params.bluffChance
@@ -355,6 +373,15 @@ function raiseTo(input: AIDecisionInput, fraction: number): number {
 
 function has(input: AIDecisionInput, action: BettingAction): boolean {
   return input.legalActions.some((a) => a.action === action)
+}
+
+/**
+ * Whether the AI may (re-)raise here: raising must be legal AND the per-street raise
+ * cap must not yet be reached. Once `raisesThisStreet` hits `MAX_AI_RAISES_PER_STREET`
+ * this returns false, so the AI calls or folds rather than continuing a raise-war.
+ */
+function canRaise(input: AIDecisionInput): boolean {
+  return has(input, 'raise') && (input.raisesThisStreet ?? 0) < MAX_AI_RAISES_PER_STREET
 }
 
 function finalize(input: AIDecisionInput, decision: AIDecision): AIDecision {

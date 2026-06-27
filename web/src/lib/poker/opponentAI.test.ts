@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decideAI, type AIDecisionInput, type AITier } from './opponentAI'
+import { decideAI, MAX_AI_RAISES_PER_STREET, type AIDecisionInput, type AITier } from './opponentAI'
 import type { LegalAction } from './handEngine'
 import type { CardId } from '../../types/lesson'
 import type { PokerStreet } from '../../types/poker'
@@ -318,6 +318,50 @@ describe('preflop — premiums re-raise instead of only calling', () => {
       }),
     )
     expect(d.action).not.toBe('raise')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Re-raise cap + novice passivity (regression for the AI raise-war)
+// ---------------------------------------------------------------------------
+
+describe('re-raise cap & novice passivity (raise-war regression)', () => {
+  it('Tier 1 calls (never re-raises) two pair facing a bet, so two stations cannot war', () => {
+    for (const seed of [0.0, 0.25, 0.5, 0.75, 0.99]) {
+      const d = decideAI(
+        makeInput({
+          tier: 1,
+          hole: ['AS', 'KD'],
+          board: ['AC', 'KH', '3S'], // two pair
+          street: 'flop',
+          legalActions: FACING_BET,
+          toCall: 40,
+          pot: 100,
+          rng: () => seed,
+        }),
+      )
+      expect(d.action).toBe('call')
+    }
+  })
+
+  it('a strong hand (a set) re-raises under the cap but only CALLS once the cap is hit', () => {
+    const base = {
+      tier: 3 as AITier,
+      hole: ['JS', 'JC'] as [CardId, CardId],
+      board: ['JH', '9S', '2D'] as CardId[], // top set
+      street: 'flop' as PokerStreet,
+      legalActions: FACING_BET,
+      toCall: 40,
+      pot: 100,
+      opponents: 1,
+      position: 'ip' as const,
+      rng: () => 0.99, // clear the rng>0.35 value-raise gate
+    }
+    const underCap = decideAI(makeInput({ ...base, raisesThisStreet: 0 }))
+    const atCap = decideAI(makeInput({ ...base, raisesThisStreet: MAX_AI_RAISES_PER_STREET }))
+
+    expect(underCap.action).toBe('raise')
+    expect(atCap.action).toBe('call') // capped: the set just calls instead of warring
   })
 })
 

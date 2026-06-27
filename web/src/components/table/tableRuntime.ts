@@ -32,7 +32,12 @@ import {
   holeCardsImproveBoard,
   rankValue,
 } from '../../lib/poker/handEvaluator'
-import { decideAI, type AIDecisionInput, type AITier } from '../../lib/poker/opponentAI'
+import {
+  decideAI,
+  MAX_AI_RAISES_PER_STREET,
+  type AIDecisionInput,
+  type AITier,
+} from '../../lib/poker/opponentAI'
 import {
   casinoTierProfile,
   shapePersona,
@@ -221,6 +226,7 @@ export function buildAIDecisionInput(
     position: positionFor(state, seatIndex),
     opponents: liveOpponents(state, seatIndex),
     legalActions: legalActions(state),
+    raisesThisStreet: state.streetRaiseCount,
     rng: decisionRng(state, seatIndex),
   }
 }
@@ -231,6 +237,11 @@ export function buildLLMContext(
   persona?: string,
 ): LLMOpponentContext {
   const seat = state.seats[seatIndex]
+  // Apply the same per-street raise cap as the rule AI: once the street has been
+  // (re-)raised enough, do not even offer `raise` to the model, so it cannot be
+  // talked into an endless 3-bet/4-bet war. It may still call or fold.
+  const legal = legalActions(state)
+  const capped = state.streetRaiseCount >= MAX_AI_RAISES_PER_STREET
   return {
     persona,
     hole: holeOf(seat),
@@ -241,7 +252,7 @@ export function buildLLMContext(
     stack: seat.stack,
     minRaise: state.minRaise,
     position: positionFor(state, seatIndex),
-    legalActions: legalActions(state),
+    legalActions: capped ? legal.filter((a) => a.action !== 'raise') : legal,
   }
 }
 
@@ -339,6 +350,7 @@ export function makeRuleFallback(
       position: ctx.position,
       opponents: liveOpponents(state, seatIndex),
       legalActions: ctx.legalActions,
+      raisesThisStreet: state.streetRaiseCount,
       rng: decisionRng(state, seatIndex),
     }
     const d = decideAI(input)
