@@ -54,13 +54,25 @@ import {
 import { drillAccuracyPct } from '../../lib/gamification'
 
 /**
- * Table-only chrome: the wood/brass rail, the championship-green felt (warm center
- * spotlight + emerald dome + felt weave + vignette + a brass hairline), the seat
- * plaques, the spotlit pot glow, and the "your turn" pulse. Injected once via a
- * <style> in the table tree (the shared chip/card CSS lives in <CardKitStyles />).
- * All motion here is CSS, so the global reduced-motion kill-switch freezes it.
+ * Table-only chrome for the pro online-poker layout: the dark "room" the felt is
+ * inset into, the wood/brass rail, the championship-green felt (warm dealer spotlight
+ * + emerald dome + felt weave + vignette + a brass hairline), the centered board
+ * tray, the seat nameplates, the spotlit pot glow, the action apron + bet slider, and
+ * the "your turn" pulse. Injected once via a <style> in the table tree (the shared
+ * chip/card CSS lives in <CardKitStyles />). All CSS motion here is frozen by the
+ * global reduced-motion kill-switch; the JS-driven motion is gated on `animate`.
  */
 const TABLE_STYLES = `
+.suited-room {
+  background:
+    radial-gradient(130% 120% at 50% -12%, rgba(23, 73, 47, 0.38), transparent 58%),
+    radial-gradient(120% 120% at 50% 126%, rgba(0, 0, 0, 0.5), transparent 72%),
+    linear-gradient(180deg, #08180f 0%, #050f0a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(212, 173, 87, 0.12),
+    0 30px 60px -30px rgba(0, 0, 0, 0.7);
+}
 .suited-rail-wood {
   background: radial-gradient(130% 140% at 50% -10%, #6e5230 0%, #4a371f 44%, #2c2012 100%);
   box-shadow:
@@ -72,8 +84,8 @@ const TABLE_STYLES = `
 .suited-felt {
   background-color: #0a5a3d;
   background-image:
-    radial-gradient(56% 44% at 50% 37%, rgba(255, 248, 224, 0.26) 0%, rgba(255, 246, 214, 0.06) 40%, transparent 66%),
-    radial-gradient(126% 124% at 50% 40%, #1aa873 0%, #128a5c 24%, #0a5c40 50%, #073e2a 74%, #04271a 100%),
+    radial-gradient(50% 40% at 50% 44%, rgba(255, 248, 224, 0.30) 0%, rgba(255, 246, 214, 0.07) 42%, transparent 66%),
+    radial-gradient(126% 124% at 50% 42%, #1aa873 0%, #128a5c 24%, #0a5c40 50%, #073e2a 74%, #04271a 100%),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 6px),
     repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 6px);
   box-shadow:
@@ -82,24 +94,74 @@ const TABLE_STYLES = `
     inset 0 18px 50px rgba(0, 0, 0, 0.45),
     inset 0 -26px 72px rgba(0, 0, 0, 0.52);
 }
-.suited-seat {
-  background-color: rgba(6, 20, 14, 0.5);
-}
-.suited-seat--active {
-  background-color: rgba(6, 20, 14, 0.68);
+/* A faint brass center logo so an empty felt still reads as "a real table". */
+.suited-center-mark {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  font-size: 5.5rem;
+  line-height: 1;
+  color: rgba(255, 246, 214, 0.06);
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
 }
 .suited-pot-glow {
   position: absolute;
   left: 50%;
-  top: 36%;
-  width: 17rem;
-  height: 10rem;
+  top: 40%;
+  width: 18rem;
+  height: 11rem;
   transform: translate(-50%, -50%);
   border-radius: 9999px;
   background: radial-gradient(closest-side, rgba(255, 248, 224, 0.42), rgba(255, 246, 214, 0.08) 55%, transparent 72%);
   pointer-events: none;
   z-index: -1;
   filter: blur(3px);
+}
+/* The community-board tray — a quiet dark inlay the five cards sit in, dead center. */
+.suited-board-tray {
+  background: linear-gradient(180deg, rgba(4, 16, 11, 0.55), rgba(4, 16, 11, 0.22));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), inset 0 2px 7px rgba(0, 0, 0, 0.4);
+}
+/* The seat nameplate "pod". */
+.suited-plate {
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(26, 50, 38, 0.92), rgba(7, 20, 14, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 16px -8px rgba(0, 0, 0, 0.65);
+  outline: 1.5px solid rgba(255, 255, 255, 0.08);
+  outline-offset: -1.5px;
+}
+.suited-plate--active {
+  background: linear-gradient(180deg, rgba(42, 76, 56, 0.96), rgba(12, 34, 23, 0.96));
+  outline-color: rgba(231, 205, 134, 0.9);
+}
+.suited-plate--win {
+  outline-color: rgba(212, 173, 87, 0.95);
+}
+.suited-plate--hero {
+  outline-color: rgba(231, 205, 134, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 1px rgba(212, 173, 87, 0.28), 0 10px 20px -8px rgba(0, 0, 0, 0.7);
+}
+.suited-plate--hero.suited-plate--active {
+  outline-color: rgba(231, 205, 134, 0.95);
+}
+/* The action apron — the dark "table edge" the betting controls live on. */
+.suited-apron {
+  background: linear-gradient(180deg, #0c2a1e 0%, #07150f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(212, 173, 87, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 16px 32px -20px rgba(0, 0, 0, 0.7);
+}
+.suited-apron-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #e7cd86;
+  animation: suited-turn-pulse 1.5s ease-out infinite;
 }
 .suited-turn-dot {
   display: inline-block;
@@ -110,9 +172,48 @@ const TABLE_STYLES = `
   animation: suited-turn-pulse 1.5s ease-out infinite;
 }
 @keyframes suited-turn-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
-  70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(231, 205, 134, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(231, 205, 134, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 205, 134, 0); }
+}
+/* The bet-sizing slider, re-skinned for the dark apron with a brass thumb. */
+.suited-bet-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(212, 173, 87, 0.55), rgba(212, 173, 87, 0.18));
+  outline: none;
+  cursor: pointer;
+}
+.suited-bet-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 32%, #f6e4ac, #bb8f3c);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.suited-bet-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 32%, #f6e4ac, #bb8f3c);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.suited-bet-slider:focus-visible {
+  outline: 2px solid var(--color-gold-300);
+  outline-offset: 3px;
+}
+.suited-bet-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 `
 
@@ -152,14 +253,16 @@ type PokerTableProps = {
 function ovalPositions(count: number): { x: number; y: number }[] {
   const cx = 50
   const cy = 50
-  const rx = 40
-  const ry = 37
+  const rx = 41
+  const ry = 35
   // Hero pinned a touch inside the bottom edge so a big seat never clips the felt.
-  const positions: { x: number; y: number }[] = [{ x: cx, y: 86 }]
+  const positions: { x: number; y: number }[] = [{ x: cx, y: 87 }]
   const opponents = Math.max(0, count - 1)
+  // Opponents ring the TOP + SIDES (208°…332° in screen space, y pointing down) so
+  // they never crowd the centered board, reading clean from heads-up to 4-handed.
   for (let k = 0; k < opponents; k++) {
     const t = opponents === 1 ? 0.5 : k / (opponents - 1)
-    const rad = ((215 + t * 110) * Math.PI) / 180
+    const rad = ((208 + t * 124) * Math.PI) / 180
     positions.push({ x: cx + rx * Math.cos(rad), y: cy + ry * Math.sin(rad) })
   }
   return positions
@@ -184,7 +287,7 @@ type ChipFlightSpec = {
 }
 
 /** Where the pot sits on the felt (the chip pile atop the centered board column). */
-const POT_ANCHOR: Point = { x: 50, y: 46 }
+const POT_ANCHOR: Point = { x: 50, y: 40 }
 
 /** Chips to show for a bet: scaled by size in big blinds, kept readable (1–4). */
 function betChipCount(amount: number, bb: number): number {
@@ -612,46 +715,86 @@ export function PokerTable({
       </div>
       )}
 
-      {/* Table + action dock (main column) and the coach / hint side rail. The hero's
-          hand sits at the bottom of the felt and the controls dock directly beneath
-          it, so cards + actions read as one unit; the coach stays in view alongside. */}
+      {/* The poker-room "table window" (main column) + the coach / hint side rail.
+          The felt is inset into a dark room so it reads like a real online client;
+          the hero's hand sits bottom-center and the action apron docks beneath it, so
+          cards + controls read as one unit. The coach stays in view alongside. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        {/* Main column: the felt, then the action dock under the hero's hand */}
+        {/* Main column: the dark table window, then the action apron under it */}
         <div className="space-y-3">
-          {/* Wood/brass rail wrapping the championship-green felt */}
-          <div className="pck-scene relative mx-auto w-full max-w-2xl">
-            <div className="suited-rail-wood relative rounded-[44%] p-2.5 sm:p-3.5">
-              <div className="suited-felt relative aspect-square w-full overflow-visible rounded-[44%] sm:aspect-[7/5]">
-                {/* Center: a spotlit pot, the board, and the deck + burns */}
-                <div className="absolute left-1/2 top-1/2 z-[4] flex w-[72%] max-w-[20rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2.5">
-                  <div className="relative flex flex-col items-center">
-                    <span className="suited-pot-glow" aria-hidden />
-                    {hand.pot > 0 && (
-                      <div className={`mb-1.5 ${handOver ? 'pck-pot-pop' : ''}`}>
-                        <ChipStack amount={hand.pot} size={34} />
-                      </div>
-                    )}
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-night-950/60 px-3.5 py-1 text-base font-bold shadow-lg ring-1 ring-inset ring-gold-300/35">
-                      <Chip size={15} tone="gold" />
-                      <span className="text-[0.62rem] font-bold uppercase tracking-[0.18em] text-gold-200/85">
-                        Pot
+          <div className="suited-room relative mx-auto w-full max-w-2xl rounded-[1.75rem] p-2.5 sm:p-3.5">
+            {/* Table info strip — blinds + hand number, for at-a-glance tracking. */}
+            <div className="mb-2.5 flex items-center justify-between gap-2 px-1 text-[0.62rem] font-semibold sm:mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 ring-1 ring-inset ring-white/10">
+                <span className="uppercase tracking-[0.14em] text-white/45">Blinds</span>
+                <span className="tabular-nums text-white">
+                  {config.smallBlind.toLocaleString()}/{config.bigBlind.toLocaleString()}
+                </span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 ring-1 ring-inset ring-white/10">
+                <span className="uppercase tracking-[0.14em] text-white/45">Hand</span>
+                <span className="tabular-nums text-white">#{handIndex + 1}</span>
+              </span>
+            </div>
+
+            {/* Wood/brass rail wrapping the championship-green felt */}
+            <div className="pck-scene relative w-full">
+              <div className="suited-rail-wood relative rounded-[44%] p-2 sm:p-3">
+                <div className="suited-felt relative aspect-square w-full overflow-visible rounded-[44%] sm:aspect-[7/5]">
+                  {/* Faint brass center logo so the felt always reads as a real table. */}
+                  <span className="suited-center-mark font-display" aria-hidden>
+                    ♠
+                  </span>
+
+                  {/* DEAD CENTER — the gaze anchor: the pot, then the community board. */}
+                  <div className="absolute left-1/2 top-[43%] z-[4] flex w-[82%] max-w-[21rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2.5">
+                    <div className="relative flex flex-col items-center">
+                      <span className="suited-pot-glow" aria-hidden />
+                      {hand.pot > 0 && (
+                        <div className={`mb-1.5 ${handOver ? 'pck-pot-pop' : ''}`}>
+                          <ChipStack amount={hand.pot} size={32} />
+                        </div>
+                      )}
+                      <span className="inline-flex items-center gap-2 rounded-full bg-night-950/70 px-4 py-1.5 shadow-lg ring-1 ring-inset ring-gold-300/40">
+                        <Chip size={15} tone="gold" />
+                        <span className="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-gold-200/85">
+                          Pot
+                        </span>
+                        <span className="text-lg font-bold tabular-nums text-white">
+                          {hand.pot.toLocaleString()}
+                        </span>
                       </span>
-                      <span className="tabular-nums text-white">{hand.pot.toLocaleString()}</span>
-                    </span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[0.52rem] font-bold uppercase tracking-[0.24em] text-white/45">
+                        {handOver
+                          ? results?.reachedShowdown
+                            ? 'Showdown'
+                            : 'Hand complete'
+                          : hand.board.length >= 5
+                            ? 'River'
+                            : hand.board.length === 4
+                              ? 'Turn'
+                              : hand.board.length === 3
+                                ? 'Flop'
+                                : 'Pre-flop'}
+                      </span>
+                      <div className="suited-board-tray flex items-center justify-center gap-1.5 rounded-xl px-2 py-1.5">
+                        {Array.from({ length: 5 }).map((_, i) => {
+                          const card = hand.board[i]
+                          return card ? (
+                            <CardFace key={card} id={card} size="sm" animate={animate} delay={i * 60} />
+                          ) : (
+                            <EmptySlot key={`board-${i}`} size="sm" />
+                          )
+                        })}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => {
-                      const card = hand.board[i]
-                      return card ? (
-                        <CardFace key={card} id={card} size="sm" animate={animate} delay={i * 60} />
-                      ) : (
-                        <EmptySlot key={`board-${i}`} size="sm" />
-                      )
-                    })}
-                  </div>
-
-                  <div className="flex items-center gap-2 opacity-90">
+                  {/* Quieted periphery: the deck + burns tucked to the left edge. */}
+                  <div className="absolute left-[7%] top-[53%] z-[2] flex -translate-y-1/2 scale-[0.82] items-center gap-1.5 opacity-70">
                     <DeckPile size="sm" count={hand.deck.length} />
                     {hand.burns.length > 0 && (
                       <div className="flex items-center">
@@ -661,68 +804,70 @@ export function PokerTable({
                       </div>
                     )}
                   </div>
+
+                  {/* Each player's committed bet, shown as a real chip stack on the felt
+                      between them and the pot (the chips then rake into the pot). */}
+                  {hand.seats.map((seat, index) => {
+                    if (seat.folded || seat.committed <= 0) return null
+                    const sp = positions[index]
+                    const bp = {
+                      x: sp.x + (POT_ANCHOR.x - sp.x) * 0.34,
+                      y: sp.y + (POT_ANCHOR.y - sp.y) * 0.34,
+                    }
+                    return (
+                      <div
+                        key={`bet-${seat.id}`}
+                        className="absolute z-[8] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+                        style={{ left: `${bp.x}%`, top: `${bp.y}%` }}
+                      >
+                        <ChipStack amount={seat.committed} size={16} />
+                        <span className="rounded-full bg-night-950/75 px-1.5 py-0.5 text-[0.58rem] font-bold tabular-nums text-gold-100 ring-1 ring-inset ring-white/10">
+                          {seat.committed.toLocaleString()}
+                        </span>
+                      </div>
+                    )
+                  })}
+
+                  {/* Seats ringed around the oval (hero bottom-center) */}
+                  {hand.seats.map((seat, index) => {
+                    const pos = positions[index]
+                    return (
+                      <div
+                        key={seat.id}
+                        className="absolute z-[6] -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                      >
+                        <Seat
+                          seat={seat}
+                          active={hand.toActIndex === index && !handOver}
+                          thinking={activeOppIndex === index}
+                          role={roleFor(hand, index)}
+                          revealHole={seat.isHero || (Boolean(results?.reachedShowdown) && !seat.folded)}
+                          winner={Boolean(results && results.winnerIds.includes(seat.id))}
+                          animate={animate}
+                          compact={!seat.isHero}
+                          talk={talk[seat.id] ?? null}
+                        />
+                      </div>
+                    )
+                  })}
+
+                  {/* Chips in flight (bet → pot, pot → winner), atop the felt. */}
+                  {animate && flights.length > 0 && (
+                    <div className="pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
+                      {flights.map((f) => (
+                        <ChipFlight key={f.id} flight={f} onDone={removeFlight} />
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {/* Each player's committed bet, shown as a real chip stack on the felt
-                    between them and the pot (the chips then rake into the pot). */}
-                {hand.seats.map((seat, index) => {
-                  if (seat.folded || seat.committed <= 0) return null
-                  const sp = positions[index]
-                  const bp = {
-                    x: sp.x + (POT_ANCHOR.x - sp.x) * 0.36,
-                    y: sp.y + (POT_ANCHOR.y - sp.y) * 0.36,
-                  }
-                  return (
-                    <div
-                      key={`bet-${seat.id}`}
-                      className="absolute z-[8] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
-                      style={{ left: `${bp.x}%`, top: `${bp.y}%` }}
-                    >
-                      <ChipStack amount={seat.committed} size={17} />
-                      <span className="rounded-full bg-night-950/70 px-1.5 py-0.5 text-[0.6rem] font-bold tabular-nums text-gold-100 ring-1 ring-inset ring-white/10">
-                        {seat.committed.toLocaleString()}
-                      </span>
-                    </div>
-                  )
-                })}
-
-                {/* Seats around the oval */}
-                {hand.seats.map((seat, index) => {
-                  const pos = positions[index]
-                  return (
-                    <div
-                      key={seat.id}
-                      className="absolute z-[6] -translate-x-1/2 -translate-y-1/2"
-                      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                    >
-                      <Seat
-                        seat={seat}
-                        active={hand.toActIndex === index && !handOver}
-                        thinking={activeOppIndex === index}
-                        role={roleFor(hand, index)}
-                        revealHole={seat.isHero || (Boolean(results?.reachedShowdown) && !seat.folded)}
-                        winner={Boolean(results && results.winnerIds.includes(seat.id))}
-                        animate={animate}
-                        compact={!seat.isHero}
-                        talk={talk[seat.id] ?? null}
-                      />
-                    </div>
-                  )
-                })}
-
-                {/* Chips in flight (bet → pot, pot → winner), atop the felt. */}
-                {animate && flights.length > 0 && (
-                  <div className="pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
-                    {flights.map((f) => (
-                      <ChipFlight key={f.id} flight={f} onDone={removeFlight} />
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
-          {/* Action dock — directly below the hero's hole cards */}
+          {/* Action apron — docks under the table window. Bottom-right action cluster
+              on desktop; full-width thumb zone on mobile. It still feeds the single
+              hero-action funnel (heroAct → drill grader). */}
           <div className="mx-auto w-full max-w-2xl">
             {results ? (
               <ResultsPanel
@@ -738,19 +883,12 @@ export function PokerTable({
                 bustedNote={bustedNote}
               />
             ) : isHeroTurn && heroIndex >= 0 ? (
-              <div className="rounded-2xl border border-night-900/10 bg-white p-3 shadow-card sm:p-4">
-                <div className="mb-3 flex items-center justify-center">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-3.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
-                    <span className="suited-turn-dot" aria-hidden />
-                    Your turn to act
-                  </span>
-                </div>
-                <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} />
-              </div>
+              <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} animate={animate} />
             ) : (
-              <p className="rounded-2xl border border-night-900/10 bg-white p-4 text-center text-sm font-semibold text-night-700/70 shadow-card">
-                {toActName ? `Waiting for ${toActName}…` : 'Dealing…'}
-              </p>
+              <div className="suited-apron flex items-center justify-center gap-2.5 rounded-2xl px-4 py-5 text-sm font-semibold text-white/75">
+                <span className="suited-apron-dot opacity-70" aria-hidden />
+                {toActName ? `Waiting for ${toActName}…` : 'Dealing the next hand…'}
+              </div>
             )}
           </div>
         </div>
