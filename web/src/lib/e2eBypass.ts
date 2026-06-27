@@ -22,4 +22,5 @@ export const E2E_MOCK_PROFILE: UserProfile = {
   lastActivityDate: null,
   chips: 0,
   bankrollGranted: false,
+  casinoNetWinnings: 0,
 }

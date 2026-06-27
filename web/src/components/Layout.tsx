@@ -11,8 +11,9 @@ import { buttonVariants } from './ui/Button'
 import { Footer } from './ui/Footer'
 import { Logo } from './ui/Logo'
 import { cx } from './ui/cx'
-import { FlameIcon } from './icons'
+import { FlameIcon, LockIcon } from './icons'
 import { usePrefersReducedMotion } from './lesson/interactions/usePrefersReducedMotion'
+import { isCasinoFloorUnlocked } from '../lib/casinoProgress'
 
 const navItems = [
   { to: '/', label: 'Home', match: (p: string) => p === '/' },
@@ -21,11 +22,13 @@ const navItems = [
     label: 'Course',
     match: (p: string) => p.startsWith('/course') || p.startsWith('/lesson'),
   },
-  // The casino lives at `/table/:id`; Room 1 is the first table. The table route
-  // still enforces its own unlock gate, so a locked tap just returns to the path.
-  { to: '/table/room-1', label: 'Play', match: (p: string) => p.startsWith('/table') },
+  // "Play" is the Casino Floor (`/casino`). It stays visibly LOCKED until both
+  // in-course tables are cleared; the lobby + table routes guard themselves too.
+  { to: '/casino', label: 'Play', match: (p: string) => p.startsWith('/casino') },
   { to: '/glossary', label: 'Glossary', match: (p: string) => p.startsWith('/glossary') },
 ]
+
+const CASINO_LOCKED_TIP = 'Clear both course tables to unlock the Casino Floor'
 
 export function Layout() {
   const location = useLocation()
@@ -34,6 +37,7 @@ export function Layout() {
   const streak = getEffectiveStreak(profile?.streak ?? 0, profile?.lastActivityDate ?? null)
 
   const reduced = usePrefersReducedMotion()
+  const casinoUnlocked = isCasinoFloorUnlocked()
   const flameControls = useAnimationControls()
   const armedRef = useRef(false)
   const armTimer = useRef<number | undefined>(undefined)
@@ -96,6 +100,19 @@ export function Layout() {
           <nav className="hidden items-center gap-1 sm:flex">
             {signedIn &&
               navItems.map((item) => {
+                if (item.to === '/casino' && !casinoUnlocked) {
+                  return (
+                    <span
+                      key={item.to}
+                      aria-disabled="true"
+                      title={CASINO_LOCKED_TIP}
+                      className="relative inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-night-700/40"
+                    >
+                      <LockIcon className="h-3.5 w-3.5" aria-hidden />
+                      <span className="relative">{item.label}</span>
+                    </span>
+                  )
+                }
                 const active = item.match(location.pathname)
                 return (
                   <Link
@@ -173,6 +190,19 @@ export function Layout() {
           <nav className="px-4 pb-3 sm:hidden">
             <div className="flex gap-1 rounded-xl border border-night-900/10 bg-white/70 p-1 shadow-sm">
               {navItems.map((item) => {
+                if (item.to === '/casino' && !casinoUnlocked) {
+                  return (
+                    <span
+                      key={item.to}
+                      aria-disabled="true"
+                      title={CASINO_LOCKED_TIP}
+                      className="relative flex flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-center text-sm font-semibold text-night-700/40"
+                    >
+                      <LockIcon className="h-3.5 w-3.5" aria-hidden />
+                      <span className="relative">{item.label}</span>
+                    </span>
+                  )
+                }
                 const active = item.match(location.pathname)
                 return (
                   <Link

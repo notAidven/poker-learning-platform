@@ -24,6 +24,12 @@ const SkillCheckPage = lazy(() =>
 const TablePage = lazy(() =>
   import('./pages/TablePage').then((m) => ({ default: m.TablePage })),
 )
+const CasinoLobbyPage = lazy(() =>
+  import('./pages/CasinoLobbyPage').then((m) => ({ default: m.CasinoLobbyPage })),
+)
+const CasinoTablePage = lazy(() =>
+  import('./pages/CasinoTablePage').then((m) => ({ default: m.CasinoTablePage })),
+)
 const GlossaryPage = lazy(() =>
   import('./pages/GlossaryPage').then((m) => ({ default: m.GlossaryPage })),
 )
@@ -88,6 +94,22 @@ const router = createBrowserRouter([
             element: (
               <Lazy>
                 <TablePage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'casino',
+            element: (
+              <Lazy>
+                <CasinoLobbyPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'casino/:tableId',
+            element: (
+              <Lazy>
+                <CasinoTablePage />
               </Lazy>
             ),
           },

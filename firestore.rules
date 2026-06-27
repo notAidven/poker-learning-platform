@@ -8,7 +8,8 @@ service cloud.firestore {
     // users/{uid} profile + gamification fields:
     //   level (int >= 1), totalXp (int >= 0), streak (int >= 0),
     //   lastActivityDate (string YYYY-MM-DD or null),
-    //   chips (int >= 0), bankrollGranted (bool) — Phase 2 casino bankroll.
+    //   chips (int >= 0), bankrollGranted (bool) — Phase 2 casino bankroll,
+    //   casinoNetWinnings (number, may be negative) — Phase 3 lifetime net winnings.
     function validGamificationFields(data) {
       return (!('level' in data) || (data.level is int && data.level >= 1))
         && (!('totalXp' in data) || (data.totalXp is int && data.totalXp >= 0))
@@ -18,7 +19,8 @@ service cloud.firestore {
           || (data.lastActivityDate is string
             && data.lastActivityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
         && (!('chips' in data) || (data.chips is int && data.chips >= 0))
-        && (!('bankrollGranted' in data) || data.bankrollGranted is bool);
+        && (!('bankrollGranted' in data) || data.bankrollGranted is bool)
+        && (!('casinoNetWinnings' in data) || data.casinoNetWinnings is number);
     }
 
     // Whitelist of every field the app ever writes to a user doc. Blocks
@@ -27,8 +29,23 @@ service cloud.firestore {
       return data.keys().hasOnly([
         'email', 'username', 'profileAnimal', 'profileComplete',
         'level', 'totalXp', 'streak', 'lastActivityDate',
-        'chips', 'bankrollGranted', 'createdAt'
+        'chips', 'bankrollGranted', 'casinoNetWinnings', 'createdAt'
       ]);
+    }
+
+    // House Standings leaderboard row (Phase 3 Casino Floor): a small public
+    // projection of a player's lifetime net. World-readable to any signed-in user,
+    // but each player may only ever write THEIR OWN row, in this exact shape.
+    // `netWinnings` is a signed number (sessions can lose). Play-money + client
+    // written by design — the shape + ownership pin are the protection.
+    function validLeaderboardDoc(data, uid) {
+      return data.keys().hasOnly(['uid', 'username', 'profileAnimal', 'netWinnings', 'updatedAt'])
+        && data.uid == uid
+        && data.username is string
+        && data.username.size() <= 40
+        && (data.profileAnimal == null || data.profileAnimal is string)
+        && data.netWinnings is number
+        && data.updatedAt is timestamp;
     }
 
     // True iff, AFTER this atomic commit, usernames/{key} exists and points at the
@@ -125,6 +142,16 @@ service cloud.firestore {
       // user may ONLY delete a usernames doc that points to their own uid.
       allow delete: if request.auth != null
         && resource.data.uid == request.auth.uid;
+    }
+
+    // House Standings leaderboard (Phase 3 Casino Floor). Any signed-in user may
+    // read the board; a player may only create/update THEIR OWN row, and only with
+    // the validated shape above (uid pinned to their own uid). No deletes.
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && validLeaderboardDoc(request.resource.data, uid);
     }
   }
 }

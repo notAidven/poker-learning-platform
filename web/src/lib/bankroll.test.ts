@@ -4,12 +4,23 @@
  * in for the browser store.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { STARTING_BANKROLL, getLocalBankroll, grantBankroll, rebuy, setBankroll } from './bankroll'
+import {
+  STARTING_BANKROLL,
+  bankrollAfterCashOut,
+  canCoverBuyIn,
+  getLocalBankroll,
+  grantBankroll,
+  pocketAfterBuyIn,
+  rebuy,
+  sessionNet,
+  setBankroll,
+} from './bankroll'
 import {
   areAllLessonsComplete,
   areGuidedPlayLessonsComplete,
   getClearedTableIds,
   hasClearedAnyCoachedTable,
+  isCasinoFloorUnlocked,
   isTableCleared,
   isTableUnlocked,
   markTableCleared,
@@ -127,5 +138,68 @@ describe('casino unlock gating (two rooms)', () => {
     // …but only once the first two sections are complete.
     expect(isTableUnlocked(room2, FOUNDATIONS_IDS)).toBe(false)
     expect(isTableUnlocked(room2, [])).toBe(false)
+  })
+})
+
+describe('Casino Floor unlock (Phase 3 — both in-course tables cleared)', () => {
+  it('opens only after BOTH room-1 and room-2 are cleared', () => {
+    expect(isCasinoFloorUnlocked()).toBe(false)
+
+    markTableCleared('room-1')
+    expect(isCasinoFloorUnlocked()).toBe(false) // one table is not enough
+
+    markTableCleared('room-2')
+    expect(isCasinoFloorUnlocked()).toBe(true)
+  })
+
+  it('is order-independent (room-2 then room-1 also unlocks)', () => {
+    expect(isCasinoFloorUnlocked()).toBe(false)
+    markTableCleared('room-2')
+    expect(isCasinoFloorUnlocked()).toBe(false)
+    markTableCleared('room-1')
+    expect(isCasinoFloorUnlocked()).toBe(true)
+  })
+})
+
+describe('casino buy-in / cash-out math (pure)', () => {
+  it('canCoverBuyIn guards against an unaffordable seat', () => {
+    expect(canCoverBuyIn(1000, 100)).toBe(true)
+    expect(canCoverBuyIn(100, 100)).toBe(true) // exact buy-in is fine
+    expect(canCoverBuyIn(99, 100)).toBe(false)
+    expect(canCoverBuyIn(0, 100)).toBe(false)
+    expect(canCoverBuyIn(500, 0)).toBe(false) // a zero/invalid buy-in is never coverable
+  })
+
+  it('pocketAfterBuyIn moves the buy-in off the bankroll and never goes negative', () => {
+    expect(pocketAfterBuyIn(1000, 100)).toBe(900)
+    expect(pocketAfterBuyIn(2000, 2000)).toBe(0)
+    expect(pocketAfterBuyIn(50, 100)).toBe(0) // clamped, never negative
+  })
+
+  it('bankrollAfterCashOut returns the table stack to the pocket', () => {
+    expect(bankrollAfterCashOut(900, 250)).toBe(1150) // cashed out up
+    expect(bankrollAfterCashOut(900, 0)).toBe(900) // busted: nothing returns
+    expect(bankrollAfterCashOut(900, 60)).toBe(960) // cashed out down
+  })
+
+  it('sessionNet is the signed result recorded to the leaderboard', () => {
+    expect(sessionNet(250, 100)).toBe(150) // won 150
+    expect(sessionNet(100, 100)).toBe(0) // broke even
+    expect(sessionNet(0, 100)).toBe(-100) // busted the buy-in
+  })
+
+  it('round-trips a full session: buy in, play, then cash out / bust', () => {
+    const start = 1000
+    const buyIn = 100
+    const pocket = pocketAfterBuyIn(start, buyIn)
+    expect(pocket).toBe(900)
+
+    // Cashed out a 250 stack → bankroll 1150, net +150 (total conserved: 900 + 250).
+    expect(bankrollAfterCashOut(pocket, 250)).toBe(1150)
+    expect(sessionNet(250, buyIn)).toBe(150)
+
+    // Busted the same buy-in → bankroll back to the pocket, net −100.
+    expect(bankrollAfterCashOut(pocket, 0)).toBe(900)
+    expect(sessionNet(0, buyIn)).toBe(-100)
   })
 })
