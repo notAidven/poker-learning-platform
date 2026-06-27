@@ -33,10 +33,17 @@ import {
   rankValue,
 } from '../../lib/poker/handEvaluator'
 import { decideAI, type AIDecisionInput, type AITier } from '../../lib/poker/opponentAI'
+import {
+  casinoTierProfile,
+  shapePersona,
+  shouldQueryLLM,
+  type CasinoAiTier,
+} from '../../lib/poker/casinoAi'
 import { decideWithLLM, type LLMOpponentContext, type OppDecision } from '../../lib/ai/llmOpponent'
 import type { CoachContext, DeepCoachContext } from '../../lib/ai/coach'
 import { analyzeSpot, type HintContext, type SpotAnalysis } from '../../lib/poker/hints'
 import type { TableConfig, TableFeature } from '../../data/tables'
+import type { CasinoTableConfig } from '../../data/casinoTables'
 import type { SeatRole } from './Seat'
 
 // ---------------------------------------------------------------------------
@@ -62,6 +69,14 @@ export type TableRuntimeConfig = {
   smallBlind: number
   bigBlind: number
   startingStack: number
+  /**
+   * Casino Floor difficulty band (Phase 3). When set, `decideOpponentAction` routes
+   * opponents through the tiered policy in `lib/poker/casinoAi` (rule vs gated LLM)
+   * instead of the in-course `opponentSource` branch. Absent for the in-course rooms.
+   */
+  aiTier?: CasinoAiTier
+  /** Whether opponents may emit (light) AI table-talk flavor. Defaults to on. */
+  tableTalk?: boolean
 }
 
 /** Derive the runtime config (decision source + support mode) from a `TableConfig`. */
@@ -78,6 +93,30 @@ export function toRuntimeConfig(table: TableConfig): TableRuntimeConfig {
     smallBlind: table.smallBlind,
     bigBlind: table.bigBlind,
     startingStack: table.startingStack,
+  }
+}
+
+/**
+ * Derive the runtime config for a Casino Floor table. Casino tables are always
+ * "ai" feature with the rule-based hint bar (no coach); the difficulty band
+ * (`aiTier`) drives how opponents think via `decideOpponentAction`. `tier` carries
+ * the band's rule fallback tier so any rule decision (and the LLM fallback) matches.
+ */
+export function toCasinoRuntimeConfig(table: CasinoTableConfig): TableRuntimeConfig {
+  const profile = casinoTierProfile(table.aiTier)
+  return {
+    tableId: table.id,
+    title: table.name,
+    feature: 'ai',
+    opponentSource: profile.source,
+    tier: profile.ruleTier,
+    support: 'hints',
+    opponents: table.opponents,
+    smallBlind: table.smallBlind,
+    bigBlind: table.bigBlind,
+    startingStack: table.startingStack,
+    aiTier: table.aiTier,
+    tableTalk: profile.tableTalk,
   }
 }
 
@@ -276,17 +315,19 @@ export function decideRuleAction(
 }
 
 /**
- * The deterministic Tier-3 strategy injected into `decideWithLLM`. It maps the
- * LLM context back into an `AIDecisionInput` and runs the rule AI, so the table
- * still plays a full hand when AI Logic is off (or the model fails/times out).
+ * The deterministic rule strategy injected into `decideWithLLM`. It maps the LLM
+ * context back into an `AIDecisionInput` and runs the rule AI at `tier`, so the
+ * table still plays a full hand when AI Logic is off (or the model fails/times out).
+ * `tier` lets a casino band pick the fallback strength that matches its difficulty.
  */
-export function makeTier3Fallback(
+export function makeRuleFallback(
   state: HandState,
   seatIndex: number,
+  tier: AITier = 3,
 ): (ctx: LLMOpponentContext) => OppDecision {
   return (ctx) => {
     const input: AIDecisionInput = {
-      tier: 3,
+      tier,
       hole: ctx.hole,
       board: ctx.board,
       street: ctx.street,
@@ -305,18 +346,72 @@ export function makeTier3Fallback(
   }
 }
 
-/** Feature 2 / ai: LLM decision validated + clamped, falling back to Tier-3 rule AI. */
+/**
+ * Back-compat alias for the Tier-3 rule fallback injected into `decideWithLLM`
+ * (used by the in-course Room 2 path and exercised directly in the unit tests).
+ */
+export function makeTier3Fallback(
+  state: HandState,
+  seatIndex: number,
+): (ctx: LLMOpponentContext) => OppDecision {
+  return makeRuleFallback(state, seatIndex, 3)
+}
+
+/** Feature 2 / ai: LLM decision validated + clamped, falling back to a rule-AI tier. */
 export async function decideLLMAction(
   state: HandState,
   seatIndex: number,
   persona?: string,
+  fallbackTier: AITier = 3,
 ): Promise<{ applied: AppliedAction; reason: string }> {
   const seat = state.seats[seatIndex]
   if (!seat || !seat.holeCards) return { applied: safeAction(state), reason: '' }
   const ctx = buildLLMContext(state, seatIndex, persona)
-  const fallback = makeTier3Fallback(state, seatIndex)
+  const fallback = makeRuleFallback(state, seatIndex, fallbackTier)
   const d = await decideWithLLM(ctx, fallback)
   return { applied: { action: d.action, amount: d.amount }, reason: d.reason }
+}
+
+/**
+ * Route a single opponent decision to the right policy, always async so
+ * <PokerTable> can `await` one code path regardless of table type.
+ *
+ *   - In-course tables (no `aiTier`): preserve the EXACT existing behavior —
+ *     `opponentSource` picks the synchronous rule AI or the LLM (Tier-3 fallback).
+ *   - Casino tables (`aiTier` set): apply the tiered policy in `lib/poker/casinoAi`:
+ *       · 'novice' → rule AI at the band tier (no proxy calls);
+ *       · 'solid'  → LLM only on spots that matter (else rule fallback), loose persona;
+ *       · 'sharp'  → full-strength LLM with a relentless persona.
+ *     Every casino path still degrades to the deterministic rule AI when AI is off
+ *     (or when a spot is gated out), so a hand always plays to completion.
+ */
+export async function decideOpponentAction(
+  state: HandState,
+  seatIndex: number,
+  config: TableRuntimeConfig,
+  persona?: string,
+): Promise<{ applied: AppliedAction; reason: string }> {
+  if (!config.aiTier) {
+    return config.opponentSource === 'rule'
+      ? decideRuleAction(state, seatIndex, config.tier)
+      : decideLLMAction(state, seatIndex, persona)
+  }
+
+  const profile = casinoTierProfile(config.aiTier)
+  if (profile.source === 'rule') {
+    return decideRuleAction(state, seatIndex, profile.ruleTier)
+  }
+
+  const spot = { street: streetOf(state), toCall: toCallFor(state, seatIndex) }
+  if (!shouldQueryLLM(config.aiTier, spot)) {
+    return decideRuleAction(state, seatIndex, profile.ruleTier)
+  }
+  return decideLLMAction(
+    state,
+    seatIndex,
+    shapePersona(persona, profile.personaStyle),
+    profile.ruleTier,
+  )
 }
 
 // ---------------------------------------------------------------------------

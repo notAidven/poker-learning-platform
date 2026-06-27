@@ -43,6 +43,17 @@ export function hasClearedAnyCoachedTable(): boolean {
   return tables.some((t) => t.feature === 'coached' && cleared.includes(t.id))
 }
 
+/**
+ * Whether the after-hours Casino Floor (Phase 3) is unlocked. The floor opens only
+ * once the learner has cleared BOTH in-course practice tables — the Coach's Table
+ * (room-1) and the AI Table (room-2) — so a player earns their seat by finishing
+ * guided play before sitting down for real stakes. Read synchronously during render
+ * (localStorage-backed), mirroring the rest of this module.
+ */
+export function isCasinoFloorUnlocked(): boolean {
+  return isTableCleared('room-1') && isTableCleared('room-2')
+}
+
 export function getClearedTableIds(): string[] {
   try {
     const raw = localStorage.getItem(CLEARED_TABLES_KEY)

@@ -26,6 +26,7 @@ import { CoachPanel } from './CoachPanel'
 import { HintBar } from './HintBar'
 import { FirstTableIntro } from './FirstTableIntro'
 import { hasSeenFirstTableIntro } from './tableIntro'
+import { cx } from '../ui/cx'
 import {
   buildCoachContext,
   buildDeepCoachContext,
@@ -34,8 +35,7 @@ import {
   coachResultReaction,
   createInitialHand,
   createNextHand,
-  decideLLMAction,
-  decideRuleAction,
+  decideOpponentAction,
   finalizeHand,
   groupHandLog,
   roleFor,
@@ -57,6 +57,18 @@ type PokerTableProps = {
   onHandSettled?: (heroStack: number) => void
   /** Called when the busted hero asks to rebuy. */
   onRequestRebuy?: () => void
+  /**
+   * Visual theme. 'casino' hides the built-in header (the Casino Floor page renders
+   * its own brass chrome + bankroll) and re-skins the felt to the casino palette;
+   * 'course' (default) keeps the original in-course chrome unchanged.
+   */
+  theme?: 'course' | 'casino'
+  /** Where the in-table "Leave" links navigate (default: the course path). */
+  leaveTo?: string
+  /** Label for the busted action button (casino overrides the rebuy-to-1000 copy). */
+  rebuyLabel?: string
+  /** Note shown when the hero busts (casino overrides the rebuy-to-1000 copy). */
+  bustedNote?: string
 }
 
 /**
@@ -159,9 +171,14 @@ export function PokerTable({
   onCleared,
   onHandSettled,
   onRequestRebuy,
+  theme = 'course',
+  leaveTo = '/course',
+  rebuyLabel,
+  bustedNote,
 }: PokerTableProps) {
   const reduceMotion = usePrefersReducedMotion()
   const aiOff = useMemo(() => !isAIConfigured(), [])
+  const isCasino = theme === 'casino'
 
   const [baseSeed] = useState(() => (hashString(config.tableId) ^ (Date.now() >>> 0)) >>> 0)
   const [hand, setHand] = useState<HandState>(() =>
@@ -222,10 +239,7 @@ export function PokerTable({
 
     const timer = window.setTimeout(() => {
       void (async () => {
-        const decision =
-          config.opponentSource === 'rule'
-            ? decideRuleAction(hand, idx, config.tier)
-            : await decideLLMAction(hand, idx, personaForSeat(seatId))
+        const decision = await decideOpponentAction(hand, idx, config, personaForSeat(seatId))
         if (cancelled) return
         // Stale-guard: only apply if the same seat is still to act.
         setHand((cur) =>
@@ -240,7 +254,7 @@ export function PokerTable({
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [hand, activeOppIndex, reduceMotion, config.opponentSource, config.tier, personaForSeat])
+  }, [hand, activeOppIndex, reduceMotion, config, personaForSeat])
 
   // --- Mark the table cleared once (side effect only — no React state set here). ---
   useEffect(() => {
@@ -261,9 +275,10 @@ export function PokerTable({
     if (hero) onHandSettled?.(hero.stack)
   }, [handOver, handIndex, hand, onHandSettled])
 
-  // --- Optional table-talk flavor (AI tables only; silent when AI is off). ------
+  // --- Optional table-talk flavor (AI tables only; silent when AI is off, or when
+  //     a table opts out via `config.tableTalk === false`). ------------------------
   useEffect(() => {
-    if (aiOff || !handOver) return
+    if (aiOff || !handOver || config.tableTalk === false) return
     const summary = summarizeHand(hand)
     const winnerOpp = hand.seats.find((s) => !s.isHero && summary.winnerIds.includes(s.id))
     if (!winnerOpp) return
@@ -277,7 +292,7 @@ export function PokerTable({
     return () => {
       cancelled = true
     }
-  }, [handOver, hand, aiOff, personaForSeat])
+  }, [handOver, hand, aiOff, personaForSeat, config.tableTalk])
 
   // --- Chip rake (bet → pot): when a seat commits more chips, slide a small stack
   //     from that seat into the pot. We diff each seat's running `totalCommitted`
@@ -422,14 +437,15 @@ export function PokerTable({
   )
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className={cx('mx-auto max-w-5xl space-y-4', isCasino && 'casino-table-skin')}>
       <CardKitStyles />
 
       {showIntro && (
         <FirstTableIntro support={config.support} onClose={() => setShowIntro(false)} />
       )}
 
-      {/* Header */}
+      {/* Header — hidden on the Casino Floor, where the page renders brass chrome. */}
+      {!isCasino && (
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-bold text-ink sm:text-2xl">{config.title}</h1>
@@ -470,6 +486,7 @@ export function PokerTable({
           </div>
         </div>
       </div>
+      )}
 
       {/* Table (round felt) + side rail (actions + support), so everything is in view. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
@@ -561,6 +578,9 @@ export function PokerTable({
               tableCleared={tableCleared}
               onNextHand={startNextHand}
               onRequestRebuy={onRequestRebuy}
+              leaveTo={leaveTo}
+              rebuyLabel={rebuyLabel}
+              bustedNote={bustedNote}
             />
           ) : isHeroTurn && heroIndex >= 0 ? (
             <div className="space-y-2">
@@ -640,6 +660,9 @@ function ResultsPanel({
   tableCleared,
   onNextHand,
   onRequestRebuy,
+  leaveTo = '/course',
+  rebuyLabel,
+  bustedNote,
 }: {
   hand: HandState
   summary: HandSummary
@@ -648,6 +671,9 @@ function ResultsPanel({
   tableCleared: boolean
   onNextHand: () => void
   onRequestRebuy?: () => void
+  leaveTo?: string
+  rebuyLabel?: string
+  bustedNote?: string
 }) {
   const nameFor = (id: string) => hand.seats.find((s) => s.id === id)?.name ?? id
   const heroWon = summary.winnerIds.includes('hero')
@@ -690,8 +716,8 @@ function ResultsPanel({
 
       {heroBusted && (
         <p className="rounded-xl bg-danger-50 px-3 py-2 text-sm font-semibold text-danger-700">
-          You are out of chips. Rebuy for {STARTING_BANKROLL.toLocaleString()} play-money chips to
-          keep playing, or leave the table.
+          {bustedNote ??
+            `You are out of chips. Rebuy for ${STARTING_BANKROLL.toLocaleString()} play-money chips to keep playing, or leave the table.`}
         </p>
       )}
       {tableCleared && (
@@ -707,7 +733,7 @@ function ResultsPanel({
             onClick={onRequestRebuy}
             className="flex-1 rounded-xl bg-gold-400 px-4 py-3 text-center text-sm font-bold text-night-900 shadow-sm transition hover:bg-gold-300"
           >
-            Rebuy {STARTING_BANKROLL.toLocaleString()}
+            {rebuyLabel ?? `Rebuy ${STARTING_BANKROLL.toLocaleString()}`}
           </button>
         ) : (
           <button
@@ -720,7 +746,7 @@ function ResultsPanel({
           </button>
         )}
         <Link
-          to="/course"
+          to={leaveTo}
           className="flex-1 rounded-xl border border-night-900/12 bg-white px-4 py-3 text-center text-sm font-bold text-night-700 transition hover:border-brand-300 hover:text-brand-700"
         >
           Leave table

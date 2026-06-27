@@ -22,6 +22,34 @@ import { useAuth } from '../contexts/AuthContext'
 /** Play-money chips granted once when the Casino Floor unlocks. */
 export const STARTING_BANKROLL = 1000
 
+// --- Casino buy-in / cash-out math (pure, unit-tested) -----------------------
+// The shared bankroll is the hero's "pocket". Sitting at a casino table moves a
+// fixed buy-in from the pocket onto the table; the table stack then floats with
+// the hero's play. When the session ends (cash-out or bust) the remaining table
+// stack returns to the pocket and the signed net (final stack − buy-in) is what
+// gets recorded to the House Standings leaderboard. These helpers keep that math
+// in one obvious place so the page just wires them to `setBankroll` / `rebuy`.
+
+/** True when the shared bankroll can cover a table's buy-in. */
+export function canCoverBuyIn(bankroll: number, buyIn: number): boolean {
+  return buyIn > 0 && bankroll >= buyIn
+}
+
+/** Pocket (off-table) chips left after moving `buyIn` onto the table. */
+export function pocketAfterBuyIn(bankroll: number, buyIn: number): number {
+  return Math.max(0, Math.round(bankroll) - Math.round(buyIn))
+}
+
+/** Bankroll after a session ends and the remaining table stack returns to the pocket. */
+export function bankrollAfterCashOut(pocket: number, tableStack: number): number {
+  return Math.max(0, Math.round(pocket)) + Math.max(0, Math.round(tableStack))
+}
+
+/** Signed net result of a finished session — recorded to the leaderboard. */
+export function sessionNet(finalTableStack: number, buyIn: number): number {
+  return Math.round(finalTableStack) - Math.round(buyIn)
+}
+
 const CHIPS_KEY = 'bankroll-chips'
 const GRANTED_KEY = 'bankroll-granted'
 

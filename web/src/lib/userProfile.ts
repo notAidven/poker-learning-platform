@@ -24,6 +24,8 @@ export type UserProfile = {
   chips: number
   /** Idempotency guard so the starting bankroll is granted exactly once. */
   bankrollGranted: boolean
+  /** Lifetime signed net winnings across Casino Floor sessions (Phase 3 leaderboard). */
+  casinoNetWinnings: number
   createdAt?: Timestamp
 }
 
@@ -43,6 +45,7 @@ function normalizeUserProfile(data: Record<string, unknown>): UserProfile {
       typeof data.lastActivityDate === 'string' ? data.lastActivityDate : null,
     chips: typeof data.chips === 'number' ? data.chips : 0,
     bankrollGranted: data.bankrollGranted === true,
+    casinoNetWinnings: typeof data.casinoNetWinnings === 'number' ? data.casinoNetWinnings : 0,
     createdAt: data.createdAt as Timestamp | undefined,
   }
 }
@@ -121,6 +124,7 @@ export async function completeProfileSetup(
       lastActivityDate: null,
       chips: 0,
       bankrollGranted: false,
+      casinoNetWinnings: 0,
     }
 
     if (userSnap.exists()) {
