@@ -16,10 +16,12 @@ import {
   CardFace,
   CardKitStyles,
   Chip,
+  ChipDisc,
+  ChipStack,
   DeckPile,
   EmptySlot,
-  PotPile,
 } from '../lesson/interactions/cards/PlayingCardKit'
+import { topDenom, type ChipDenom } from '../lesson/interactions/cards/chipDenoms'
 import { Seat } from './Seat'
 import { ActionControls } from './ActionControls'
 import { CoachPanel } from './CoachPanel'
@@ -42,6 +44,69 @@ import {
   type HandSummary,
   type TableRuntimeConfig,
 } from './tableRuntime'
+
+/**
+ * Table-only chrome: the wood/brass rail, the championship-green felt (warm center
+ * spotlight + emerald dome + felt weave + vignette + a brass hairline), the seat
+ * plaques, the spotlit pot glow, and the "your turn" pulse. Injected once via a
+ * <style> in the table tree (the shared chip/card CSS lives in <CardKitStyles />).
+ * All motion here is CSS, so the global reduced-motion kill-switch freezes it.
+ */
+const TABLE_STYLES = `
+.suited-rail-wood {
+  background: radial-gradient(130% 140% at 50% -10%, #6e5230 0%, #4a371f 44%, #2c2012 100%);
+  box-shadow:
+    0 26px 54px -22px rgba(0, 0, 0, 0.78),
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 2px 2px rgba(255, 231, 176, 0.22),
+    inset 0 -10px 26px rgba(0, 0, 0, 0.5);
+}
+.suited-felt {
+  background-color: #0a5a3d;
+  background-image:
+    radial-gradient(56% 44% at 50% 37%, rgba(255, 248, 224, 0.26) 0%, rgba(255, 246, 214, 0.06) 40%, transparent 66%),
+    radial-gradient(126% 124% at 50% 40%, #1aa873 0%, #128a5c 24%, #0a5c40 50%, #073e2a 74%, #04271a 100%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 6px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 6px);
+  box-shadow:
+    inset 0 0 0 2px rgba(212, 173, 87, 0.6),
+    inset 0 0 0 6px rgba(7, 21, 15, 0.4),
+    inset 0 18px 50px rgba(0, 0, 0, 0.45),
+    inset 0 -26px 72px rgba(0, 0, 0, 0.52);
+}
+.suited-seat {
+  background-color: rgba(6, 20, 14, 0.5);
+}
+.suited-seat--active {
+  background-color: rgba(6, 20, 14, 0.68);
+}
+.suited-pot-glow {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  width: 17rem;
+  height: 10rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgba(255, 248, 224, 0.42), rgba(255, 246, 214, 0.08) 55%, transparent 72%);
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(3px);
+}
+.suited-turn-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #fff;
+  animation: suited-turn-pulse 1.5s ease-out infinite;
+}
+@keyframes suited-turn-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+`
 
 type PokerTableProps = {
   config: TableRuntimeConfig
@@ -106,6 +171,8 @@ type ChipFlightSpec = {
   to: Point
   count: number
   kind: 'bet' | 'win'
+  /** Denomination color of the chips in flight (top denom of the amount moved). */
+  denom: ChipDenom
 }
 
 /** Where the pot sits on the felt (the chip pile atop the centered board column). */
@@ -128,11 +195,11 @@ function winChipCount(pot: number, bb: number): number {
  * rendered when motion is allowed (the parent gates on reduced motion).
  */
 function ChipFlight({ flight, onDone }: { flight: ChipFlightSpec; onDone: (id: number) => void }) {
-  const { from, to, count, kind } = flight
+  const { from, to, count, kind, denom } = flight
   const duration = kind === 'win' ? DUR.celebrate : DUR.deal
   // A won pot waits a beat so the final bet settles in before the rake pulls out.
   const baseDelay = kind === 'win' ? 0.3 : 0
-  const size = 13
+  const size = 15
 
   return (
     <>
@@ -144,8 +211,8 @@ function ChipFlight({ flight, onDone }: { flight: ChipFlightSpec; onDone: (id: n
         return (
           <motion.span
             key={i}
-            className="poker-chip absolute"
-            style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }}
+            className="absolute"
+            style={{ marginLeft: -size / 2, marginTop: -size / 2 }}
             initial={{ left: `${fromX}%`, top: `${fromY}%`, opacity: 0, scale: 0.5 }}
             animate={{
               left: `${toX}%`,
@@ -155,7 +222,9 @@ function ChipFlight({ flight, onDone }: { flight: ChipFlightSpec; onDone: (id: n
             }}
             transition={{ duration, delay: baseDelay + i * 0.05, ease: EASE.rake }}
             onAnimationComplete={i === count - 1 ? () => onDone(flight.id) : undefined}
-          />
+          >
+            <ChipDisc denom={denom} size={size} />
+          </motion.span>
         )
       })}
     </>
@@ -320,6 +389,7 @@ export function PokerTable({
           to: POT_ANCHOR,
           count: betChipCount(delta, hand.bb),
           kind: 'bet',
+          denom: topDenom(delta),
         })
       }
     })
@@ -351,6 +421,7 @@ export function PokerTable({
           to: pos[i],
           count: winChipCount(hand.pot, hand.bb),
           kind: 'win',
+          denom: topDenom(hand.pot),
         })
       }
     })
@@ -438,6 +509,7 @@ export function PokerTable({
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <CardKitStyles />
+      <style>{TABLE_STYLES}</style>
 
       {showIntro && (
         <FirstTableIntro support={config.support} onClose={() => setShowIntro(false)} />
@@ -487,111 +559,151 @@ export function PokerTable({
       </div>
       )}
 
-      {/* Table (round felt) + side rail (actions + support), so everything is in view. */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-        {/* Round felt */}
-        <div className="pck-scene relative mx-auto w-full max-w-2xl">
-          <div className="pck-felt relative aspect-square w-full overflow-visible rounded-[44%] border border-night-950/40 shadow-xl ring-1 ring-black/25 sm:aspect-[7/5]">
-            {/* Inner felt line */}
-            <div
-              className="pointer-events-none absolute inset-[7%] rounded-[44%] ring-2 ring-white/10"
-              aria-hidden
-            />
+      {/* Table + action dock (main column) and the coach / hint side rail. The hero's
+          hand sits at the bottom of the felt and the controls dock directly beneath
+          it, so cards + actions read as one unit; the coach stays in view alongside. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        {/* Main column: the felt, then the action dock under the hero's hand */}
+        <div className="space-y-3">
+          {/* Wood/brass rail wrapping the championship-green felt */}
+          <div className="pck-scene relative mx-auto w-full max-w-2xl">
+            <div className="suited-rail-wood relative rounded-[44%] p-2.5 sm:p-3.5">
+              <div className="suited-felt relative aspect-square w-full overflow-visible rounded-[44%] sm:aspect-[7/5]">
+                {/* Center: a spotlit pot, the board, and the deck + burns */}
+                <div className="absolute left-1/2 top-1/2 z-[4] flex w-[72%] max-w-[20rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2.5">
+                  <div className="relative flex flex-col items-center">
+                    <span className="suited-pot-glow" aria-hidden />
+                    {hand.pot > 0 && (
+                      <div className={`mb-1.5 ${handOver ? 'pck-pot-pop' : ''}`}>
+                        <ChipStack amount={hand.pot} size={34} />
+                      </div>
+                    )}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-night-950/60 px-3.5 py-1 text-base font-bold shadow-lg ring-1 ring-inset ring-gold-300/35">
+                      <Chip size={15} tone="gold" />
+                      <span className="text-[0.62rem] font-bold uppercase tracking-[0.18em] text-gold-200/85">
+                        Pot
+                      </span>
+                      <span className="tabular-nums text-white">{hand.pot.toLocaleString()}</span>
+                    </span>
+                  </div>
 
-            {/* Center: pot, board, deck + burns */}
-            <div className="absolute left-1/2 top-1/2 flex max-w-[64%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-1">
-                <PotPile pop={handOver} />
-                <span className="flex items-center gap-1.5 text-sm font-bold text-gold-100">
-                  <Chip size={14} tone="gold" />
-                  <span className="tabular-nums">Pot {hand.pot.toLocaleString()}</span>
-                </span>
-              </div>
+                  <div className="flex flex-wrap items-center justify-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const card = hand.board[i]
+                      return card ? (
+                        <CardFace key={card} id={card} size="sm" animate={animate} delay={i * 60} />
+                      ) : (
+                        <EmptySlot key={`board-${i}`} size="sm" />
+                      )
+                    })}
+                  </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => {
-                  const card = hand.board[i]
-                  return card ? (
-                    <CardFace key={card} id={card} size="sm" animate={animate} delay={i * 60} />
-                  ) : (
-                    <EmptySlot key={`board-${i}`} size="sm" />
+                  <div className="flex items-center gap-2 opacity-90">
+                    <DeckPile size="sm" count={hand.deck.length} />
+                    {hand.burns.length > 0 && (
+                      <div className="flex items-center">
+                        {hand.burns.map((c) => (
+                          <BurnCard key={c} size="sm" animate={animate} className="-ml-3 first:ml-0" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Each player's committed bet, shown as a real chip stack on the felt
+                    between them and the pot (the chips then rake into the pot). */}
+                {hand.seats.map((seat, index) => {
+                  if (seat.folded || seat.committed <= 0) return null
+                  const sp = positions[index]
+                  const bp = {
+                    x: sp.x + (POT_ANCHOR.x - sp.x) * 0.36,
+                    y: sp.y + (POT_ANCHOR.y - sp.y) * 0.36,
+                  }
+                  return (
+                    <div
+                      key={`bet-${seat.id}`}
+                      className="absolute z-[8] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+                      style={{ left: `${bp.x}%`, top: `${bp.y}%` }}
+                    >
+                      <ChipStack amount={seat.committed} size={17} />
+                      <span className="rounded-full bg-night-950/70 px-1.5 py-0.5 text-[0.6rem] font-bold tabular-nums text-gold-100 ring-1 ring-inset ring-white/10">
+                        {seat.committed.toLocaleString()}
+                      </span>
+                    </div>
                   )
                 })}
-              </div>
 
-              <div className="flex items-center gap-2">
-                <DeckPile size="sm" count={hand.deck.length} />
-                {hand.burns.length > 0 && (
-                  <div className="flex items-center">
-                    {hand.burns.map((c) => (
-                      <BurnCard key={c} size="sm" animate={animate} className="-ml-3 first:ml-0" />
+                {/* Seats around the oval */}
+                {hand.seats.map((seat, index) => {
+                  const pos = positions[index]
+                  return (
+                    <div
+                      key={seat.id}
+                      className="absolute z-[6] -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                    >
+                      <Seat
+                        seat={seat}
+                        active={hand.toActIndex === index && !handOver}
+                        thinking={activeOppIndex === index}
+                        role={roleFor(hand, index)}
+                        revealHole={seat.isHero || (Boolean(results?.reachedShowdown) && !seat.folded)}
+                        winner={Boolean(results && results.winnerIds.includes(seat.id))}
+                        animate={animate}
+                        compact={!seat.isHero}
+                        talk={talk[seat.id] ?? null}
+                      />
+                    </div>
+                  )
+                })}
+
+                {/* Chips in flight (bet → pot, pot → winner), atop the felt. */}
+                {animate && flights.length > 0 && (
+                  <div className="pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
+                    {flights.map((f) => (
+                      <ChipFlight key={f.id} flight={f} onDone={removeFlight} />
                     ))}
                   </div>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Seats around the oval */}
-            {hand.seats.map((seat, index) => {
-              const pos = positions[index]
-              return (
-                <div
-                  key={seat.id}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                >
-                  <Seat
-                    seat={seat}
-                    active={hand.toActIndex === index && !handOver}
-                    thinking={activeOppIndex === index}
-                    role={roleFor(hand, index)}
-                    revealHole={seat.isHero || (Boolean(results?.reachedShowdown) && !seat.folded)}
-                    winner={Boolean(results && results.winnerIds.includes(seat.id))}
-                    animate={animate}
-                    compact={!seat.isHero}
-                    talk={talk[seat.id] ?? null}
-                  />
+          {/* Action dock — directly below the hero's hole cards */}
+          <div className="mx-auto w-full max-w-2xl">
+            {results ? (
+              <ResultsPanel
+                hand={hand}
+                summary={results}
+                canContinue={canContinue}
+                heroBusted={heroBusted}
+                tableCleared={tableCleared}
+                onNextHand={startNextHand}
+                onRequestRebuy={onRequestRebuy}
+                leaveTo={leaveTo}
+                rebuyLabel={rebuyLabel}
+                bustedNote={bustedNote}
+              />
+            ) : isHeroTurn && heroIndex >= 0 ? (
+              <div className="rounded-2xl border border-night-900/10 bg-white p-3 shadow-card sm:p-4">
+                <div className="mb-3 flex items-center justify-center">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-3.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
+                    <span className="suited-turn-dot" aria-hidden />
+                    Your turn to act
+                  </span>
                 </div>
-              )
-            })}
-
-            {/* Chips in flight (bet → pot, pot → winner), atop the felt. */}
-            {animate && flights.length > 0 && (
-              <div className="pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
-                {flights.map((f) => (
-                  <ChipFlight key={f.id} flight={f} onDone={removeFlight} />
-                ))}
+                <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} />
               </div>
+            ) : (
+              <p className="rounded-2xl border border-night-900/10 bg-white p-4 text-center text-sm font-semibold text-night-700/70 shadow-card">
+                {toActName ? `Waiting for ${toActName}…` : 'Dealing…'}
+              </p>
             )}
           </div>
         </div>
 
-        {/* Right rail: action / results on top (high + visible), then support panel */}
-        <div className="flex flex-col gap-3">
-          {results ? (
-            <ResultsPanel
-              hand={hand}
-              summary={results}
-              canContinue={canContinue}
-              heroBusted={heroBusted}
-              tableCleared={tableCleared}
-              onNextHand={startNextHand}
-              onRequestRebuy={onRequestRebuy}
-              leaveTo={leaveTo}
-              rebuyLabel={rebuyLabel}
-              bustedNote={bustedNote}
-            />
-          ) : isHeroTurn && heroIndex >= 0 ? (
-            <div className="space-y-2">
-              <p className="text-center text-sm font-bold text-brand-700">Your turn to act</p>
-              <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} />
-            </div>
-          ) : (
-            <p className="rounded-2xl border border-night-900/10 bg-white p-4 text-center text-sm font-semibold text-night-700/70 shadow-card">
-              {toActName ? `Waiting for ${toActName}…` : 'Dealing…'}
-            </p>
-          )}
-
+        {/* Side rail: the coach (or hint bar) stays in view next to the felt */}
+        <div className="flex flex-col gap-3 lg:sticky lg:top-4">
           {config.support === 'coach' ? (
             <CoachPanel
               context={coachContext}

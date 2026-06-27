@@ -57,14 +57,19 @@ export function ActionControls({ state, heroIndex, onAct, disabled = false }: Ac
     : []
 
   return (
-    <div className="space-y-3 rounded-2xl border border-night-900/10 bg-white p-4 shadow-card">
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-3">
+      {/* Primary actions — big, thumb-friendly targets sized for the bottom of the table */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {canFold && (
           <button
             type="button"
             disabled={disabled}
             onClick={() => onAct({ action: 'fold' })}
-            className={buttonVariants({ variant: 'secondary', className: 'flex-1 min-w-[6rem]' })}
+            className={buttonVariants({
+              variant: 'secondary',
+              size: 'lg',
+              className: 'text-base hover:border-danger-300 hover:text-danger-700',
+            })}
           >
             Fold
           </button>
@@ -74,7 +79,7 @@ export function ActionControls({ state, heroIndex, onAct, disabled = false }: Ac
             type="button"
             disabled={disabled}
             onClick={() => onAct({ action: 'check' })}
-            className={buttonVariants({ variant: 'primary', className: 'flex-1 min-w-[6rem]' })}
+            className={buttonVariants({ variant: 'primary', size: 'lg', className: 'text-base' })}
           >
             Check
           </button>
@@ -84,7 +89,7 @@ export function ActionControls({ state, heroIndex, onAct, disabled = false }: Ac
             type="button"
             disabled={disabled}
             onClick={() => onAct({ action: 'call' })}
-            className={buttonVariants({ variant: 'primary', className: 'flex-1 min-w-[6rem]' })}
+            className={buttonVariants({ variant: 'primary', size: 'lg', className: 'text-base' })}
           >
             Call <span className="tabular-nums">{toCall.toLocaleString()}</span>
           </button>
@@ -92,11 +97,11 @@ export function ActionControls({ state, heroIndex, onAct, disabled = false }: Ac
       </div>
 
       {betOrRaise && (
-        <div className="space-y-2 rounded-xl bg-night-900/[0.03] p-3">
-          <div className="flex items-center justify-between text-sm font-semibold text-ink">
-            <span className="capitalize">{betOrRaise.action} to</span>
-            <span className="inline-flex items-center gap-1.5">
-              <Chip size={15} tone="gold" />
+        <div className="space-y-2.5 rounded-xl border border-night-900/10 bg-night-900/[0.035] p-3">
+          <div className="flex items-center justify-between text-sm font-bold text-ink">
+            <span className="capitalize text-night-700">{betOrRaise.action} to</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-base shadow-sm ring-1 ring-inset ring-night-900/10">
+              <Chip size={16} tone="gold" />
               <span className="tabular-nums">{clamped.toLocaleString()}</span>
             </span>
           </div>
@@ -112,16 +117,16 @@ export function ActionControls({ state, heroIndex, onAct, disabled = false }: Ac
             aria-label={`${betOrRaise.action} amount`}
           />
           {quickSizes.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {quickSizes.map((q) => (
                 <button
                   key={q.label}
                   type="button"
                   disabled={disabled}
                   onClick={() => setAmount(q.total)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  className={`rounded-lg px-2 py-1.5 text-xs font-bold transition ${
                     clamped === q.total
-                      ? 'bg-brand-600 text-white'
+                      ? 'bg-brand-600 text-white shadow-sm'
                       : 'bg-white text-night-700 ring-1 ring-inset ring-night-900/10 hover:bg-night-900/5'
                   }`}
                 >
@@ -134,7 +139,7 @@ export function ActionControls({ state, heroIndex, onAct, disabled = false }: Ac
             type="button"
             disabled={disabled}
             onClick={() => onAct({ action: betOrRaise.action, amount: clamped })}
-            className={buttonVariants({ variant: 'gold', className: 'w-full' })}
+            className={buttonVariants({ variant: 'gold', size: 'lg', className: 'w-full text-base' })}
           >
             <span className="capitalize">{betOrRaise.action}</span> to{' '}
             <span className="tabular-nums">{clamped.toLocaleString()}</span>
