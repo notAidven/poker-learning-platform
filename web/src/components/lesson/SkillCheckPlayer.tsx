@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { useProgressStore } from '../../lib/progress/ProgressContext'
 import type { LessonCompletionAward } from '../../lib/progress/types'
-import { isSkillCheckPassing, type LessonXpBreakdown } from '../../lib/gamification'
+import { isSkillCheckPassing, skillCheckMinToPass, type LessonXpBreakdown } from '../../lib/gamification'
 import { buildRewardModel, type RewardModel } from '../../lib/reward'
 import { DUR, EASE } from '../../lib/motion'
 import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
@@ -132,8 +132,11 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
               <span className="font-bold text-danger-700">
                 {correctCount}/{total}
               </span>{' '}
-              ({percent}%). You need at least <span className="font-semibold">2 of 3</span> correct
-              to pass the {lessonTitle} skill check.
+              ({percent}%). You need at least{' '}
+              <span className="font-semibold">
+                {skillCheckMinToPass(total)} of {total}
+              </span>{' '}
+              correct to pass the {lessonTitle} skill check.
             </p>
             <p className="mt-3 rounded-2xl bg-white/80 px-4 py-3 text-sm text-night-700">
               Your lesson progress is saved. Retake the skill check whenever you're ready. No need

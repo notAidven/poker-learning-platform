@@ -7,6 +7,7 @@ import { lessonNumber, lessons } from '../data/lessons'
 import type { SkillCheckDefinition } from '../types/skillCheck'
 import { useActivityExitGuard } from '../hooks/useActivityExitGuard'
 import { useProgress } from '../lib/progress'
+import { skillCheckMinToPass } from '../lib/gamification'
 
 export function SkillCheckPage() {
   const { lessonId = '' } = useParams()
@@ -115,7 +116,8 @@ export function SkillCheckPage() {
           </p>
           <h1 className="text-xl font-bold text-ink sm:text-2xl">{meta.title}</h1>
           <p className="mt-1 text-sm text-night-700">
-            3 interactive challenges — no hints. Pass with 2 of 3.
+            {skillCheck.questions.length} interactive challenges — no hints. Pass with{' '}
+            {skillCheckMinToPass(skillCheck.questions.length)} of {skillCheck.questions.length}.
           </p>
         </div>
 

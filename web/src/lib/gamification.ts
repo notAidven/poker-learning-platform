@@ -143,6 +143,12 @@ export function isSkillCheckPassing(correct: number, total: number): boolean {
   return correct / total >= SKILL_CHECK_PASS_RATIO - 1e-9
 }
 
+/** Fewest correct answers that pass a skill check of `total` questions (≥ 2/3). */
+export function skillCheckMinToPass(total: number): number {
+  if (total <= 0) return 0
+  return Math.ceil(total * SKILL_CHECK_PASS_RATIO - 1e-9)
+}
+
 /** Calendar days use Central American Time (UTC−6, no DST). */
 export const STREAK_TIMEZONE = 'America/Guatemala'
 
