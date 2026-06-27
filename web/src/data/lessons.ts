@@ -1,7 +1,7 @@
 /** Canonical course path: 9 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
 
 /** The visually-distinct sections of the learning path. */
-export type SectionId = 'foundations' | 'playing' | 'math' | 'casino'
+export type SectionId = 'foundations' | 'playing' | 'math' | 'advanced' | 'casino'
 
 export type SectionMeta = {
   id: SectionId
@@ -32,6 +32,12 @@ export const sections: SectionMeta[] = [
     title: 'The Math',
     subtitle: 'Outs, pot odds, EV, and bet sizing',
     accent: 'gold',
+  },
+  {
+    id: 'advanced',
+    title: 'Advanced Play',
+    subtitle: 'Ranges, board texture, implied odds, combos, and ICM',
+    accent: 'brand',
   },
   {
     id: 'casino',
@@ -122,6 +128,44 @@ export const lessons: LessonMeta[] = [
     section: 'math',
     unit: 'The Math · Bet sizing',
     primaryInteraction: 'Value bets; size to the board',
+  },
+
+  // --- Advanced Play (Part A): five lessons between The Math and the Casino Floor.
+  // ids are stable and referenced by concepts.ts (LESSON_CONCEPTS) + the section gate.
+  {
+    id: 'adv-ranges',
+    title: 'Preflop Ranges & Position',
+    section: 'advanced',
+    unit: 'Advanced Play · Preflop ranges',
+    primaryInteraction: 'Position & RFI; read and build ranges on the 13x13 grid',
+  },
+  {
+    id: 'adv-texture',
+    title: 'Board Texture & C-Betting',
+    section: 'advanced',
+    unit: 'Advanced Play · Board texture',
+    primaryInteraction: 'Dry vs wet flops; when and how big to c-bet',
+  },
+  {
+    id: 'adv-implied',
+    title: 'Implied Odds & SPR',
+    section: 'advanced',
+    unit: 'Advanced Play · Implied odds',
+    primaryInteraction: 'Future chips when you hit; stack-to-pot ratio',
+  },
+  {
+    id: 'adv-combos',
+    title: 'Combinatorics & Blockers',
+    section: 'advanced',
+    unit: 'Advanced Play · Combinatorics',
+    primaryInteraction: 'Counting combos (pairs 6, suited 4, offsuit 12); blockers',
+  },
+  {
+    id: 'adv-icm',
+    title: 'Tournaments & ICM',
+    section: 'advanced',
+    unit: 'Advanced Play · Tournaments',
+    primaryInteraction: 'Chips are not cash; short-stack push/fold',
   },
 
   // --- Casino Floor (Phase 2): exactly TWO rooms — ids match data/tables.ts ----

@@ -1,4 +1,5 @@
 import type { BettingAction, HandCategory, PokerStreet } from './poker'
+import type { ConceptId } from './concept'
 
 /**
  * An optional, self-contained illustration rendered under a concept step's
@@ -36,6 +37,12 @@ export type ProblemStepBase = {
    * uncluttered.
    */
   showCalculator?: boolean
+  /**
+   * Concept(s) this problem trains, for the spaced-repetition Review system. Optional:
+   * when omitted, the review layer falls back to the lesson's concepts (see
+   * `LESSON_CONCEPTS` in `data/concepts.ts`), so existing data needs no backfill.
+   */
+  concepts?: ConceptId[]
 }
 
 /** Reduced fraction for P(ω) = num/den */
@@ -472,6 +479,46 @@ export type PreflopHandStep = ProblemStepBase & {
   answer: PreflopHandAnswer
 }
 
+// --- range-grid (Advanced Play · preflop ranges) -----------------------------
+// A deterministic, AI-free interaction over the 13x13 matrix of the 169 starting-hand
+// classes. Rows are the first rank A..2 (high->low), columns the second rank A..2.
+// The diagonal is the pocket pairs (AA,KK,...,22); the upper triangle (col > row) is
+// the suited hands (e.g. 'AKs') and the lower triangle is the offsuit hands ('AKo').
+// Hand ids use the standard shorthand with 'T' for ten. All grid math lives in the
+// pure helpers in `interactions/rangeGrid.ts`, which the widget and its tests share.
+export type RangeGridMode =
+  | 'is-hand-in-range' // show one hand, ask whether it is in/out of a named range
+  | 'select-range' // tap the cells that make up the target range (exact set)
+  | 'build-range' // build a small, enumerated range by tapping its cells (exact set)
+
+export type RangeGridConfig = {
+  mode: RangeGridMode
+  /** Human label for the range being judged or built (e.g. "a button open"). */
+  rangeName?: string
+  /**
+   * The hand classes that make up the range. For select-range / build-range this is the
+   * exact target the tapped set is graded against; for is-hand-in-range it tints the grid
+   * and (with `answer.inRange` omitted) computes whether `hand` is in/out.
+   */
+  range?: string[]
+  /** is-hand-in-range: the single hand class shown and judged (e.g. 'A5s'). */
+  hand?: string
+  helperText?: string
+}
+
+export type RangeGridAnswer = {
+  /** select-range / build-range: the exact set of hand classes that should be selected. */
+  hands?: string[]
+  /** is-hand-in-range: whether `config.hand` is inside the range (else computed from range). */
+  inRange?: boolean
+}
+
+export type RangeGridStep = ProblemStepBase & {
+  interaction: 'range-grid'
+  config: RangeGridConfig
+  answer: RangeGridAnswer
+}
+
 export type ProblemStep =
   | CardDeckStep
   | CompareEventsStep
@@ -482,6 +529,7 @@ export type ProblemStep =
   | BettingRoundStep
   | HandRankingLadderStep
   | PreflopHandStep
+  | RangeGridStep
 
 export type LessonStep = ConceptStep | ProblemStep
 

@@ -57,8 +57,9 @@ const BANNER_BOX = 'h-[4.5rem] w-full max-w-[18rem]'
 
 /**
  * Per-section visual theme. Tints map onto palette tokens in index.css: foundations →
- * success-* (felt-green), oxblood → brand-*, brass → gold-*; the casino capstone keeps a
- * distinct violet "neon" tint (no token equivalent). Completed nodes are unified to
+ * success-* (felt-green), oxblood → brand-*, brass → gold-*; Advanced Play and the casino
+ * capstone keep distinct indigo and violet "neon" tints (default-palette literals, no token
+ * equivalent). Completed nodes are unified to
  * COMPLETED_NODE so finishing reads as a "won hand" everywhere. Class strings are literal
  * (Tailwind needs them visible) and preserve the status affordances (check / number-or-star
  * / lock + current pulse + badge). Connector colours are CSS-var tokens for the SVG trail.
@@ -112,6 +113,23 @@ const SECTION_THEME: Record<
       current:
         'bg-gold-600 text-white shadow-lg shadow-gold-400/40 ring-[5px] ring-gold-200 animate-[pulse_2.5s_ease-in-out_infinite]',
       locked: 'bg-gold-200/60 text-gold-600 ring-[5px] ring-gold-200',
+    },
+  },
+  // Advanced Play (Part A): a cool indigo "sapphire" tint — its own jewel tone, bluer
+  // than the casino violet and away from the warm foundations/playing/math sections, so
+  // the pro section reads as a deliberate step up toward the felt. Default-palette
+  // literals (Tailwind needs them visible), with no index.css token equivalent.
+  advanced: {
+    band: 'bg-indigo-50/70 ring-1 ring-inset ring-indigo-100',
+    headerRing: 'ring-indigo-200',
+    eyebrow: 'text-indigo-600',
+    title: 'text-indigo-900',
+    connector: '#6366f1',
+    node: {
+      completed: COMPLETED_NODE,
+      current:
+        'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 ring-[5px] ring-indigo-200 animate-[pulse_2.5s_ease-in-out_infinite]',
+      locked: 'bg-indigo-50 text-indigo-300 ring-[5px] ring-indigo-100',
     },
   },
   // Casino Floor (Phase 2 AI tables): a distinct violet "neon" tint with no palette

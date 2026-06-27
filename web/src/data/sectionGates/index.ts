@@ -10,6 +10,7 @@ const sectionGateLoaders: Partial<Record<SectionId, () => Promise<SectionGateDef
   foundations: () => import('./gate-foundations').then((m) => m.gateFoundations),
   playing: () => import('./gate-playing').then((m) => m.gatePlaying),
   math: () => import('./gate-math').then((m) => m.gateMath),
+  advanced: () => import('./gate-advanced').then((m) => m.gateAdvanced),
 }
 
 const sectionGateCache = new Map<SectionId, SectionGateDefinition>()

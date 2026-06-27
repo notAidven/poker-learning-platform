@@ -32,11 +32,12 @@ function completed(ids: string[]): StatsByLesson {
 
 describe('sectionGates — ids and section membership', () => {
   it('names a gate per gated section and round-trips its id', () => {
-    expect(GATED_SECTIONS).toEqual(['foundations', 'playing', 'math'])
+    expect(GATED_SECTIONS).toEqual(['foundations', 'playing', 'math', 'advanced'])
     expect(gateId('foundations')).toBe('gate-foundations')
     expect(isGateId('gate-foundations')).toBe(true)
     expect(isGateId('1')).toBe(false)
     expect(sectionIdForGateId('gate-playing')).toBe('playing')
+    expect(sectionIdForGateId('gate-advanced')).toBe('advanced')
     expect(sectionIdForGateId('gate-casino')).toBeNull() // casino is not gated
   })
 
@@ -44,9 +45,17 @@ describe('sectionGates — ids and section membership', () => {
     expect(sectionLessonIds('foundations')).toEqual(['1', '2'])
     expect(sectionLessonIds('playing')).toEqual(['3', '4', 'preflop'])
     expect(sectionLessonIds('math')).toEqual(['5', '6', '7', '8'])
+    expect(sectionLessonIds('advanced')).toEqual([
+      'adv-ranges',
+      'adv-texture',
+      'adv-implied',
+      'adv-combos',
+      'adv-icm',
+    ])
     expect(priorGatedSection('foundations')).toBeNull()
     expect(priorGatedSection('playing')).toBe('foundations')
     expect(priorGatedSection('math')).toBe('playing')
+    expect(priorGatedSection('advanced')).toBe('math')
   })
 })
 
@@ -56,6 +65,7 @@ describe('sectionGates — section unlock + completion progression', () => {
     expect(isSectionUnlocked(none, 'foundations')).toBe(true)
     expect(isSectionUnlocked(none, 'playing')).toBe(false)
     expect(isSectionUnlocked(none, 'math')).toBe(false)
+    expect(isSectionUnlocked(none, 'advanced')).toBe(false)
 
     const afterFoundations = completed([gateId('foundations')])
     expect(isSectionUnlocked(afterFoundations, 'playing')).toBe(true)
@@ -63,6 +73,10 @@ describe('sectionGates — section unlock + completion progression', () => {
 
     const afterPlaying = completed([gateId('foundations'), gateId('playing')])
     expect(isSectionUnlocked(afterPlaying, 'math')).toBe(true)
+    expect(isSectionUnlocked(afterPlaying, 'advanced')).toBe(false)
+
+    const afterMath = completed([gateId('foundations'), gateId('playing'), gateId('math')])
+    expect(isSectionUnlocked(afterMath, 'advanced')).toBe(true)
   })
 
   it('a section is complete exactly when its gate is passed', () => {
@@ -122,12 +136,18 @@ describe('sectionGates — isLessonUnlocked across the gate boundaries', () => {
     const playingDone = [...playingOpen, '3', '4', 'preflop']
     expect(isLessonUnlocked('5', playingDone)).toBe(false)
     expect(isLessonUnlocked('5', [...playingDone, gateId('playing')])).toBe(true)
+
+    // Advanced Play's first lesson ('adv-ranges') needs the MATH gate.
+    const mathDone = [...playingDone, gateId('playing'), '5', '6', '7', '8']
+    expect(isLessonUnlocked('adv-ranges', mathDone)).toBe(false)
+    expect(isLessonUnlocked('adv-ranges', [...mathDone, gateId('math')])).toBe(true)
   })
 
   it('leaves the casino AI tables on their own (position-based) prerequisite', () => {
-    // room-1 follows lesson '8' in the array; its lesson-sequence fallback is unchanged.
+    // room-1 follows the last Advanced lesson ('adv-icm') in the array; its
+    // lesson-sequence fallback uses that immediate predecessor.
     expect(isLessonUnlocked('room-1', [])).toBe(false)
-    expect(isLessonUnlocked('room-1', ['8'])).toBe(true)
+    expect(isLessonUnlocked('room-1', ['adv-icm'])).toBe(true)
   })
 })
 
@@ -147,6 +167,12 @@ describe('sectionGates — buildCoursePathNodes', () => {
       '7',
       '8',
       'gate-math',
+      'adv-ranges',
+      'adv-texture',
+      'adv-implied',
+      'adv-combos',
+      'adv-icm',
+      'gate-advanced',
       'room-1',
       'room-2',
     ])

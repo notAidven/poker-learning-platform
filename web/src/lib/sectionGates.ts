@@ -23,7 +23,7 @@ import type { LessonStats } from './progress/types'
 export type StatsByLesson = Record<string, LessonStats>
 
 /** The sections that have lessons AND a gate, in path order (the casino is not gated). */
-export const GATED_SECTIONS: SectionId[] = ['foundations', 'playing', 'math']
+export const GATED_SECTIONS: SectionId[] = ['foundations', 'playing', 'math', 'advanced']
 
 const GATE_ID_PREFIX = 'gate-'
 

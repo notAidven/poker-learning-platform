@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { gateFoundations } from './gate-foundations'
 import { gatePlaying } from './gate-playing'
 import { gateMath } from './gate-math'
+import { gateAdvanced } from './gate-advanced'
 import type { SectionGateDefinition, SectionGateQuestion } from './types'
 import type {
   BoardDealerStep,
@@ -33,7 +34,7 @@ import { skillCheck6 } from '../skillChecks/skill-check-6'
 import { skillCheck7 } from '../skillChecks/skill-check-7'
 import { skillCheck8 } from '../skillChecks/skill-check-8'
 
-const gates: SectionGateDefinition[] = [gateFoundations, gatePlaying, gateMath]
+const gates: SectionGateDefinition[] = [gateFoundations, gatePlaying, gateMath, gateAdvanced]
 
 /** Mirror of OutsOdds widget's draw-label → category mapping. */
 function deriveTarget(drawLabel: string): HandCategory | undefined {

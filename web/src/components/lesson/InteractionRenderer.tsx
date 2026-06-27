@@ -27,6 +27,11 @@ const HandRankingLadder = lazy(() =>
 const PreflopHand = lazy(() =>
   import('./interactions/PreflopHand').then((m) => ({ default: m.PreflopHand })),
 )
+// Explicit .tsx extension disambiguates the PascalCase component from the lowercase
+// `rangeGrid.ts` helpers on case-insensitive filesystems (allowImportingTsExtensions).
+const RangeGrid = lazy(() =>
+  import('./interactions/RangeGrid.tsx').then((m) => ({ default: m.RangeGrid })),
+)
 
 type InteractionRendererProps = InteractionProps & {
   step: ProblemStep
@@ -88,6 +93,9 @@ export function InteractionRenderer({
       interaction = (
         <PreflopHand key={step.id} config={step.config} answer={step.answer} {...props} />
       )
+      break
+    case 'range-grid':
+      interaction = <RangeGrid key={step.id} config={step.config} answer={step.answer} {...props} />
       break
     default:
       return null

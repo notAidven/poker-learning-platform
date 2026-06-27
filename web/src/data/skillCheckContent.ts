@@ -10,6 +10,12 @@ const skillCheckLoaders: Record<string, () => Promise<SkillCheckDefinition>> = {
   '6': () => import('./skillChecks/skill-check-6').then((m) => m.skillCheck6),
   '7': () => import('./skillChecks/skill-check-7').then((m) => m.skillCheck7),
   '8': () => import('./skillChecks/skill-check-8').then((m) => m.skillCheck8),
+  // Advanced Play (Part A)
+  'adv-ranges': () => import('./skillChecks/skill-check-adv-ranges').then((m) => m.skillCheckAdvRanges),
+  'adv-texture': () => import('./skillChecks/skill-check-adv-texture').then((m) => m.skillCheckAdvTexture),
+  'adv-implied': () => import('./skillChecks/skill-check-adv-implied').then((m) => m.skillCheckAdvImplied),
+  'adv-combos': () => import('./skillChecks/skill-check-adv-combos').then((m) => m.skillCheckAdvCombos),
+  'adv-icm': () => import('./skillChecks/skill-check-adv-icm').then((m) => m.skillCheckAdvIcm),
 }
 
 const skillCheckCache = new Map<string, SkillCheckDefinition>()
