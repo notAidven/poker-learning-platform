@@ -1,4 +1,4 @@
-/** Canonical course path: 9 lessons in 3 sections for "Suited", a Texas Hold'em poker course. */
+/** Canonical course path: 14 lessons in 4 sections (plus the casino floor) for "Suited", a Texas Hold'em poker course. */
 
 /** The visually-distinct sections of the learning path. */
 export type SectionId = 'foundations' | 'playing' | 'math' | 'advanced' | 'casino'

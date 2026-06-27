@@ -5,8 +5,8 @@ export const course = {
   eyebrow: "Texas Hold'em, hands-on",
   heroLine: "Learn Texas Hold'em, one hand at a time",
   heroDescription:
-    'Nine hands-on lessons in three sections: Foundations, Playing a Hand, and The Math (outs, pot odds, EV, and bet sizing). Play money only, no real betting. Just sharper instincts.',
+    'Fourteen hands-on lessons in four sections: Foundations, Playing a Hand, The Math, and Advanced Play. Then test it all on the casino floor against AI. Play money only, no real betting. Just sharper instincts.',
   pathDescription:
-    'Play each hand in order through three sections, then onto the casino floor. Clear a lesson to turn the next card on the table.',
-  courseSummary: '9 lessons · 3 sections + casino floor · play money',
+    'Play each hand in order through four sections, then onto the casino floor. Clear a lesson to turn the next card on the table.',
+  courseSummary: '14 lessons · 4 sections + casino floor · play money',
 } as const

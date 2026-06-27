@@ -162,8 +162,8 @@ export function LessonPlayer({
     }
 
     // No skill check for this lesson → finishing the body completes it and
-    // awards XP directly (latent-safety / item #12). All 6 current lessons have
-    // skill checks, so this path is a guard for future content.
+    // awards XP directly (latent-safety / item #12). Every current lesson has
+    // a skill check, so this path is a guard for future content.
     store.completeLessonWithoutSkillCheck(lesson.id)
     allowNavigation?.()
     navigate('/course')
