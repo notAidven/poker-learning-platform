@@ -84,10 +84,12 @@ export const gateAdvanced: SectionGateDefinition = {
         eventA: {
           label: 'A-K-4 rainbow',
           detail: 'Three suits, spread-out high cards. Almost no draws.',
+          cards: ['AS', 'KH', '4D'],
         },
         eventB: {
           label: '6-5-4 with two spades',
           detail: 'Connected ranks and a flush draw. Lots of draws.',
+          cards: ['6S', '5S', '4H'],
         },
       },
       answer: { more: 'b' },

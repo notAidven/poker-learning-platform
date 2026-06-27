@@ -66,10 +66,12 @@ Dry boards tend to favor the **preflop raiser**, because high cards hit a tight 
         eventA: {
           label: 'K-7-2 rainbow',
           detail: 'Three different suits, spread-out ranks. Hard to draw to.',
+          cards: ['KS', '7H', '2D'],
         },
         eventB: {
           label: '9-8-7 with two hearts',
           detail: 'Connected ranks and a flush draw possible. Lots of draws.',
+          cards: ['9H', '8H', '7S'],
         },
       },
       answer: { more: 'b' },

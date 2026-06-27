@@ -20,10 +20,12 @@ export const skillCheckAdvTexture: SkillCheckDefinition = {
         eventA: {
           label: 'A-8-3 rainbow',
           detail: 'Three suits, spread-out ranks. Very few draws.',
+          cards: ['AS', '8H', '3D'],
         },
         eventB: {
           label: 'J-T-9 with two diamonds',
           detail: 'Connected ranks and a flush draw. Many draws.',
+          cards: ['JD', '10D', '9C'],
         },
       },
       answer: { more: 'a' },

@@ -185,6 +185,15 @@ export type CompareEventsSide = {
   label: string
   /** Optional supporting detail, e.g. "Jacks, Queens, Kings — 12 of 52 cards". */
   detail?: string
+  /**
+   * Optional flop / board to render as real playing-card faces instead of a plain
+   * text description — used by the board-texture "which flop is drier / wetter?"
+   * comparisons so the learner reads two actual boards. Card ids like 'AS', '10D'.
+   * When present, the renderer makes the cards the option's primary content and
+   * demotes `label` to a quiet caption (and hides `detail`, which tends to give the
+   * read away). Text-only options omit this and render exactly as before.
+   */
+  cards?: CardId[]
   /** Optional favorable / total counts; shown as "12 / 52" and drive the reveal bar. */
   favorable?: number
   total?: number

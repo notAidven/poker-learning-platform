@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import type {
+  CardId,
   CompareEventsAnswer,
   CompareEventsChoice,
   CompareEventsConfig,
   CompareEventsSide,
   FractionProbability,
 } from '../../../types/lesson'
+import { cardLabel } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { reduceFraction } from './fractionAnswer'
+import { CardFace } from './cards/PlayingCardKit'
 
 type CompareEventsProps = InteractionProps & {
   config: CompareEventsConfig
@@ -49,6 +52,49 @@ function BalanceGlyph() {
         strokeLinejoin="round"
       />
     </svg>
+  )
+}
+
+/**
+ * Corner status pill for a card (flop) option. Over the busy card art a faint
+ * background tint alone reads weakly, so the chosen / correct / wrong state also
+ * gets an unmistakable badge: a brand tick while picking, a success tick on the
+ * right board, a danger cross on a wrong pick. Decorative — the button's
+ * aria-pressed + the surrounding copy carry the state for assistive tech.
+ */
+function StatusBadge({ tone }: { tone: 'brand' | 'success' | 'danger' }) {
+  const bg =
+    tone === 'success' ? 'bg-success-500' : tone === 'danger' ? 'bg-danger-500' : 'bg-brand-500'
+  return (
+    <span
+      className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-white shadow-sm ${bg}`}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+        {tone === 'danger' ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M5 13l4 4L19 7" />}
+      </svg>
+    </span>
+  )
+}
+
+/**
+ * A flop rendered as three real card faces (the option's primary content) with the
+ * texture name demoted to a quiet caption. `md` matches the community-card size used
+ * by the board / betting widgets, so the flop reads identically to boards elsewhere
+ * and three cards still fit a full-width option down to a 320px phone.
+ */
+function FlopOption({ cards, caption }: { cards: CardId[]; caption: string }) {
+  return (
+    <>
+      <span className="flex items-center justify-center gap-1.5 sm:gap-2">
+        {cards.map((id) => (
+          <CardFace key={id} id={id} size="md" />
+        ))}
+      </span>
+      <span className="block text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">
+        {caption}
+      </span>
+    </>
   )
 }
 
@@ -101,39 +147,67 @@ export function CompareEvents({
 
   const canSubmit = choice !== null && !locked
 
-  function panelClass(side: 'a' | 'b') {
+  function panelClass(side: 'a' | 'b', hasCards: boolean) {
     const active = choice === side
     const isCorrectSide = answer.more === side || answer.more === 'equal'
-    const base =
-      'relative flex-1 rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed'
+    // Card options center their flop + caption; text options stay left-aligned.
+    const layout = hasCards
+      ? 'flex flex-col items-center justify-center gap-3 text-center'
+      : 'text-left'
+    const base = `relative flex-1 rounded-2xl border-2 p-4 transition disabled:cursor-not-allowed ${layout}`
     if (submitted) {
       if (isCorrectSide) return `${base} border-success-500 bg-success-50`
       if (active) return `${base} border-danger-400 bg-danger-50`
       return `${base} border-slate-200 bg-white opacity-70`
     }
     if (active) return `${base} border-brand-500 bg-brand-50 shadow-sm`
-    return `${base} border-slate-200 bg-white hover:border-brand-300`
+    return `${base} border-slate-200 bg-white hover:border-brand-300${hasCards ? ' hover:shadow-pop' : ''}`
   }
 
   function renderPanel(side: 'a' | 'b', event: CompareEventsSide) {
     const active = choice === side
+    const isCorrectSide = answer.more === side || answer.more === 'equal'
+    const hasCards = Array.isArray(event.cards) && event.cards.length > 0
+
+    // The selection / result badge only shows on card options, where the tint alone
+    // reads weakly over the card art. Text options keep their original look.
+    let badgeTone: 'brand' | 'success' | 'danger' | null = null
+    if (hasCards) {
+      if (submitted) badgeTone = isCorrectSide ? 'success' : active ? 'danger' : null
+      else if (active) badgeTone = 'brand'
+    }
+
+    // In card mode the cards carry the read, so name the option by its cards (not the
+    // answer-hinting `detail`). Keeping `label` in the name preserves existing
+    // by-name lookups (e.g. gate tests) and screen-reader parity.
+    const ariaLabel = hasCards
+      ? `${event.label}: ${event.cards!.map(cardLabel).join(', ')}`
+      : `${event.label}${event.detail ? `. ${event.detail}` : ''}`
+
     return (
       <button
         type="button"
         disabled={locked}
         onClick={() => setChoice(side)}
         aria-pressed={active}
-        aria-label={`${event.label}${event.detail ? `. ${event.detail}` : ''}`}
-        className={panelClass(side)}
+        aria-label={ariaLabel}
+        className={panelClass(side, hasCards)}
       >
-        <span className="block text-base font-bold text-slate-900">{event.label}</span>
-        {event.detail && (
-          <span className="mt-1 block text-xs text-slate-500">{event.detail}</span>
-        )}
-        {event.favorable !== undefined && event.total && (
-          <span className="mt-2 inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-sm font-bold tabular-nums text-slate-700">
-            {event.favorable} / {event.total}
-          </span>
+        {badgeTone && <StatusBadge tone={badgeTone} />}
+        {hasCards ? (
+          <FlopOption cards={event.cards!} caption={event.label} />
+        ) : (
+          <>
+            <span className="block text-base font-bold text-slate-900">{event.label}</span>
+            {event.detail && (
+              <span className="mt-1 block text-xs text-slate-500">{event.detail}</span>
+            )}
+            {event.favorable !== undefined && event.total && (
+              <span className="mt-2 inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-sm font-bold tabular-nums text-slate-700">
+                {event.favorable} / {event.total}
+              </span>
+            )}
+          </>
         )}
       </button>
     )
