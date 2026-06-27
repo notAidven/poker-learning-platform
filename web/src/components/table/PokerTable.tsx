@@ -26,7 +26,6 @@ import { CoachPanel } from './CoachPanel'
 import { HintBar } from './HintBar'
 import { FirstTableIntro } from './FirstTableIntro'
 import { hasSeenFirstTableIntro } from './tableIntro'
-import { cx } from '../ui/cx'
 import {
   buildCoachContext,
   buildDeepCoachContext,
@@ -437,7 +436,7 @@ export function PokerTable({
   )
 
   return (
-    <div className={cx('mx-auto max-w-5xl space-y-4', isCasino && 'casino-table-skin')}>
+    <div className="mx-auto max-w-5xl space-y-4">
       <CardKitStyles />
 
       {showIntro && (

@@ -8,10 +8,13 @@ import { isAIConfigured } from '../lib/ai/aiClient'
 import { casinoTables } from '../data/casinoTables'
 import { CasinoTableCard } from '../components/casino/CasinoTableCard'
 import { HouseStandings } from '../components/casino/HouseStandings'
-import { useCountUp } from '../components/casino/useCountUp'
-import { cx } from '../components/ui/cx'
-import { CheckIcon, LockIcon } from '../components/icons'
+import { Badge } from '../components/ui/Badge'
 import { buttonVariants } from '../components/ui/Button'
+import { NightPanel } from '../components/ui/NightPanel'
+import { StatToken } from '../components/ui/StatToken'
+import { Stagger } from '../components/ui/Stagger'
+import { cx } from '../components/ui/cx'
+import { CheckIcon, ChipIcon, LockIcon, SpadeIcon } from '../components/icons'
 
 /**
  * The Casino Floor lobby (`/casino`).
@@ -20,8 +23,8 @@ import { buttonVariants } from '../components/ui/Button'
  *    in-course practice tables) and link back to the course. The play routes are
  *    self-guarded separately (they bounce to /course), so this screen is the place
  *    a curious direct-link visitor learns how to get in.
- *  - Unlocked: the floor opens — a brass header with the live bankroll, the three
- *    tables as oval-felt vignettes, and the signature House Standings tote-board.
+ *  - Unlocked: the floor opens — a felt hero with the live bankroll, the three tables
+ *    as white app cards, and a clean House Standings panel.
  */
 export function CasinoLobbyPage() {
   const { user, profile } = useAuth()
@@ -43,132 +46,169 @@ export function CasinoLobbyPage() {
     return <LockedFloor />
   }
 
-  return (
-    <div className="casino-floor -mx-4 rounded-none px-4 py-8 sm:-mx-6 sm:rounded-3xl sm:px-8 lg:px-10">
-      <FloorHeader bankroll={bankroll} />
+  const safeBankroll = Math.max(0, Math.round(bankroll))
+  const aiOff = !isAIConfigured()
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
-        <div>
-          <h2 className="casino-label mb-3 text-xs text-casino-bone/60">The Tables</h2>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+  return (
+    <div className="space-y-8">
+      <NightPanel className="p-6 sm:p-9 lg:p-10">
+        <div className="grid items-center gap-8 lg:grid-cols-[1.35fr_1fr]">
+          <Stagger delay={0.05} step={0.09} y={16}>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-gold-300 ring-1 ring-inset ring-gold-400/25">
+              <span aria-hidden>&spades;</span>
+              After hours
+            </span>
+            <h1 className="mt-4 font-display text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
+              The Casino Floor
+            </h1>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+              The course was the school; this is the floor. Take a seat against AI opponents that
+              get tougher table by table, from the friendly Parlor to the high-limit Vault — all
+              on play money.
+            </p>
+          </Stagger>
+
+          <div className="anim-deal rounded-2xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-5">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+              Your floor
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <StatToken
+                icon={<ChipIcon className="h-6 w-6" />}
+                value={safeBankroll}
+                label="Bankroll"
+                accent="gold"
+                orientation="col"
+                delayMs={180}
+              />
+              <StatToken
+                icon={<SpadeIcon className="h-6 w-6" />}
+                value={casinoTables.length}
+                label="Tables"
+                accent="green"
+                orientation="col"
+                delayMs={260}
+              />
+            </div>
+            {aiOff && (
+              <p className="mt-3 rounded-xl border border-white/10 bg-night-950/40 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-gold-200/80">
+                AI offline · built-in strategy
+              </p>
+            )}
+          </div>
+        </div>
+      </NightPanel>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <section>
+          <div className="mb-5">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+              Choose your table
+            </h2>
+            <p className="mt-1 text-sm text-night-700/70">
+              Buy in from your shared bankroll; cash out or bust and the result returns to it.
+            </p>
+          </div>
+
+          <Stagger className="grid gap-4 sm:grid-cols-2" delay={0.05} step={0.06} y={14}>
             {casinoTables.map((table) => (
               <CasinoTableCard key={table.id} table={table} bankroll={bankroll} />
             ))}
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-casino-bone/50">
-            Play money only — no real wagering. Buy in from your shared bankroll; cash out or
-            bust and the result returns to it. Grind up to afford the high-limit Vault.
-          </p>
-        </div>
+          </Stagger>
 
-        <div className="lg:sticky lg:top-24 lg:self-start">
+          <p className="mt-4 text-xs leading-relaxed text-night-700/55">
+            Play money only — no real wagering. Grind up at the softer games to afford the
+            high-limit Vault.
+          </p>
+        </section>
+
+        <aside className="lg:sticky lg:top-24 lg:self-start">
           <HouseStandings />
-        </div>
+        </aside>
       </div>
     </div>
   )
 }
 
-function FloorHeader({ bankroll }: { bankroll: number }) {
-  const shownBankroll = useCountUp(bankroll)
-  const aiOff = !isAIConfigured()
-  return (
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-casino-brass/20 pb-6">
-      <div>
-        <p className="casino-label text-xs text-casino-brass/70">After hours</p>
-        <h1 className="mt-1 font-display text-3xl font-semibold text-casino-bone sm:text-4xl">
-          The Casino Floor
-        </h1>
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-casino-bone/70">
-          The course was the school. This is the floor at midnight — hushed, luxe, and
-          high-limit. Pick your table and take a seat.
-        </p>
-      </div>
-      <div className="flex flex-col items-end gap-2">
-        <div className="rounded-2xl border border-casino-brass/30 bg-black/30 px-5 py-3 text-right">
-          <p className="casino-label text-[0.5625rem] text-casino-bone/55">Your bankroll</p>
-          <p className="casino-numeral text-3xl sm:text-4xl">{shownBankroll.toLocaleString()}</p>
-        </div>
-        {aiOff && (
-          <span className="rounded-full border border-casino-brass/30 bg-black/30 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-casino-brass/80">
-            AI offline · built-in strategy
-          </span>
-        )}
-      </div>
-    </header>
-  )
-}
-
 /** The closed-floor screen: how to earn a seat, with live progress on the two gates. */
 function LockedFloor() {
-  const room1Cleared = isTableCleared('room-1')
-  const room2Cleared = isTableCleared('room-2')
   const gates: { label: string; sub: string; done: boolean }[] = [
     {
       label: "The Coach's Table",
       sub: 'Clear the coached room in the course',
-      done: room1Cleared,
+      done: isTableCleared('room-1'),
     },
-    { label: 'The AI Table', sub: 'Clear the AI room in the course', done: room2Cleared },
+    {
+      label: 'The AI Table',
+      sub: 'Clear the AI room in the course',
+      done: isTableCleared('room-2'),
+    },
   ]
 
   return (
-    <div className="casino-floor -mx-4 rounded-none px-4 py-12 sm:-mx-6 sm:rounded-3xl sm:px-8">
-      <div className="mx-auto max-w-lg text-center">
-        <span className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-casino-brass/40 bg-black/30">
-          <LockIcon className="h-7 w-7 text-casino-brass" />
+    <div className="mx-auto max-w-2xl space-y-6">
+      <NightPanel className="p-6 text-center sm:p-9">
+        <span
+          className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.07] text-gold-300 ring-1 ring-inset ring-gold-400/25"
+          aria-hidden
+        >
+          <LockIcon className="h-7 w-7" />
         </span>
-        <p className="casino-label mt-5 text-xs text-casino-brass/70">Members only</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-casino-bone">
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-gold-300">
+          Members only
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           The Casino Floor is closed
         </h1>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-casino-bone/75">
-          Clear the Coach's Table and the AI Table in the course to earn your seat. The floor
-          opens once you've proven yourself at both practice rooms.
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/70">
+          Clear the Coach's Table and the AI Table in the course to earn your seat. The floor opens
+          once you've proven yourself at both practice rooms.
         </p>
+        <Link
+          to="/course"
+          className={buttonVariants({ variant: 'gold', size: 'lg', className: 'mt-7' })}
+        >
+          Back to the course
+          <span aria-hidden>→</span>
+        </Link>
+      </NightPanel>
 
-        <ul className="mx-auto mt-7 max-w-sm space-y-2.5 text-left">
+      <div className="rounded-2xl border border-night-900/10 bg-white p-5 shadow-card sm:p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-night-700/50">
+          Earn your seat
+        </h2>
+        <ul className="mt-4 space-y-2.5">
           {gates.map((gate) => (
             <li
               key={gate.label}
               className={cx(
                 'flex items-center gap-3 rounded-xl border px-4 py-3',
-                gate.done
-                  ? 'border-casino-brass/40 bg-casino-brass/10'
-                  : 'border-casino-bone/15 bg-black/25',
+                gate.done ? 'border-success-200 bg-success-50' : 'border-night-900/10 bg-night-900/[0.02]',
               )}
             >
               <span
                 className={cx(
-                  'grid h-7 w-7 shrink-0 place-items-center rounded-full',
-                  gate.done ? 'bg-casino-brass/25 text-casino-brass-bright' : 'bg-black/40 text-casino-bone/50',
+                  'grid h-8 w-8 shrink-0 place-items-center rounded-full',
+                  gate.done
+                    ? 'bg-success-500 text-white shadow-[0_2px_0_var(--color-success-700)]'
+                    : 'bg-night-900/5 text-night-700/40 ring-1 ring-inset ring-night-900/10',
                 )}
+                aria-hidden
               >
-                {gate.done ? <CheckIcon className="h-4 w-4" /> : <LockIcon className="h-3.5 w-3.5" />}
+                {gate.done ? <CheckIcon className="h-4 w-4" /> : <LockIcon className="h-4 w-4" />}
               </span>
               <span className="min-w-0">
-                <span
-                  className={cx(
-                    'block text-sm font-bold',
-                    gate.done ? 'text-casino-brass-bright' : 'text-casino-bone/85',
-                  )}
-                >
-                  {gate.label}
-                </span>
-                <span className="block text-xs text-casino-bone/55">
+                <span className="block text-sm font-semibold text-ink">{gate.label}</span>
+                <span className="block text-xs text-night-700/60">
                   {gate.done ? 'Cleared' : gate.sub}
                 </span>
+              </span>
+              <span className="ml-auto shrink-0">
+                {gate.done ? <Badge tone="success">Cleared</Badge> : <Badge tone="neutral">Locked</Badge>}
               </span>
             </li>
           ))}
         </ul>
-
-        <Link
-          to="/course"
-          className={buttonVariants({ variant: 'gold', size: 'lg', className: 'mt-8' })}
-        >
-          Back to the course
-        </Link>
       </div>
     </div>
   )

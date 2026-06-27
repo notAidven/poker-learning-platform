@@ -5,6 +5,7 @@ export type BadgeTone =
   | 'brand'
   | 'success'
   | 'gold'
+  | 'danger'
   | 'neutral'
   // Deprecated aliases — kept so cross-branch callers don't break at merge;
   // they now render the on-brand token equivalents below.
@@ -20,6 +21,7 @@ const tones: Record<BadgeTone, string> = {
   brand: BRAND,
   success: SUCCESS,
   gold: 'bg-gold-200/70 text-gold-700 ring-1 ring-inset ring-gold-300',
+  danger: 'bg-danger-50 text-danger-700 ring-1 ring-inset ring-danger-200',
   neutral: NEUTRAL,
   emerald: SUCCESS,
   slate: NEUTRAL,
