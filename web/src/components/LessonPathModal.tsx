@@ -1,12 +1,14 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { lessonNumber, type LessonMeta } from '../data/lessons'
+import { lessonNumber, type LessonMeta, type SectionId } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
 import { useProgress, skillCheckScorePercent, type LessonStats } from '../lib/progress'
 import { areAllLessonsComplete, isTableCleared } from '../lib/casinoProgress'
+import { areSectionLessonsComplete } from '../lib/sectionGates'
 import { Modal } from './ui/Modal'
+import { Badge } from './ui/Badge'
 import { buttonVariants } from './ui/Button'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
@@ -20,11 +22,14 @@ type LessonPathModalProps = {
 
 export function LessonPathModal({ lesson, status, open, onClose }: LessonPathModalProps) {
   const isTable = lesson.kind === 'ai-table'
+  const isGate = lesson.kind === 'gate'
   const { getStats, isLessonInProgress } = useProgress()
   const stats = getStats(lesson.id)
   const inProgress = isLessonInProgress(lesson.id, 100)
   const hasContent = hasLessonContent(lesson.id)
   const closeRef = useRef<HTMLButtonElement>(null)
+
+  const eyebrow = isTable ? 'Casino table' : isGate ? 'Section gate' : `Lesson ${lessonNumber(lesson.id)}`
 
   return (
     <Modal
@@ -43,9 +48,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         <CloseIcon />
       </button>
 
-      <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-        {isTable ? 'Casino table' : `Lesson ${lessonNumber(lesson.id)}`}
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">{eyebrow}</p>
       <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-ink">
         {lesson.title}
       </h2>
@@ -54,6 +57,8 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
       <div className="mt-5">
         {isTable ? (
           <TableBody lesson={lesson} status={status} onClose={onClose} />
+        ) : isGate ? (
+          <GateBody lesson={lesson} status={status} onClose={onClose} />
         ) : (
           <>
             {status === 'locked' && <LockedBody />}
@@ -75,6 +80,69 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         )}
       </div>
     </Modal>
+  )
+}
+
+function GateBody({
+  lesson,
+  status,
+  onClose,
+}: {
+  lesson: LessonMeta
+  status: LessonStatus
+  onClose: () => void
+}) {
+  const sectionId = lesson.section as SectionId
+  const { completedIds, isGatePassed, isSectionTestedOut } = useProgress()
+  const passed = isGatePassed(sectionId)
+  const testedOut = isSectionTestedOut(sectionId)
+  const lessonsDone = areSectionLessonsComplete(completedIds, sectionId)
+
+  if (status === 'locked') {
+    return (
+      <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
+        Pass the previous section&rsquo;s gate to unlock this one.
+      </p>
+    )
+  }
+
+  if (passed) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Badge tone="success">Section complete</Badge>
+          {testedOut && <Badge tone="gold">Tested out</Badge>}
+        </div>
+        <p className="text-sm text-night-700">
+          You&rsquo;ve cleared this gate, so the next section is unlocked. Retake it any time for a
+          little practice XP.
+        </p>
+        <Link
+          to={`/gate/${sectionId}`}
+          onClick={onClose}
+          className={buttonVariants({ variant: 'secondary', className: 'w-full' })}
+        >
+          Retake gate
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-night-700">
+        {lessonsDone
+          ? 'You\u2019ve finished every lesson here. Clear this gate to complete the section and unlock the next one.'
+          : 'Skip ahead: pass this gate to complete the whole section (for reduced XP). If you don\u2019t pass, just work through the lessons normally — nothing is lost.'}
+      </p>
+      <Link
+        to={`/gate/${sectionId}`}
+        onClick={onClose}
+        className={buttonVariants({ variant: 'primary', className: 'w-full' })}
+      >
+        {lessonsDone ? 'Take the section gate' : 'Test out of this section'}
+      </Link>
+    </div>
   )
 }
 

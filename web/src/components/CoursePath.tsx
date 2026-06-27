@@ -3,6 +3,12 @@ import { motion } from 'motion/react'
 import { lessonNumber, sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { isTableCleared, isTableUnlocked } from '../lib/casinoProgress'
+import {
+  areSectionLessonsComplete,
+  buildCoursePathNodes,
+  gateId,
+  priorGatedSection,
+} from '../lib/sectionGates'
 import { LessonPathModal } from './LessonPathModal'
 import { CheckIcon, ChipIcon, LockIcon } from './icons'
 import { DUR, EASE } from '../lib/motion'
@@ -211,6 +217,16 @@ function getLessonStatus(
     return unlocked ? 'current' : 'locked'
   }
 
+  // Section gates: passed → completed; otherwise available (current) as soon as the
+  // section is unlocked (prior section's gate passed), so test-out is reachable even
+  // before the section's lessons are done.
+  if (lesson.kind === 'gate') {
+    if (completedIds.includes(lesson.id)) return 'completed'
+    const prior = priorGatedSection(lesson.section)
+    const unlocked = !prior || completedIds.includes(gateId(prior))
+    return unlocked ? 'current' : 'locked'
+  }
+
   if (completedIds.includes(lesson.id)) return 'completed'
   if (index === 0) return 'current'
   const prev = lessonList[index - 1]
@@ -256,7 +272,11 @@ function connectorPath(from: LessonLayout, to: LessonLayout, width: number) {
 }
 
 export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
-  const { lessonLayouts, sectionLayouts, totalHeight } = computeLayout(lessons)
+  // Weave the section-gate nodes into the path (after each gated section's lessons).
+  // Gate nodes are NOT part of the lessons array, so the completion math never counts
+  // them; they only ride the path here.
+  const nodes = buildCoursePathNodes(lessons)
+  const { lessonLayouts, sectionLayouts, totalHeight } = computeLayout(nodes)
   const trackRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [selectedLesson, setSelectedLesson] = useState<{
@@ -276,7 +296,7 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
     return () => observer.disconnect()
   }, [])
 
-  const statuses = lessons.map((lesson, i) => getLessonStatus(lesson, i, lessons, completedIds))
+  const statuses = nodes.map((lesson, i) => getLessonStatus(lesson, i, nodes, completedIds))
   const reduced = usePrefersReducedMotion()
 
   // Nodes finished since the path was last shown get a one-shot chip flip. The per-session
@@ -457,6 +477,11 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
                       status={status}
                       section={ll.section}
                       justCompleted={flipIds.has(ll.lesson.id)}
+                      gateLessonsDone={
+                        ll.lesson.kind === 'gate'
+                          ? areSectionLessonsComplete(completedIds, ll.lesson.section)
+                          : false
+                      }
                       reduced={reduced}
                       onSelect={() => setSelectedLesson({ lesson: ll.lesson, status })}
                     />
@@ -549,11 +574,36 @@ function LessonSideLabel({
   )
 }
 
+/** A section gate reads as a brass "checkpoint" chip distinct from the section's lesson
+ *  nodes — gold when available (no pulse, so it never competes with the current lesson),
+ *  green check when passed, muted lock when the prior gate is still unpassed. */
+const GATE_NODE: Record<LessonStatus, string> = {
+  completed: COMPLETED_NODE,
+  current: 'bg-gold-400 text-night-900 shadow-lg shadow-gold-400/40 ring-[5px] ring-gold-200',
+  locked: 'bg-night-900/[0.04] text-night-700/40 ring-[5px] ring-night-900/10',
+}
+
+/** Shield glyph for an available section gate (a "checkpoint" before the next section). */
+function GateGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3l7 2.5v5.5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V5.5L12 3z"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function PathNode({
   lesson,
   status,
   section,
   justCompleted,
+  gateLessonsDone,
   reduced,
   onSelect,
 }: {
@@ -561,31 +611,51 @@ function PathNode({
   status: LessonStatus
   section: SectionId
   justCompleted: boolean
+  gateLessonsDone: boolean
   reduced: boolean
   onSelect: () => void
 }) {
+  const isTable = lesson.kind === 'ai-table'
+  const isGate = lesson.kind === 'gate'
+  const number = lessonNumber(lesson.id)
+
   const shell = [
     'relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-full transition-transform',
-    SECTION_THEME[section].node[status],
+    isGate ? GATE_NODE[status] : SECTION_THEME[section].node[status],
     'hover:scale-105 active:scale-95',
   ]
     .filter(Boolean)
     .join(' ')
 
-  const isTable = lesson.kind === 'ai-table'
-  const number = lessonNumber(lesson.id)
   const content =
     status === 'completed' ? (
       <CheckIcon className="h-8 w-8" strokeWidth={3} />
     ) : status === 'locked' ? (
       <LockIcon className="h-6 w-6" />
+    ) : isGate ? (
+      <GateGlyph className="h-9 w-9" />
     ) : isTable ? (
       <ChipIcon className="h-9 w-9" strokeWidth={2.25} />
     ) : (
       <span className="text-2xl font-bold">{number}</span>
     )
 
-  const badgeText = isTable ? 'Play' : number === 1 ? 'Start' : 'Up next'
+  const badgeText = isGate
+    ? gateLessonsDone
+      ? 'Gate'
+      : 'Test out'
+    : isTable
+      ? 'Play'
+      : number === 1
+        ? 'Start'
+        : 'Up next'
+
+  const ariaLabel = isGate
+    ? `Section gate: ${lesson.title}`
+    : isTable
+      ? `Table: ${lesson.title}`
+      : `Lesson ${number}: ${lesson.title}`
+
   // A freshly-won node flips face-up like a chip being raked in; otherwise it sits still
   // (initial=false) so hover/active scale on the inner shell keeps working.
   const flip = justCompleted && !reduced
@@ -595,7 +665,7 @@ function PathNode({
       type="button"
       onClick={onSelect}
       className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-4"
-      aria-label={isTable ? `Table: ${lesson.title}` : `Lesson ${number}: ${lesson.title}`}
+      aria-label={ariaLabel}
     >
       <motion.div
         className="relative"

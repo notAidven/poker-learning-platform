@@ -10,7 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProgressStore } from './ProgressStore'
 import { InMemoryProgressBackend } from './InMemoryProgressBackend'
 import { clearClearedTables } from '../casinoProgress'
-import { getNextLessonPath } from './selectors'
+import { areGuidedPlayLessonsComplete } from '../casinoProgress'
+import { getTable } from '../../data/tables'
+import { isTableUnlocked } from '../casinoProgress'
+import { gateId } from '../sectionGates'
+import { computeReplayXp, computeTestOutXp, XP_GATE_PASS } from '../gamification'
+import { getNextLessonPath, isLessonUnlocked } from './selectors'
 import { defaultLessonStats, type LessonStats } from './types'
 
 function makeStorage() {
@@ -140,7 +145,7 @@ describe('ProgressStore — completion XP (computeLessonXp) and idempotency', ()
     expect(retake.xpBreakdown).toBeNull()
   })
 
-  it('awards XP to the backend user exactly once across two completions', async () => {
+  it('awards the full first-completion XP exactly once; replays add small decaying XP', async () => {
     const backend = new InMemoryProgressBackend({ today: () => '2026-01-10' })
     backend.seedUser('u')
     const store = newStore({ backend })
@@ -150,9 +155,17 @@ describe('ProgressStore — completion XP (computeLessonXp) and idempotency', ()
     store.saveSkillCheckResult('1', 3, 3)
     expect(backend.getUser('u')).toMatchObject({ totalXp: 150, streak: 1 })
 
-    // Second pass (retake): backend award is idempotent — XP unchanged.
+    // Replay (retake an already-completed lesson): the full 150 is NEVER re-awarded —
+    // instead a small replay reward lands (first replay = computeReplayXp(0) = 20).
     store.saveSkillCheckResult('1', 3, 3)
-    expect(backend.getUser('u')).toMatchObject({ totalXp: 150 })
+    expect(backend.getUser('u')).toMatchObject({ totalXp: 150 + computeReplayXp(0) })
+
+    // A further replay decays (computeReplayXp(1) = 10), confirming diminishing returns
+    // and that first-completion idempotency holds (no second 150 ever appears).
+    store.saveSkillCheckResult('1', 3, 3)
+    expect(backend.getUser('u')).toMatchObject({
+      totalXp: 150 + computeReplayXp(0) + computeReplayXp(1),
+    })
   })
 
   it('records review activity as a streak touch without XP', async () => {
@@ -335,6 +348,114 @@ describe('ProgressStore — subscribe / snapshot / cross-tab', () => {
 
     expect(listener).toHaveBeenCalled()
     expect(store.getSnapshot().completedIds).toEqual(['1'])
+  })
+})
+
+describe('ProgressStore — section gates, test-out, and casino-gate coherence', () => {
+  function completeLessonNormally(store: ProgressStore, id: string) {
+    store.saveLessonFinished(id, 100, {}, [])
+    store.saveSkillCheckResult(id, 3, 3)
+  }
+
+  it('passing a section gate completes it, unlocks the next section, and routes there', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-02-01' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    completeLessonNormally(store, '1')
+    completeLessonNormally(store, '2')
+
+    // Foundations lessons done, but Playing a Hand ('3') is still gated until the gate.
+    expect(isLessonUnlocked('3', store.getCompletedIds())).toBe(false)
+    // "Continue" routes to the gate once the section's lessons are done.
+    expect(nextPath(store)).toBe('/gate/foundations')
+
+    const res = store.saveGateResult('foundations', 4, 4)
+    expect(res.isFirstCompletion).toBe(true)
+    // Did the lessons → full mastery bonus (not the reduced test-out amount).
+    expect(res.xpBreakdown?.total).toBe(XP_GATE_PASS)
+    expect(store.getCompletedIds()).toContain(gateId('foundations'))
+    expect(store.getStats(gateId('foundations')).testedOut).toBe(false)
+    // The next section is now open.
+    expect(isLessonUnlocked('3', store.getCompletedIds())).toBe(true)
+    expect(nextPath(store)).toBe('/lesson/3')
+    expect(backend.getUser('u')).toMatchObject({ streak: 1 })
+  })
+
+  it('test-out marks the skipped lessons complete and awards reduced XP', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-02-02' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    // Clear Foundations cold, without doing either lesson.
+    const res = store.saveGateResult('foundations', 4, 4)
+    expect(res.isFirstCompletion).toBe(true)
+    expect(res.xpBreakdown?.total).toBe(computeTestOutXp(2)) // 2 skipped lessons
+
+    // The skipped lessons are now completed (flagged tested-out) + the gate itself.
+    expect(store.getCompletedIds()).toEqual(
+      expect.arrayContaining(['1', '2', gateId('foundations')]),
+    )
+    expect(store.getStats('1').testedOut).toBe(true)
+    expect(store.getStats('2').testedOut).toBe(true)
+    expect(store.getStats(gateId('foundations')).testedOut).toBe(true)
+    // Reduced XP only — far below the 2×(100..150) the lessons would have paid.
+    expect(backend.getUser('u')).toMatchObject({ totalXp: computeTestOutXp(2), streak: 1 })
+  })
+
+  it('testing out Foundations + Playing keeps the downstream casino gate coherent', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-02-03' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    // Foundations not unlocked-gated for the FIRST section, so test it out directly,
+    // which unlocks Playing a Hand; then test that out too.
+    store.saveGateResult('foundations', 4, 4)
+    store.saveGateResult('playing', 6, 6)
+
+    const completed = store.getCompletedIds()
+    // Every Foundations + Playing lesson is now complete (via test-out)...
+    expect(areGuidedPlayLessonsComplete(completed)).toBe(true)
+    // ...so the EXISTING lesson-based casino unlock (Room 1) just works — no edits needed.
+    const room1 = getTable('room-1')!
+    expect(isTableUnlocked(room1, completed)).toBe(true)
+  })
+
+  it('re-passing an already-passed gate grants only small replay XP (first pass idempotent)', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-02-04' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    const first = store.saveGateResult('foundations', 4, 4) // tested out → computeTestOutXp(2)
+    expect(first.isFirstCompletion).toBe(true)
+    expect(backend.getUser('u')?.totalXp).toBe(computeTestOutXp(2))
+
+    const replay = store.saveGateResult('foundations', 3, 4)
+    expect(replay.isFirstCompletion).toBe(false)
+    expect(replay.xpBreakdown).toBeNull()
+    // The full first-pass amount is never re-awarded; only a small decaying replay reward.
+    expect(backend.getUser('u')?.totalXp).toBe(computeTestOutXp(2) + computeReplayXp(0))
+  })
+
+  it('a tested-out lesson never later pays its full first-completion XP (replay only)', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-02-05' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    store.saveGateResult('foundations', 4, 4) // marks '1','2' tested-out complete
+    const xpAfterTestOut = backend.getUser('u')!.totalXp
+
+    // Going back to actually do lesson '1' is a replay (it is already completed), so it
+    // earns small replay XP, never the full 150 — the test-out "spent" that first award.
+    store.saveLessonFinished('1', 100, { a: 1 }, ['a'])
+    const res = store.saveSkillCheckResult('1', 3, 3)
+    expect(res.isFirstCompletion).toBe(false)
+    expect(backend.getUser('u')!.totalXp).toBe(xpAfterTestOut + computeReplayXp(0))
   })
 })
 

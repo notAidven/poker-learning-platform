@@ -1,6 +1,14 @@
 import { createContext, useContext, useMemo, useSyncExternalStore } from 'react'
+import type { SectionId } from '../../data/lessons'
 import type { ProgressStore } from './ProgressStore'
 import { getNextLessonPath, isLessonUnlocked } from './selectors'
+import {
+  gateId,
+  isGatePassed,
+  isSectionTestedOut,
+  isSectionUnlocked,
+  isTestOutAvailable,
+} from '../sectionGates'
 import { defaultLessonStats, type LessonSession, type LessonStats } from './types'
 
 /** App-wide ProgressStore instance, provided by `ProgressProvider`. */
@@ -20,6 +28,16 @@ export type UseProgress = {
   isLessonUnlocked: (lessonId: string) => boolean
   isLessonInProgress: (lessonId: string, stepCount: number) => boolean
   getNextLessonPath: () => string
+  /** Stats for a section's gate doc (`gate-<sectionId>`). */
+  getGateStats: (sectionId: SectionId) => LessonStats
+  /** True once the prior section's gate is passed (Foundations is always unlocked). */
+  isSectionUnlocked: (sectionId: SectionId) => boolean
+  /** True once this section's gate is passed (the section is complete). */
+  isGatePassed: (sectionId: SectionId) => boolean
+  /** True when the section was cleared via test-out rather than worked through. */
+  isSectionTestedOut: (sectionId: SectionId) => boolean
+  /** True when the "Test out / Skip section" affordance applies (unlocked, not done). */
+  isTestOutAvailable: (sectionId: SectionId) => boolean
 }
 
 /**
@@ -41,6 +59,13 @@ export function useProgress(): UseProgress {
       isLessonInProgress: (lessonId: string, stepCount: number) =>
         store.isLessonInProgress(lessonId, stepCount),
       getNextLessonPath: () => getNextLessonPath(completedIds, statsByLesson),
+      getGateStats: (sectionId: SectionId) =>
+        statsByLesson[gateId(sectionId)] ?? defaultLessonStats(),
+      isSectionUnlocked: (sectionId: SectionId) => isSectionUnlocked(statsByLesson, sectionId),
+      isGatePassed: (sectionId: SectionId) => isGatePassed(statsByLesson, sectionId),
+      isSectionTestedOut: (sectionId: SectionId) => isSectionTestedOut(statsByLesson, sectionId),
+      isTestOutAvailable: (sectionId: SectionId) =>
+        isTestOutAvailable(statsByLesson, completedIds, sectionId),
     }),
     [store, statsByLesson, completedIds],
   )

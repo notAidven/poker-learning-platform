@@ -21,6 +21,9 @@ const LessonPage = lazy(() =>
 const SkillCheckPage = lazy(() =>
   import('./pages/SkillCheckPage').then((m) => ({ default: m.SkillCheckPage })),
 )
+const SectionGatePage = lazy(() =>
+  import('./pages/SectionGatePage').then((m) => ({ default: m.SectionGatePage })),
+)
 const TablePage = lazy(() =>
   import('./pages/TablePage').then((m) => ({ default: m.TablePage })),
 )
@@ -86,6 +89,14 @@ const router = createBrowserRouter([
             element: (
               <Lazy>
                 <SkillCheckPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'gate/:sectionId',
+            element: (
+              <Lazy>
+                <SectionGatePage />
               </Lazy>
             ),
           },

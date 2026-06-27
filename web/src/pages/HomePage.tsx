@@ -25,7 +25,7 @@ import {
 
 export function HomePage() {
   const { profile } = useAuth()
-  const { completedIds, getNextLessonPath } = useProgress()
+  const { completedIds, getNextLessonPath, isLessonUnlocked } = useProgress()
   const continueTo = getNextLessonPath()
 
   const totalXp = profile?.totalXp ?? 0
@@ -33,17 +33,15 @@ export function HomePage() {
   const streak = getEffectiveStreak(profile?.streak ?? 0, profile?.lastActivityDate ?? null)
 
   // The home overview lists the interactive lessons only; casino tables live on
-  // the course path and are excluded from the lesson completion math.
+  // the course path and are excluded from the lesson completion math. Unlock uses the
+  // shared selector so it matches the route guard (incl. the section-gate boundaries).
   const lessonNodes = lessons.filter((l) => l.kind !== 'ai-table')
 
-  function lessonUnlocked(index: number) {
-    if (index === 0) return true
-    return completedIds.includes(lessonNodes[index - 1].id)
-  }
+  const lessonUnlocked = (lessonId: string) => isLessonUnlocked(lessonId)
 
   const nextIndex = lessonNodes.findIndex(
-    (lesson, index) =>
-      lessonUnlocked(index) && hasLessonContent(lesson.id) && !completedIds.includes(lesson.id),
+    (lesson) =>
+      lessonUnlocked(lesson.id) && hasLessonContent(lesson.id) && !completedIds.includes(lesson.id),
   )
   const completedCount = lessonNodes.filter((l) => completedIds.includes(l.id)).length
   const startedJourney = completedCount > 0 || streak > 0 || totalXp > 0
@@ -156,7 +154,7 @@ export function HomePage() {
             <LessonCard
               key={lesson.id}
               lesson={lesson}
-              unlocked={lessonUnlocked(index) && hasLessonContent(lesson.id)}
+              unlocked={lessonUnlocked(lesson.id) && hasLessonContent(lesson.id)}
               done={completedIds.includes(lesson.id)}
               isNext={index === nextIndex}
               hasContent={hasLessonContent(lesson.id)}

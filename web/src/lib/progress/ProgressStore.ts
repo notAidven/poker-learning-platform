@@ -11,7 +11,9 @@
  * Replaces the former split across `lessonProgress*`, `progressSync`, `lessonSession`,
  * and the module-level singletons, plus the bespoke window custom-event bus.
  */
-import { computeLessonXp } from '../gamification'
+import { computeLessonXp, computeTestOutXp, XP_GATE_PASS, type LessonXpBreakdown } from '../gamification'
+import { gateId, sectionLessonIds } from '../sectionGates'
+import type { SectionId } from '../../data/lessons'
 import { sanitizeProblemAttempts, sanitizeStringArray } from './sanitize'
 import { getCompletedIds } from './selectors'
 import {
@@ -152,6 +154,77 @@ export class ProgressStore {
   }
 
   /**
+   * Record a PASSING section-gate attempt. Gate state lives behind a synthetic
+   * `gate-<sectionId>` progress doc, so passing it rides the same atomic completion +
+   * idempotent-XP + replay path as a lesson:
+   *  - First pass after doing the lessons → a one-time `XP_GATE_PASS` mastery bonus.
+   *  - First pass via TEST-OUT (some section lessons still unfinished) → the skipped
+   *    lessons are marked complete (so the lesson-based casino gates stay coherent) and
+   *    a reduced `computeTestOutXp(skipped)` is awarded instead of the mastery bonus.
+   *  - A re-pass of an already-passed gate → small, decaying replay XP (xpBreakdown null).
+   * Failing attempts must NOT call this (the gate stays retryable, nothing unlocks).
+   */
+  saveGateResult(sectionId: SectionId, correct: number, total: number): SkillCheckSaveResult {
+    const id = gateId(sectionId)
+    const current = this.statsByLesson[id] ?? defaultLessonStats()
+    const isFirstCompletion = !current.completed
+
+    // Lessons in this section not yet completed BEFORE this pass — what a test-out skips.
+    const completedIds = this.getCompletedIds()
+    const pendingLessonIds = sectionLessonIds(sectionId).filter((lid) => !completedIds.includes(lid))
+    const testedOut = isFirstCompletion ? pendingLessonIds.length > 0 : current.testedOut
+
+    // Test-out: auto-complete the skipped lessons (no per-lesson XP) so every existing
+    // lesson-based gate (areGuidedPlayLessonsComplete / isTableUnlocked / …) just works.
+    if (isFirstCompletion && pendingLessonIds.length > 0) {
+      for (const lessonId of pendingLessonIds) this.markLessonTestedOut(lessonId)
+    }
+
+    const gateXp = testedOut ? computeTestOutXp(pendingLessonIds.length) : XP_GATE_PASS
+    const xpBreakdown: LessonXpBreakdown | null = isFirstCompletion
+      ? { base: gateXp, bonus: 0, total: gateXp }
+      : null
+
+    const nextStats: LessonStats = {
+      ...current,
+      attempted: true,
+      lessonFinished: true,
+      completed: true,
+      skillCheckCorrect: correct,
+      skillCheckTotal: total,
+      pendingProblemAttempts: null,
+      testedOut,
+      lastLessonXpBreakdown: xpBreakdown
+        ? { base: xpBreakdown.base, bonus: xpBreakdown.bonus }
+        : current.lastLessonXpBreakdown,
+    }
+
+    return this.runCompletion(id, nextStats, xpBreakdown, isFirstCompletion)
+  }
+
+  /**
+   * Mark a single lesson complete via test-out: it counts for the lesson-based gates but
+   * is flagged `testedOut` and intentionally earns NO per-lesson XP (the section's reduced
+   * test-out XP is awarded once, on the gate doc). Persists `completed: true` so the
+   * backend's idempotency guard never later grants this lesson its full first-completion XP.
+   * A no-op when the lesson was already completed for real.
+   */
+  private markLessonTestedOut(lessonId: string): void {
+    const current = this.statsByLesson[lessonId] ?? defaultLessonStats()
+    if (current.completed) return
+    const next: LessonStats = {
+      ...current,
+      attempted: true,
+      lessonFinished: true,
+      completed: true,
+      testedOut: true,
+    }
+    this.statsByLesson[lessonId] = next
+    this.persistStats()
+    this.writeStatsToBackend(lessonId, next)
+  }
+
+  /**
    * Complete a lesson that has no skill check: finishing the body IS the full
    * completion, so mark completed and award XP directly. (All current lessons have
    * skill checks, so this is a guard for future content rather than a live path.)
@@ -192,7 +265,24 @@ export class ProgressStore {
         ? { base: xpBreakdown.base, bonus: xpBreakdown.bonus }
         : current.lastLessonXpBreakdown,
     }
-    this.statsByLesson[lessonId] = nextStats
+
+    return this.runCompletion(lessonId, nextStats, xpBreakdown, isFirstCompletion)
+  }
+
+  /**
+   * Shared completion tail for lessons and section gates: write the local stats,
+   * notify subscribers, and (for signed-in users) hand off to the atomic backend
+   * `completeLesson`. A non-null `xpBreakdown` is a first completion (full XP, once);
+   * null is a replay (small decaying XP). The award promise is surfaced and never
+   * rejects so the celebration can prefer the authoritative values without blocking.
+   */
+  private runCompletion(
+    progressKey: string,
+    nextStats: LessonStats,
+    xpBreakdown: LessonXpBreakdown | null,
+    isFirstCompletion: boolean,
+  ): SkillCheckSaveResult {
+    this.statsByLesson[progressKey] = nextStats
     this.persistStats()
     this.commit()
 
@@ -201,18 +291,17 @@ export class ProgressStore {
     if (uid) {
       // The backend transaction persists the progress doc (completion + xpAwarded),
       // so on SUCCESS we intentionally do NOT also queue a separate stats write —
-      // that would race with the atomic award. XP is added only on the first
-      // completion; a retake just refreshes stats and advances the streak. The
-      // promise is surfaced (and never rejects) so the "win the pot" celebration can
-      // prefer the authoritative award without blocking on it.
-      award = this.backend.completeLesson(uid, lessonId, xpBreakdown, nextStats).catch((err) => {
+      // that would race with the atomic award. The promise is surfaced (and never
+      // rejects) so the "win the pot" celebration can prefer the authoritative award
+      // without blocking on it.
+      award = this.backend.completeLesson(uid, progressKey, xpBreakdown, nextStats).catch((err) => {
         // Durability: the atomic award didn't land, so the completion lives only in
         // local storage and the next sync would silently revert it. Best-effort
         // persist completed:true to the remote progress doc. The backend's
         // completed/xpAwarded guard keeps a later reconcile idempotent (never
-        // double-awards XP).
-        console.warn('Failed to award lesson completion; persisting completion as a fallback:', err)
-        this.writeCompletionFallback(lessonId, nextStats)
+        // double-awards first-completion XP).
+        console.warn('Failed to award completion; persisting completion as a fallback:', err)
+        this.writeCompletionFallback(progressKey, nextStats)
         return null
       })
     }

@@ -12,6 +12,7 @@
 import type { LessonXpBreakdown } from '../gamification'
 import {
   XP_BASE_LESSON,
+  computeReplayXp,
   computeStreakAfterCompletion,
   didStreakIncrease,
   getCalendarDayCAT,
@@ -43,6 +44,8 @@ import type {
 type FirestoreLessonProgressDoc = LessonStats & {
   session?: LessonSession
   xpAwarded?: boolean
+  /** How many replays of this item have already been rewarded (drives diminishing replay XP). */
+  replayCount?: number
   updatedAt?: Timestamp
 }
 
@@ -82,6 +85,7 @@ export class FirestoreProgressBackend implements ProgressBackend {
                   bonus: data.lastLessonXpBreakdown.bonus,
                 }
               : null,
+          testedOut: Boolean(data.testedOut),
         },
         session: data.session
           ? {
@@ -126,7 +130,9 @@ export class FirestoreProgressBackend implements ProgressBackend {
     xpBreakdown: LessonXpBreakdown | null,
     stats: LessonStats,
   ): Promise<LessonCompletionAward | null> {
-    const xpAmount = xpBreakdown?.total ?? 0
+    // A non-null breakdown is a first-completion attempt; null is a replay (see ProgressBackend).
+    const isFirstAttempt = xpBreakdown != null
+    const firstXp = xpBreakdown?.total ?? 0
     const userRef = doc(db, 'users', uid)
     const progressRef = progressDoc(uid, lessonId)
     const today = getCalendarDayCAT()
@@ -138,13 +144,24 @@ export class FirestoreProgressBackend implements ProgressBackend {
       // Treat an explicit `xpAwarded` flag OR an already-`completed` progress doc
       // as "already awarded". The `completed` fallback protects lessons that were
       // completed BEFORE this flag existed from a double-award on a stale second
-      // device (XP is only ever granted on the first completion).
+      // device (first-completion XP is only ever granted once).
       const progressData = progressSnap.exists() ? progressSnap.data() : null
+      const priorReplays =
+        progressData && typeof progressData.replayCount === 'number' ? progressData.replayCount : 0
       const alreadyAwarded =
         progressData != null &&
         (progressData.xpAwarded === true || progressData.completed === true)
       const userExists = userSnap.exists()
-      const willAward = userExists && !alreadyAwarded && xpAmount > 0
+
+      // First completion awards the full breakdown exactly once; a replay (null
+      // breakdown on an already-awarded doc) awards a small, decaying amount.
+      const willAwardFirst = userExists && isFirstAttempt && !alreadyAwarded && firstXp > 0
+      const willAwardReplay = userExists && !isFirstAttempt && alreadyAwarded
+      const xpToAdd = willAwardFirst
+        ? firstXp
+        : willAwardReplay
+          ? computeReplayXp(priorReplays)
+          : 0
 
       // Persist the latest stats + completion, and drop any stale mid-lesson
       // session (deleteField actually removes it under merge:true). Only stamp
@@ -156,8 +173,11 @@ export class FirestoreProgressBackend implements ProgressBackend {
         updatedAt: serverTimestamp(),
         session: deleteField(),
       }
-      if (alreadyAwarded || willAward) {
+      if (alreadyAwarded || willAwardFirst) {
         progressUpdate.xpAwarded = true
+      }
+      if (willAwardReplay) {
+        progressUpdate.replayCount = priorReplays + 1
       }
       transaction.set(progressRef, progressUpdate, { merge: true })
 
@@ -170,7 +190,6 @@ export class FirestoreProgressBackend implements ProgressBackend {
       const lastActivityDate =
         typeof data.lastActivityDate === 'string' ? data.lastActivityDate : null
 
-      const xpToAdd = willAward ? xpAmount : 0
       const newTotalXp = totalXp + xpToAdd
       const newLevel = levelFromTotalXp(newTotalXp)
       const streakUpdate = computeStreakAfterCompletion(storedStreak, lastActivityDate, today)
