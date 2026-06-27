@@ -81,7 +81,7 @@ Two sides of the same coin:
       interaction: 'betting-round',
       config: {
         hole: ['JS', '10S'],
-        board: ['AD', 'KH', '7C', '4D', '2C'],
+        board: ['9S', '6S', '4C', '3D', '2H'],
         street: 'river',
         pot: 80,
         heroStack: 300,

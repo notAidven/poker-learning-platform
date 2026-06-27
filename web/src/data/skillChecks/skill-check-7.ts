@@ -61,7 +61,7 @@ export const skillCheck7: SkillCheckDefinition = {
       interaction: 'betting-round',
       config: {
         hole: ['10S', '9S'],
-        board: ['AD', 'KC', '7H', '4S', '2D'],
+        board: ['8C', '7D', '4H', '3D', '2C'],
         street: 'river',
         pot: 70,
         heroStack: 300,
