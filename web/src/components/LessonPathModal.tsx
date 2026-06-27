@@ -1,12 +1,12 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { lessonNumber, type LessonMeta, type SectionId } from '../data/lessons'
+import { lessonNumber, sections, type LessonMeta, type SectionId } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
 import { useProgress, skillCheckScorePercent, type LessonStats } from '../lib/progress'
 import { areAllLessonsComplete, isTableCleared } from '../lib/casinoProgress'
-import { areSectionLessonsComplete } from '../lib/sectionGates'
+import { areSectionLessonsComplete, priorGatedSection, sectionLessonIds } from '../lib/sectionGates'
 import { Modal } from './ui/Modal'
 import { Badge } from './ui/Badge'
 import { buttonVariants } from './ui/Button'
@@ -61,7 +61,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
           <GateBody lesson={lesson} status={status} onClose={onClose} />
         ) : (
           <>
-            {status === 'locked' && <LockedBody />}
+            {status === 'locked' && <LockedBody lesson={lesson} />}
             {status !== 'locked' && stats.completed && (
               <CompletedBody stats={stats} lessonId={lesson.id} onClose={onClose} />
             )}
@@ -146,7 +146,32 @@ function GateBody({
   )
 }
 
-function LockedBody() {
+function LockedBody({ lesson }: { lesson: LessonMeta }) {
+  // The FIRST lesson of a section is gated behind the PRIOR section's gate, not the
+  // previous lesson — so a learner who has finished the section's lessons is told to
+  // pass the gate (the real blocker) instead of being wrongly sent to "redo the
+  // previous lesson" they already completed. Within-section lessons keep the
+  // sequential message.
+  const sectionLessons = sectionLessonIds(lesson.section)
+  const prior = sectionLessons[0] === lesson.id ? priorGatedSection(lesson.section) : null
+  const priorTitle = prior ? (sections.find((s) => s.id === prior)?.title ?? null) : null
+
+  if (priorTitle && prior) {
+    return (
+      <div className="space-y-3">
+        <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
+          Pass the <span className="font-semibold">{priorTitle}</span> gate to unlock this section.
+        </p>
+        <Link
+          to={`/gate/${prior}`}
+          className={buttonVariants({ variant: 'secondary', className: 'w-full' })}
+        >
+          Go to the {priorTitle} gate
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <p className="rounded-2xl bg-night-50 px-4 py-3 text-sm text-night-700">
       Complete the previous lesson and its skill check to unlock this one.
