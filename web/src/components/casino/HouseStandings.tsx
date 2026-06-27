@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { fetchLeaderboard, type LeaderboardEntry } from '../../lib/leaderboard'
 import { useAuth } from '../../contexts/AuthContext'
 import { AnimalAvatar } from '../AnimalAvatar'
+import { Badge } from '../ui/Badge'
 import { cx } from '../ui/cx'
 import { useCountUp } from './useCountUp'
 
-/** A small brass crown for the leader marker (the memorable tote-board flourish). */
+/** A small gold crown marking the leader at the top of the board. */
 function CrownIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
@@ -18,10 +19,10 @@ function CrownIcon({ className }: { className?: string }) {
 function NetFigure({ value }: { value: number }) {
   const shown = useCountUp(value)
   const tone =
-    value > 0 ? 'text-casino-brass-bright' : value < 0 ? 'text-casino-ember' : 'text-casino-bone/70'
+    value > 0 ? 'text-success-600' : value < 0 ? 'text-danger-600' : 'text-night-700/60'
   const sign = value > 0 ? '+' : value < 0 ? '−' : ''
   return (
-    <span className={cx('casino-numeral text-xl sm:text-2xl', tone)}>
+    <span className={cx('font-display text-lg font-bold tabular-nums sm:text-xl', tone)}>
       {sign}
       {Math.abs(shown).toLocaleString()}
     </span>
@@ -32,18 +33,18 @@ function BoardShell({ children }: { children: React.ReactNode }) {
   return (
     <section
       aria-labelledby="house-standings-title"
-      className="tote-board overflow-hidden rounded-2xl p-5 sm:p-6"
+      className="rounded-2xl border border-night-900/10 bg-white p-5 shadow-card sm:p-6"
     >
-      <header className="flex items-center justify-between gap-3 border-b border-casino-brass/20 pb-4">
-        <div>
-          <h2 id="house-standings-title" className="casino-label text-base sm:text-lg">
-            House Standings
-          </h2>
-          <p className="mt-1 text-xs font-medium text-casino-bone/55">
-            Lifetime net winnings · play money
-          </p>
-        </div>
-        <CrownIcon className="h-7 w-7 text-casino-brass/70" />
+      <header className="border-b border-night-900/10 pb-4">
+        <h2
+          id="house-standings-title"
+          className="font-display text-lg font-semibold tracking-tight text-ink sm:text-xl"
+        >
+          House Standings
+        </h2>
+        <p className="mt-1 text-xs font-medium text-night-700/60">
+          Lifetime net winnings · play money
+        </p>
       </header>
       {children}
     </section>
@@ -51,10 +52,10 @@ function BoardShell({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The signature House Standings board — a vintage brass tote-board hung over the
- * floor. Ranks every player by lifetime net winnings (desc), marks the leader with
- * a crown + a lit brass row, and counts each figure up on load. The signed-in user's
- * row is ringed so they can find themselves at a glance.
+ * The House Standings board — a clean, ranked panel in the app's card style. Ranks
+ * every player by lifetime net winnings (desc), marks the leader with a crown + a
+ * soft gold row, and counts each figure up on load. The signed-in user's row is
+ * tinted in brand so they can find themselves at a glance.
  */
 export function HouseStandings({ topN = 20 }: { topN?: number }) {
   const { user } = useAuth()
@@ -84,7 +85,7 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
       <BoardShell>
         <ul className="mt-4 space-y-2" aria-hidden>
           {Array.from({ length: 5 }).map((_, i) => (
-            <li key={i} className="h-12 animate-pulse rounded-xl bg-casino-bone/5" />
+            <li key={i} className="h-12 animate-pulse rounded-xl bg-night-900/[0.04]" />
           ))}
         </ul>
         <p className="sr-only" aria-live="polite">
@@ -97,9 +98,9 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
   if (entries.length === 0) {
     return (
       <BoardShell>
-        <div className="mt-6 rounded-xl border border-dashed border-casino-brass/25 px-4 py-8 text-center">
-          <p className="text-sm font-semibold text-casino-bone/80">No standings posted yet.</p>
-          <p className="mt-1 text-xs text-casino-bone/55">
+        <div className="mt-5 rounded-xl border border-dashed border-night-900/15 px-4 py-8 text-center">
+          <p className="text-sm font-semibold text-ink">No standings posted yet.</p>
+          <p className="mt-1 text-xs text-night-700/60">
             Finish a session at any table to put your name on the board.
           </p>
         </div>
@@ -109,7 +110,7 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
 
   return (
     <BoardShell>
-      <ol className="mt-2">
+      <ol className="mt-3 space-y-1.5">
         {entries.map((entry, i) => {
           const rank = i + 1
           const isLeader = rank === 1
@@ -118,14 +119,18 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
             <li
               key={entry.uid}
               className={cx(
-                'tote-row flex items-center gap-3 px-1 py-3',
-                isLeader && 'tote-row--leader',
+                'flex items-center gap-3 rounded-xl px-3 py-2.5',
+                isLeader
+                  ? 'bg-gold-50 ring-1 ring-inset ring-gold-300/70'
+                  : isYou
+                    ? 'bg-brand-50/70 ring-1 ring-inset ring-brand-200/70'
+                    : 'bg-night-900/[0.02]',
               )}
             >
               <span
                 className={cx(
-                  'casino-numeral w-7 shrink-0 text-center text-lg',
-                  isLeader ? 'text-casino-brass-bright' : 'text-casino-bone/60',
+                  'w-6 shrink-0 text-center font-display text-sm font-bold tabular-nums',
+                  isLeader ? 'text-gold-700' : 'text-night-700/50',
                 )}
               >
                 {rank}
@@ -133,21 +138,14 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
               <div className="relative shrink-0">
                 <AnimalAvatar id={entry.profileAnimal} size="sm" />
                 {isLeader && (
-                  <CrownIcon className="absolute -right-1.5 -top-2 h-4 w-4 -rotate-12 text-casino-brass-bright" />
+                  <CrownIcon className="absolute -right-1.5 -top-2 h-4 w-4 -rotate-12 text-gold-500" />
                 )}
               </div>
-              <span
-                className={cx(
-                  'min-w-0 flex-1 truncate text-sm font-semibold',
-                  isYou ? 'text-casino-brass-bright' : 'text-casino-bone/90',
-                )}
-              >
-                {entry.username}
-                {isYou && (
-                  <span className="ml-2 rounded-full border border-casino-brass/40 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-casino-brass">
-                    You
-                  </span>
-                )}
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="min-w-0 truncate text-sm font-semibold text-ink">
+                  {entry.username}
+                </span>
+                {isYou && <Badge tone="brand">You</Badge>}
               </span>
               <NetFigure value={entry.netWinnings} />
             </li>

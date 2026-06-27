@@ -4,7 +4,6 @@ import { DUR, EASE } from '../../lib/motion'
 import {
   CardBack,
   CardFace,
-  Chip,
   ChipCount,
   EmptySlot,
   RevealCard,
@@ -51,18 +50,23 @@ export function Seat({
   const cardSize = compact ? 'sm' : 'md'
   const heroTone = seat.isHero ? 'gold' : 'blue'
 
-  // The resting border ring; the soft, pulsing halo is the <GlowRing> overlay.
-  const ring = winner ? 'ring-2 ring-gold-300' : active ? 'ring-2 ring-white/80' : 'ring-1 ring-white/10'
+  // The resting border ring; the soft, pulsing halo is the <GlowRing> overlay. The
+  // active seat is pushed hardest (bright gold ring) so whose-turn is unmistakable.
+  const ring = winner
+    ? 'ring-2 ring-gold-300'
+    : active
+      ? 'ring-2 ring-gold-300/90'
+      : 'ring-1 ring-white/10'
 
   // Opponents render narrow so several seats fit around the oval on a phone; the
   // hero seat (always at the bottom, with bigger cards) gets a little more room.
-  const sizeCls = compact ? 'w-[5.75rem] gap-0.5 px-2 py-1.5' : 'w-[7.25rem] gap-1 px-3 py-2'
+  const sizeCls = compact ? 'w-[5.75rem] gap-1 px-2 py-1.5' : 'w-[7.5rem] gap-1.5 px-3 py-2.5'
 
   return (
     <div
-      className={`relative flex flex-col items-center rounded-2xl bg-black/25 backdrop-blur-sm transition ${sizeCls} ${ring} ${
-        seat.folded ? 'opacity-50' : ''
-      }`}
+      className={`suited-seat relative flex flex-col items-center rounded-2xl backdrop-blur-sm transition ${sizeCls} ${ring} ${
+        seat.folded ? 'opacity-45 saturate-50' : ''
+      } ${active ? 'suited-seat--active' : ''}`}
     >
       {(winner || active) && <GlowRing tone={winner ? 'win' : 'active'} animate={animate} />}
 
@@ -74,12 +78,12 @@ export function Seat({
 
       {/* Name + position badge */}
       <div className="relative flex max-w-full items-center gap-1.5">
-        <span className="truncate text-xs font-bold text-white">
+        <span className="truncate text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
           {seat.isHero ? 'You' : seat.name}
         </span>
         {role && (
           <span
-            className={`rounded-full px-1.5 py-0.5 text-[0.55rem] font-black tracking-wide shadow ${ROLE_TONE[role]}`}
+            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.55rem] font-black tracking-wide shadow ${ROLE_TONE[role]}`}
           >
             {role}
           </span>
@@ -89,28 +93,22 @@ export function Seat({
       {/* Hole cards */}
       <div className="relative flex items-end gap-1">{renderHole(seat, revealHole, cardSize, animate)}</div>
 
-      {/* Stack */}
-      <div className="relative rounded-full bg-black/40 px-2 py-0.5 text-white">
+      {/* Stack — a chip-rail readout so the number always reads clearly on the felt */}
+      <div className="relative rounded-full bg-night-950/55 px-2.5 py-0.5 text-white ring-1 ring-inset ring-white/15">
         <ChipCount value={seat.stack} tone={heroTone} />
       </div>
 
-      {/* Status line: committed chips / folded / all-in / thinking */}
-      <div className="relative flex h-5 items-center gap-1.5 text-[0.65rem] font-semibold">
+      {/* Status line: folded / all-in / thinking (committed chips show on the felt) */}
+      <div className="relative flex h-4 items-center gap-1.5 text-[0.65rem] font-semibold">
         {seat.folded ? (
-          <span className="text-night-100">Folded</span>
+          <span className="uppercase tracking-wide text-night-100/90">Folded</span>
         ) : thinking ? (
           <ThinkingDots animate={animate} />
-        ) : seat.committed > 0 ? (
-          <span className="inline-flex items-center gap-1 text-gold-100">
-            <Chip size={12} tone="gold" />
-            <span className="tabular-nums">{seat.committed.toLocaleString()}</span>
-          </span>
-        ) : null}
-        {seat.allIn && !seat.folded && (
+        ) : seat.allIn ? (
           <span className="rounded bg-danger-500 px-1.5 py-0.5 text-[0.55rem] font-black uppercase text-white">
             All in
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   )

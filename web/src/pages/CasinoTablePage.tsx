@@ -155,7 +155,7 @@ export function CasinoTablePage() {
   )
 }
 
-/** A dark brass placard naming the table, its stakes, difficulty, and live chips. */
+/** A clean white placard naming the table, its stakes, difficulty, and live chips. */
 function TablePlacard({
   name,
   smallBlind,
@@ -173,19 +173,21 @@ function TablePlacard({
 }) {
   const aiOff = !isAIConfigured()
   return (
-    <div className="casino-floor flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 sm:px-6">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-night-900/10 bg-white px-4 py-3 shadow-card sm:px-5">
       <div className="flex flex-wrap items-center gap-3">
         <Link
           to="/casino"
-          className="rounded-lg border border-casino-brass/30 bg-black/30 px-3 py-1.5 text-xs font-semibold text-casino-bone/80 transition hover:border-casino-brass/60 hover:text-casino-brass-bright"
+          className="rounded-lg border border-night-900/12 bg-white px-3 py-1.5 text-xs font-semibold text-night-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700"
         >
           ← Cash out & leave
         </Link>
         <div>
-          <h1 className="casino-label text-sm sm:text-base">{name}</h1>
-          <p className="mt-0.5 text-[0.7rem] font-medium text-casino-bone/60">
+          <h1 className="font-display text-base font-bold leading-tight text-ink sm:text-lg">
+            {name}
+          </h1>
+          <p className="mt-0.5 text-[0.7rem] font-medium text-night-700/60">
             Blinds{' '}
-            <span className="casino-numeral text-xs">
+            <span className="tabular-nums text-night-800">
               {smallBlind}/{bigBlind}
             </span>{' '}
             · play money
@@ -193,22 +195,28 @@ function TablePlacard({
         </div>
         <DifficultyBadge tier={aiTier} />
         {aiOff && (
-          <span className="rounded-full border border-casino-brass/30 bg-black/30 px-2.5 py-1 text-[0.55rem] font-bold uppercase tracking-wide text-casino-brass/80">
+          <span className="rounded-full bg-night-900 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-gold-200">
             AI offline
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="casino-label text-[0.5rem] text-casino-bone/55">Bankroll</p>
-          <p className="casino-numeral text-xl">{Math.max(0, Math.round(bankroll)).toLocaleString()}</p>
-        </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-night-900 px-3 py-1.5 text-sm font-bold text-gold-300 shadow-sm">
+          <Chip size={16} tone="gold" />
+          <span className="tabular-nums">{Math.max(0, Math.round(bankroll)).toLocaleString()}</span>
+          <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/50">
+            bankroll
+          </span>
+        </span>
         {onTable != null && (
-          <div className="text-right">
-            <p className="casino-label text-[0.5rem] text-casino-bone/55">On the table</p>
-            <p className="casino-numeral text-xl text-casino-bone">{onTable.toLocaleString()}</p>
-          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-night-900/[0.06] px-3 py-1.5 text-sm font-bold text-ink ring-1 ring-inset ring-night-900/10">
+            <Chip size={16} tone="gold" />
+            <span className="tabular-nums">{onTable.toLocaleString()}</span>
+            <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-night-700/50">
+              on table
+            </span>
+          </span>
         )}
       </div>
     </div>

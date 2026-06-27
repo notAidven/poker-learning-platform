@@ -12,6 +12,7 @@ import type { CSSProperties } from 'react'
 import { motion } from 'motion/react'
 import { EASE } from '../../../../lib/motion'
 import { cardLabel, isRedSuit, parseCardId, type CardId, type CardSuit } from '../../../../types/lesson'
+import { breakIntoChips, denomVars, type ChipDenom } from './chipDenoms'
 
 export type CardSize = 'sm' | 'md' | 'lg'
 
@@ -319,22 +320,123 @@ const CHIP_TONES: Record<ChipTone, CSSProperties> = {
   green: { '--c-hi': '#bbf7d0', '--c-mid': '#22c55e', '--c-lo': '#15803d' } as CSSProperties,
 }
 
+/** A small, single chip glyph — the accent icon shown beside chip counts. */
 export function Chip({ size = 18, tone = 'gold' }: { size?: number; tone?: ChipTone }) {
   return (
     <span className="pck-chip" style={{ width: size, height: size, ...CHIP_TONES[tone] }} aria-hidden="true" />
   )
 }
 
-/** A small fanned pile of chips (used for the pot). */
-export function PotPile({ pop = false }: { pop?: boolean }) {
+// --- real, denominated poker chips ------------------------------------------
+//
+// The denomination data + breakdown helpers live in ./chipDenoms (so this file
+// only exports React components). The visuals below render those denominations as
+// a face-on disc (ChipDisc) and a stack of edge-on discs (ChipStack).
+
+/**
+ * A single, face-on poker chip — a domed disc with the classic ring of edge spots
+ * and an optional center denomination. Used as the cap of a stack and for chips in
+ * flight. `denom` picks the color; `label` shows the value (skipped when too small).
+ */
+export function ChipDisc({
+  size = 28,
+  denom = 100,
+  label = false,
+  className = '',
+}: {
+  size?: number
+  denom?: ChipDenom
+  label?: boolean
+  className?: string
+}) {
   return (
-    <span className={`relative inline-block h-7 w-16 ${pop ? 'pck-pot-pop' : ''}`} aria-hidden="true">
-      {[0, 1, 2, 3].map((i) => (
-        <span
-          key={i}
-          className="pck-chip absolute bottom-0"
-          style={{ left: i * 12, width: 28, height: 28, ...CHIP_TONES.gold }}
-        />
+    <span
+      className={`suited-chip ${className}`}
+      style={{ width: size, height: size, ...denomVars(denom) }}
+      aria-hidden="true"
+    >
+      {label && size >= 24 && (
+        <span className="suited-chip__val" style={{ fontSize: Math.round(size * 0.3) }}>
+          {denom >= 1000 ? `${denom / 1000}K` : denom}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/** Physical chips drawn per denomination column (the count label carries the exact total). */
+const MAX_PER_COLUMN = 6
+
+/** One denomination's stack: edge-on chips with a face-on cap, viewed at a slight tilt. */
+function ChipColumn({ denom, count, width }: { denom: ChipDenom; count: number; width: number }) {
+  const edge = Math.max(4, Math.round(width * 0.3))
+  const step = Math.max(3, Math.round(width * 0.22))
+  const capH = Math.max(6, Math.round(width * 0.46))
+  const n = Math.min(Math.max(1, count), MAX_PER_COLUMN)
+  const stackTop = (n - 1) * step
+  const height = stackTop + edge + capH * 0.5
+
+  return (
+    <span
+      className="suited-col"
+      style={{ width, height, ...denomVars(denom) }}
+      role="img"
+      aria-label={`${count} ${count === 1 ? 'chip' : 'chips'} of ${denom}`}
+    >
+      {Array.from({ length: n }).map((_, i) => (
+        <span key={i} className="suited-edge" style={{ bottom: i * step, height: edge, zIndex: i + 1 }} />
+      ))}
+      <span
+        className="suited-cap"
+        style={{ bottom: stackTop + edge - capH * 0.62, height: capH, zIndex: n + 2 }}
+      />
+    </span>
+  )
+}
+
+/**
+ * A real chip stack for an amount: the value broken into standard denominations,
+ * each rendered as its own little stack of colored, edge-striped discs (high → low,
+ * left → right). Decorative — callers show the exact number alongside; this is the
+ * felt's "physical" representation of the pot and players' committed bets.
+ */
+export function ChipStack({
+  amount,
+  size = 26,
+  className = '',
+}: {
+  amount: number
+  size?: number
+  className?: string
+}) {
+  const columns = breakIntoChips(amount)
+  if (columns.length === 0) return null
+  return (
+    <span className={`suited-stack ${className}`} style={{ gap: Math.round(size * 0.22) }} aria-hidden="true">
+      {columns.map(({ denom, count }) => (
+        <ChipColumn key={denom} denom={denom} count={count} width={size} />
+      ))}
+    </span>
+  )
+}
+
+/**
+ * A small fanned pile of mixed chips (used as the pot glyph in betting lessons).
+ * Decorative; the exact pot number is always shown beside it.
+ */
+export function PotPile({ pop = false }: { pop?: boolean }) {
+  const pile: { denom: ChipDenom; left: number; bottom: number }[] = [
+    { denom: 100, left: 0, bottom: 0 },
+    { denom: 25, left: 13, bottom: 0 },
+    { denom: 500, left: 6, bottom: 9 },
+    { denom: 5, left: 20, bottom: 6 },
+  ]
+  return (
+    <span className={`relative inline-block h-8 w-16 ${pop ? 'pck-pot-pop' : ''}`} aria-hidden="true">
+      {pile.map((p, i) => (
+        <span key={i} className="absolute" style={{ left: p.left, bottom: p.bottom }}>
+          <ChipDisc denom={p.denom} size={26} />
+        </span>
       ))}
     </span>
   )
@@ -379,6 +481,96 @@ export const CARD_KIT_STYLES = `
   background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.92) 0 13deg, transparent 13deg 36deg);
   -webkit-mask: radial-gradient(circle, transparent 58%, #000 59% 76%, transparent 77%);
   mask: radial-gradient(circle, transparent 58%, #000 59% 76%, transparent 77%);
+}
+
+/* --- Real, denominated chips (face-on disc, edge-on stacks) --- */
+.suited-chip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 34%, var(--hi) 0%, var(--face) 56%, var(--lo) 100%);
+  box-shadow:
+    inset 0 0 0 0.1em var(--rim),
+    inset 0 0.12em 0.16em rgba(255, 255, 255, 0.4),
+    inset 0 -0.13em 0.18em rgba(0, 0, 0, 0.34),
+    0 0.12em 0.26em rgba(7, 21, 15, 0.5);
+}
+.suited-chip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-conic-gradient(from 0deg, var(--spot) 0 12deg, transparent 12deg 45deg);
+  -webkit-mask: radial-gradient(circle, transparent 56%, #000 57% 80%, transparent 81%);
+  mask: radial-gradient(circle, transparent 56%, #000 57% 80%, transparent 81%);
+}
+.suited-chip__val {
+  position: relative;
+  z-index: 1;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+.suited-stack {
+  display: inline-flex;
+  align-items: flex-end;
+}
+.suited-col {
+  position: relative;
+  display: inline-block;
+}
+.suited-col::before {
+  /* soft contact shadow grounding the stack on the felt */
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: -0.18em;
+  height: 0.3em;
+  border-radius: 9999px;
+  background: rgba(7, 21, 15, 0.45);
+  filter: blur(2px);
+}
+.suited-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 9999px;
+  background: linear-gradient(to bottom, var(--hi) 0%, var(--face) 46%, var(--lo) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(7, 21, 15, 0.4);
+}
+.suited-edge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(90deg, var(--spot) 0 2px, transparent 2px 8px);
+  -webkit-mask: linear-gradient(to bottom, transparent 24%, #000 30% 70%, transparent 76%);
+  mask: linear-gradient(to bottom, transparent 24%, #000 30% 70%, transparent 76%);
+  opacity: 0.85;
+}
+.suited-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, var(--hi) 0%, var(--face) 58%, var(--lo) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 0 0 0.16em var(--rim),
+    0 1px 2px rgba(7, 21, 15, 0.45);
+}
+.suited-cap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-conic-gradient(from 0deg, var(--spot) 0 11deg, transparent 11deg 45deg);
+  -webkit-mask: radial-gradient(circle, transparent 52%, #000 54% 82%, transparent 84%);
+  mask: radial-gradient(circle, transparent 52%, #000 54% 82%, transparent 84%);
 }
 .pck-pot-pop { animation: pck-pop 0.5s cubic-bezier(0.34, 1.5, 0.64, 1); }
 @keyframes pck-pop {
