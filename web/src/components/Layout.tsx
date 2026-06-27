@@ -81,7 +81,10 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-ink">
-      <header className="sticky top-0 z-30 border-b border-night-900/10 bg-surface/85 backdrop-blur-md">
+      {/* z-40 sits the sticky nav in its own tier ABOVE all page content (the course
+          path's local stack tops out at z-40 but is isolated, see CoursePath) while
+          staying BELOW the z-50 overlay/modal tier. */}
+      <header className="sticky top-0 z-40 border-b border-night-900/10 bg-surface/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <Link
             to="/"

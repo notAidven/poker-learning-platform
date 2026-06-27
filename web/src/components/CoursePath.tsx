@@ -307,7 +307,11 @@ export function CoursePath({ lessons, completedIds = [] }: CoursePathProps) {
 
   return (
     <>
-      <div className="relative mx-auto w-full max-w-md rounded-[2rem] bg-white px-2 py-8 ring-1 ring-night-900/5 sm:max-w-lg sm:px-6">
+      {/* `isolate` makes this card its own stacking context so the path's internal
+          z-0..z-40 layering (connectors behind banner cards behind labels behind nodes)
+          stays LOCAL and can never paint over the sticky header. Without it those
+          z-indexes resolve in the root stacking context and overlap the nav on scroll. */}
+      <div className="relative isolate mx-auto w-full max-w-md rounded-[2rem] bg-white px-2 py-8 ring-1 ring-night-900/5 sm:max-w-lg sm:px-6">
         <div ref={trackRef} className="relative mx-auto w-full" style={{ height: totalHeight }}>
           {/* Soft tinted band behind each section's banner + rows */}
           {sectionLayouts.map((section) => (
