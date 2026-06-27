@@ -8,6 +8,7 @@
 import type { LessonXpBreakdown } from '../gamification'
 import {
   XP_BASE_LESSON,
+  computeReplayXp,
   computeStreakAfterCompletion,
   didStreakIncrease,
   getCalendarDayCAT,
@@ -30,6 +31,8 @@ export type InMemoryUser = {
 /** The persisted progress doc: the lesson stats plus the completion/award flags + session. */
 type ProgressDoc = LessonStats & {
   xpAwarded?: boolean
+  /** How many replays of this item have already been rewarded (drives diminishing replay XP). */
+  replayCount?: number
   session?: LessonProgressPayload['session']
 }
 
@@ -48,6 +51,7 @@ function extractStats(doc: ProgressDoc): LessonStats {
     pendingProblemAttempts: doc.pendingProblemAttempts ?? null,
     pendingProblemStepIds: doc.pendingProblemStepIds ?? null,
     lastLessonXpBreakdown: doc.lastLessonXpBreakdown ?? null,
+    testedOut: Boolean(doc.testedOut),
   }
 }
 
@@ -131,27 +135,34 @@ export class InMemoryProgressBackend implements ProgressBackend {
     xpBreakdown: LessonXpBreakdown | null,
     stats: LessonStats,
   ): Promise<LessonCompletionAward | null> {
-    const xpAmount = xpBreakdown?.total ?? 0
     const today = this.today()
     const docs = this.docsFor(uid)
 
     const progressData = docs.get(lessonId) ?? null
+    // A non-null breakdown is a first-completion attempt; null is a replay (see ProgressBackend).
+    const isFirstAttempt = xpBreakdown != null
+    const firstXp = xpBreakdown?.total ?? 0
+    const priorReplays = progressData?.replayCount ?? 0
     const alreadyAwarded =
       progressData != null && (progressData.xpAwarded === true || progressData.completed === true)
     const user = this.users.get(uid)
     const userExists = user != null
-    const willAward = userExists && !alreadyAwarded && xpAmount > 0
+
+    const willAwardFirst = userExists && isFirstAttempt && !alreadyAwarded && firstXp > 0
+    const willAwardReplay = userExists && !isFirstAttempt && alreadyAwarded
+    const xpToAdd = willAwardFirst ? firstXp : willAwardReplay ? computeReplayXp(priorReplays) : 0
+    const nextReplayCount = willAwardReplay ? priorReplays + 1 : priorReplays
 
     const existing = docs.get(lessonId) ?? ({} as ProgressDoc)
     const next: ProgressDoc = { ...existing, ...stats, completed: true }
     delete next.session
-    if (alreadyAwarded || willAward) next.xpAwarded = true
+    if (alreadyAwarded || willAwardFirst) next.xpAwarded = true
+    next.replayCount = nextReplayCount
     docs.set(lessonId, next)
 
     if (!user) return null
 
     const previousLevel = user.level
-    const xpToAdd = willAward ? xpAmount : 0
     const newTotalXp = user.totalXp + xpToAdd
     const newLevel = levelFromTotalXp(newTotalXp)
     const streakIncreased = didStreakIncrease(user.streak, user.lastActivityDate, today)

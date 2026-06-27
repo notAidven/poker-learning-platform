@@ -3,44 +3,64 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { useProgressStore } from '../../lib/progress/ProgressContext'
 import type { LessonCompletionAward } from '../../lib/progress/types'
-import { isSkillCheckPassing, type LessonXpBreakdown } from '../../lib/gamification'
+import { gatePassMark, isGatePassing, type LessonXpBreakdown } from '../../lib/gamification'
 import { buildRewardModel, type RewardModel } from '../../lib/reward'
 import { DUR, EASE } from '../../lib/motion'
 import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
 import { useAuth } from '../../contexts/AuthContext'
-import type { SkillCheckDefinition } from '../../types/skillCheck'
+import type { SectionId } from '../../data/lessons'
+import type { SectionGateDefinition } from '../../data/sectionGates'
 import { SkillCheckStepView } from './SkillCheckStepView'
 import { RewardCelebration } from '../gamification/RewardCelebration'
 import { CheckIcon, RetryIcon, StarIcon } from '../icons'
 import { Button, buttonVariants } from '../ui/Button'
 
-type SkillCheckPlayerProps = {
-  skillCheck: SkillCheckDefinition
-  lessonTitle: string
+type SectionGatePlayerProps = {
+  gate: SectionGateDefinition
+  sectionTitle: string
   /**
-   * Reports whether the learner is actively answering questions (vs. sitting on
-   * a result screen). Drives the page-level exit guard so the result screens'
-   * navigation buttons (incl. free retries) don't trip a "leave?" prompt.
+   * `'test-out'` when the learner is skipping the section's lessons (so a fail sends
+   * them to the lessons); `'gate'` when they reached the gate after the lessons (so a
+   * fail offers a review + retake). Drives only the result-screen copy + the link.
    */
+  mode: 'test-out' | 'gate'
+  /** First lesson of the section, for the "do the lessons" link after a failed test-out. */
+  firstLessonId: string
+  /** Reports active answering (vs. a result screen) for the page-level exit guard. */
   onActiveChange?: (active: boolean) => void
 }
 
-export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: SkillCheckPlayerProps) {
+/**
+ * Section Gate player — mirrors `SkillCheckPlayer` (interactive questions, no hints,
+ * one pass screen + a retryable fail screen) but grades the whole section: it passes
+ * at ~70% and, on a pass, completes the section via `store.saveGateResult` (awarding
+ * the gate / test-out XP, or small replay XP on a re-pass). A failed test-out leaves
+ * everything untouched, so the section's lessons stay available and the gate retryable.
+ */
+export function SectionGatePlayer({
+  gate,
+  sectionTitle,
+  mode,
+  firstLessonId,
+  onActiveChange,
+}: SectionGatePlayerProps) {
   const store = useProgressStore()
   const { profile } = useAuth()
   const reduced = usePrefersReducedMotion()
-  const total = skillCheck.questions.length
+  const total = gate.questions.length
+  const passMark = gatePassMark(total)
+  const sectionId: SectionId = gate.sectionId
+
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answered, setAnswered] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
   const [finished, setFinished] = useState(false)
   const [passed, setPassed] = useState(false)
   const [reward, setReward] = useState<RewardModel | null>(null)
-  // Bumped on each retake to force a fresh mount of the interaction widgets
-  // (they lock after a single submit), so a retry starts from a clean slate.
+  // Bumped on each retake to force a fresh mount of the interaction widgets.
   const [attemptKey, setAttemptKey] = useState(0)
 
-  const question = skillCheck.questions[questionIndex]
+  const question = gate.questions[questionIndex]
   const isLast = questionIndex >= total - 1
 
   useEffect(() => {
@@ -57,19 +77,14 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
 
     if (isLast) {
       const finalCorrect = correctCount
-      const didPass = isSkillCheckPassing(finalCorrect, total)
-      // Only a passing score completes the lesson + awards XP + unlocks the next
-      // lesson. A failing score leaves the lesson un-completed so the learner can
-      // retake the skill check directly (P1 #3).
+      const didPass = isGatePassing(finalCorrect, total)
+      // Only a passing score completes the section. A failing score changes nothing —
+      // the lessons stay available and the gate stays retryable.
       if (didPass) {
-        // Snapshot the pre-completion profile so the celebration meter knows where
-        // it started (the profile only refreshes after the award lands).
         const prevTotalXp = profile?.totalXp ?? 0
         const prevStreakStored = profile?.streak ?? 0
         const prevLastActivityDate = profile?.lastActivityDate ?? null
-        const result = store.saveSkillCheckResult(skillCheck.lessonId, finalCorrect, total)
-        // Prefer the authoritative Firestore award (streak/level), but never block
-        // the celebration on it: fall back to local math for guests / slow writes.
+        const result = store.saveGateResult(sectionId, finalCorrect, total)
         void (async () => {
           const award = await Promise.race([
             result.award,
@@ -77,8 +92,8 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
               setTimeout(() => resolve(null), 1200)
             }),
           ])
-          // First completion uses the full XP breakdown; a retake of an already-completed
-          // lesson now shows the small replay XP the backend granted (previously 0).
+          // First pass uses the authored gate/test-out XP; a re-pass shows the small
+          // replay XP the backend granted (so practice is still visibly rewarded).
           const breakdown: LessonXpBreakdown | null =
             result.xpBreakdown ??
             (award && award.xpAwarded > 0
@@ -126,26 +141,30 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
             <div className="flex justify-center" aria-hidden>
               <RetryIcon className="h-12 w-12 text-danger-500" />
             </div>
-            <h2 className="mt-3 text-2xl font-bold text-ink">Not quite yet</h2>
+            <h2 className="mt-3 text-2xl font-bold text-ink">Gate not cleared</h2>
             <p className="mt-2 text-sm text-night-700">
               You scored{' '}
               <span className="font-bold text-danger-700">
                 {correctCount}/{total}
               </span>{' '}
-              ({percent}%). You need at least <span className="font-semibold">2 of 3</span> correct
-              to pass the {lessonTitle} skill check.
+              ({percent}%). You need at least{' '}
+              <span className="font-semibold">
+                {passMark} of {total}
+              </span>{' '}
+              to clear the {sectionTitle} gate.
             </p>
             <p className="mt-3 rounded-2xl bg-white/80 px-4 py-3 text-sm text-night-700">
-              Your lesson progress is saved. Retake the skill check whenever you're ready. No need
-              to redo the lesson.
+              {mode === 'test-out'
+                ? 'No problem — work through the section\u2019s lessons to build it up, then the gate will be waiting whenever you\u2019re ready.'
+                : 'Give the section another look, then retake the gate. There\u2019s no penalty for a retry.'}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button onClick={handleRetake}>Retake skill check</Button>
+              <Button onClick={handleRetake}>Retake gate</Button>
               <Link
-                to={`/lesson/${skillCheck.lessonId}`}
+                to={mode === 'test-out' ? `/lesson/${firstLessonId}` : '/course'}
                 className={buttonVariants({ variant: 'secondary' })}
               >
-                Review lesson
+                {mode === 'test-out' ? 'Start the lessons' : 'Back to course path'}
               </Link>
             </div>
           </div>
@@ -163,13 +182,13 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
               <CheckIcon className="h-12 w-12 text-success-600" strokeWidth={2.5} />
             )}
           </div>
-          <h2 className="mt-3 text-2xl font-bold text-ink">Skill check complete</h2>
+          <h2 className="mt-3 text-2xl font-bold text-ink">Section complete</h2>
           <p className="mt-2 text-sm text-night-700">
             You scored{' '}
             <span className="font-bold text-success-700">
               {correctCount}/{total}
             </span>{' '}
-            ({percent}%) on the {lessonTitle} skill check.
+            ({percent}%) on the {sectionTitle} gate. The next section is unlocked.
           </p>
           {reward && (
             <div className="mt-4">
@@ -179,12 +198,6 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link to="/course" className={buttonVariants({ variant: 'primary' })}>
               Back to course path
-            </Link>
-            <Link
-              to={`/lesson/${skillCheck.lessonId}`}
-              className={buttonVariants({ variant: 'secondary' })}
-            >
-              Review lesson
             </Link>
           </div>
         </div>
@@ -221,9 +234,7 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
 
       <div className="mt-6 flex justify-end">
         {answered && (
-          <Button onClick={handleContinue}>
-            {isLast ? 'Finish skill check' : 'Next question'}
-          </Button>
+          <Button onClick={handleContinue}>{isLast ? 'Finish gate' : 'Next question'}</Button>
         )}
       </div>
     </div>

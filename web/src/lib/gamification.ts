@@ -7,6 +7,84 @@ export const XP_MAX_BONUS = 50
 /** Each extra submit beyond the first per problem reduces bonus by this amount. */
 export const XP_BONUS_PENALTY_PER_EXTRA_ATTEMPT = 10
 
+// ---------------------------------------------------------------------------
+// Section gates + test-out + replay XP (Section Gates feature).
+//
+// The XP story, smallest → largest, so the reward always tracks the effort:
+//   • Replay (re-doing a completed lesson / re-taking a passed gate): a tiny,
+//     decaying-but-floored amount — practice is rewarded, farming is not.
+//   • Test-out (skipping a section's lessons by passing its gate cold): a
+//     reduced flat amount PER lesson skipped — far less than actually doing them.
+//   • Doing the lessons: full per-lesson XP (100 + up to 50), unchanged, PLUS a
+//     one-time mastery bonus for passing the section gate (`XP_GATE_PASS`).
+// First-completion XP is still granted exactly once (see the backend's
+// `xpAwarded`/`completed` idempotency guard); replay XP is a separate, additive
+// reward that never re-grants the first-completion amount.
+// ---------------------------------------------------------------------------
+
+/** One-time mastery bonus for passing a section gate after doing the lessons. */
+export const XP_GATE_PASS = 75
+
+/** Reduced XP granted per lesson skipped when a section is cleared via test-out. */
+export const XP_TESTOUT_PER_LESSON = 20
+
+/** First replay's XP (the largest replay award); each further replay decays from here. */
+export const XP_REPLAY_BASE = 20
+
+/** Replays never drop below this floor (so any practice is still worth a little). */
+export const XP_REPLAY_MIN = 5
+
+/** Each successive replay multiplies the award by this factor (diminishing returns). */
+export const XP_REPLAY_DECAY = 0.5
+
+/**
+ * A section gate passes at ~70% (PM-tunable). Like skill checks, no hints; unlike
+ * them the bar is a touch higher because a gate covers the whole section. With the
+ * authored gate sizes this means: Foundations 3/4, Playing a Hand 5/6, The Math 6/8.
+ */
+export const GATE_PASS_RATIO = 0.7
+
+/** True when a section-gate score clears the ~70% bar. */
+export function isGatePassing(correct: number, total: number): boolean {
+  if (total <= 0) return true
+  // Small epsilon so an exact 70% (e.g. 7/10) reliably clears the threshold.
+  return correct / total >= GATE_PASS_RATIO - 1e-9
+}
+
+/** Smallest integer correct-count that passes a gate of `total` questions (for UI copy). */
+export function gatePassMark(total: number): number {
+  for (let correct = 0; correct <= total; correct += 1) {
+    if (isGatePassing(correct, total)) return correct
+  }
+  return total
+}
+
+/**
+ * XP for clearing a section via test-out: a reduced flat amount for each lesson the
+ * learner skipped, e.g. 2 skipped lessons → 40 XP. Deliberately far below the
+ * 100–150 XP each of those lessons would have paid out, so test-out is a shortcut
+ * with a real XP cost, not a free ride.
+ */
+export function computeTestOutXp(skippedLessonCount: number): number {
+  return Math.max(0, Math.round(skippedLessonCount)) * XP_TESTOUT_PER_LESSON
+}
+
+/**
+ * Replay XP for repeating an already-completed lesson or re-taking an already-passed
+ * gate (previously always 0). `priorReplays` is the number of replays ALREADY
+ * rewarded for this item (0 for the first replay):
+ *
+ *   award = max(XP_REPLAY_MIN, round(XP_REPLAY_BASE × XP_REPLAY_DECAY^priorReplays))
+ *
+ * So the sequence is 20, 10, 5, 5, 5, … — diminishing returns floored at 5. The
+ * tiny, bounded amount (plus the once-per-day streak credit) rewards genuine
+ * practice while making XP farming pointless.
+ */
+export function computeReplayXp(priorReplays: number): number {
+  const decayed = Math.round(XP_REPLAY_BASE * Math.pow(XP_REPLAY_DECAY, Math.max(0, priorReplays)))
+  return Math.max(XP_REPLAY_MIN, decayed)
+}
+
 export type LessonXpBreakdown = {
   base: number
   bonus: number

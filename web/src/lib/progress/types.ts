@@ -18,6 +18,14 @@ export type LessonStats = {
   pendingProblemStepIds: string[] | null
   /** XP breakdown from the most recent first-time completion. */
   lastLessonXpBreakdown: LessonXpBreakdownStored | null
+  /**
+   * True when this item was completed via "test out" rather than worked through:
+   *  - on a LESSON doc: the lesson was auto-completed because the learner tested out
+   *    of its section (so it counts for the lesson-based casino gates, but was skipped);
+   *  - on a GATE doc (`gate-<sectionId>`): the section was cleared cold via test-out
+   *    rather than after doing the lessons. Drives the "Tested out" path badge.
+   */
+  testedOut: boolean
 }
 
 export const defaultLessonStats = (): LessonStats => ({
@@ -30,6 +38,7 @@ export const defaultLessonStats = (): LessonStats => ({
   pendingProblemAttempts: null,
   pendingProblemStepIds: null,
   lastLessonXpBreakdown: null,
+  testedOut: false,
 })
 
 export type LessonSession = {
@@ -81,9 +90,16 @@ export interface ProgressBackend {
   /** Persist one lesson's stats + session (a stale/empty session is dropped under merge). */
   writeLesson(uid: string, lessonId: string, payload: LessonProgressPayload): Promise<void>
   /**
-   * Atomically record a completion and award XP exactly once. Idempotency is anchored
-   * on the persisted `xpAwarded`/`completed` flags, not in-memory state; the streak
-   * advances once per CAT day for any qualifying pass (incl. retakes), without re-awarding.
+   * Atomically record a completion (of a lesson OR a `gate-<sectionId>` doc) and award
+   * XP. The `xpBreakdown` argument distinguishes the two intents:
+   *  - NON-NULL → a first-completion attempt: award `xpBreakdown.total` IF the doc has
+   *    not already been awarded (idempotency anchored on the persisted `xpAwarded`/
+   *    `completed` flags, not in-memory state), else award 0. This makes double-taps
+   *    and stale multi-device first-completions safe (XP granted exactly once).
+   *  - NULL → a REPLAY of an already-completed item: award a small, decaying
+   *    `computeReplayXp(priorReplays)` amount and bump the persisted replay counter.
+   * Either way the streak advances at most once per CAT day. First-completion XP is
+   * never re-granted; replay XP is purely additive.
    */
   completeLesson(
     uid: string,

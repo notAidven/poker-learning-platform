@@ -6,6 +6,13 @@
 import { lessons } from '../../data/lessons'
 import { hasLessonContent } from '../../data/lessonContent'
 import { hasSkillCheck } from '../../data/skillCheckContent'
+import {
+  GATED_SECTIONS,
+  gateId,
+  isGatePassed,
+  priorGatedSection,
+  sectionLessonIds,
+} from '../sectionGates'
 import { defaultLessonStats, type LessonStats } from './types'
 
 export type StatsByLesson = Record<string, LessonStats>
@@ -22,30 +29,63 @@ export function getCompletedIds(statsByLesson: StatsByLesson): string[] {
 }
 
 /**
- * Sequential-unlock check shared by Home, the course path, and the route guards.
- * Lesson 1 is always open; lesson N requires lesson N-1 completed. Unknown lesson
- * ids return `true` so the page's own "not found" view can handle them.
+ * Unlock check shared by Home, the course path, and the route guards. WITHIN a section
+ * the original sequential rule holds (lesson N needs lesson N-1 complete). At a section
+ * BOUNDARY the new gate rule applies: the FIRST lesson of a section is locked until the
+ * PRIOR section's gate is passed (its id appears in `completedIds`, since a passed gate
+ * is a completed `gate-<sectionId>` doc — including a tested-out section). The very first
+ * section (Foundations) is always open. AI tables keep their own casino-gate prerequisite,
+ * and unknown ids return `true` so the page's own "not found" view can handle them.
  */
 export function isLessonUnlocked(lessonId: string, completedIds: string[]): boolean {
   const index = lessons.findIndex((l) => l.id === lessonId)
-  if (index <= 0) return true
-  return completedIds.includes(lessons[index - 1].id)
+  if (index < 0) return true
+  if (index === 0) return true
+
+  const lesson = lessons[index]
+
+  // AI tables are gated by casinoProgress (isTableUnlocked), not the lesson sequence —
+  // preserve the prior position-based behavior for them.
+  if (lesson.kind === 'ai-table') {
+    return completedIds.includes(lessons[index - 1].id)
+  }
+
+  const sectionLessons = sectionLessonIds(lesson.section)
+  const posInSection = sectionLessons.indexOf(lesson.id)
+
+  // First lesson of its section → gated behind the prior section's gate.
+  if (posInSection <= 0) {
+    const prior = priorGatedSection(lesson.section)
+    if (!prior) return true
+    return completedIds.includes(gateId(prior))
+  }
+
+  // Otherwise the previous lesson in the SAME section must be complete (sequential).
+  return completedIds.includes(sectionLessons[posInSection - 1])
 }
 
 /**
- * Where "continue learning" should land: skip completed lessons; if a lesson body is
- * finished but its skill check is still pending, route to the skill check, else the
- * lesson, else the course path once everything is done.
+ * Where "continue learning" should land. Walk the gated sections in order: route to the
+ * first unfinished lesson (or its pending skill check); once a section's lessons are all
+ * done, route to its gate if it is not yet passed; then on to the next section, finally
+ * the course path once every section gate is cleared.
  */
 export function getNextLessonPath(completedIds: string[], statsByLesson: StatsByLesson): string {
-  for (const lesson of lessons) {
-    if (completedIds.includes(lesson.id) || !hasLessonContent(lesson.id)) continue
+  for (const sectionId of GATED_SECTIONS) {
+    for (const lessonId of sectionLessonIds(sectionId)) {
+      if (completedIds.includes(lessonId) || !hasLessonContent(lessonId)) continue
 
-    const stats = getLessonStats(statsByLesson, lesson.id)
-    if (stats.lessonFinished && !stats.completed && hasSkillCheck(lesson.id)) {
-      return `/lesson/${lesson.id}/skill-check`
+      const stats = getLessonStats(statsByLesson, lessonId)
+      if (stats.lessonFinished && !stats.completed && hasSkillCheck(lessonId)) {
+        return `/lesson/${lessonId}/skill-check`
+      }
+      return `/lesson/${lessonId}`
     }
-    return `/lesson/${lesson.id}`
+
+    // Every lesson in this section is complete — the gate is the next stop until passed.
+    if (!isGatePassed(statsByLesson, sectionId)) {
+      return `/gate/${sectionId}`
+    }
   }
   return '/course'
 }

@@ -54,27 +54,102 @@ function testNextLessonPath() {
   record('4-logic', true, 'getNextLessonPath unlocks lesson 2 after lesson 1 complete')
 }
 
-// P1 #5: sequential unlock (mirrors isLessonUnlocked in lib/lessonProgress.ts).
-// Now a 9-lesson path: a Preflop lesson sits in Playing a Hand, between Betting
-// Basics ('4') and the Math section, so it unlocks after '4' and gates '5'.
-function testSequentialUnlock() {
-  const lessons = ['1', '2', '3', '4', 'preflop', '5', '6', '7', '8'].map((id) => ({ id }))
+// Section structure + gates mirror (data/lessons.ts + lib/sectionGates.ts). Each
+// gated section's lessons run in order, then a synthetic `gate-<section>` checkpoint.
+const SECTION_LESSONS = {
+  foundations: ['1', '2'],
+  playing: ['3', '4', 'preflop'],
+  math: ['5', '6', '7', '8'],
+}
+const GATED_SECTIONS = ['foundations', 'playing', 'math']
+const gateId = (s) => `gate-${s}`
+const priorGatedSection = (s) => {
+  const i = GATED_SECTIONS.indexOf(s)
+  return i <= 0 ? null : GATED_SECTIONS[i - 1]
+}
+const sectionOf = (id) => GATED_SECTIONS.find((s) => SECTION_LESSONS[s].includes(id)) ?? null
 
+// P1 #5 + Section Gates: within a section the sequential rule holds (lesson N needs
+// N-1); the FIRST lesson of a section is gated behind the PRIOR section's gate (a
+// passed `gate-<section>` doc appears in completedIds). Mirrors isLessonUnlocked.
+function testSequentialUnlock() {
   function isLessonUnlocked(lessonId, completedIds) {
-    const index = lessons.findIndex((l) => l.id === lessonId)
-    if (index <= 0) return true // lesson 1 always open; unknown id handled by page
-    return completedIds.includes(lessons[index - 1].id)
+    const section = sectionOf(lessonId)
+    if (!section) return true // unknown / casino id → page or casino gate handles it
+    const arr = SECTION_LESSONS[section]
+    const pos = arr.indexOf(lessonId)
+    if (pos <= 0) {
+      const prior = priorGatedSection(section)
+      return prior ? completedIds.includes(gateId(prior)) : true
+    }
+    return completedIds.includes(arr[pos - 1])
   }
 
   assert.equal(isLessonUnlocked('1', []), true) // lesson 1 always unlocked
-  assert.equal(isLessonUnlocked('preflop', ['1', '2', '3']), false) // L4 not done → Preflop locked
-  assert.equal(isLessonUnlocked('preflop', ['1', '2', '3', '4']), true) // L4 done → Preflop opens
-  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4']), false) // Preflop not done → L5 locked
-  assert.equal(isLessonUnlocked('5', ['1', '2', '3', '4', 'preflop']), true) // Preflop done → Math opens
-  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', 'preflop', '5', '6']), false) // L7 not done
-  assert.equal(isLessonUnlocked('8', ['1', '2', '3', '4', 'preflop', '5', '6', '7']), true) // L7 done → L8
+  // Within-section sequential is preserved.
+  assert.equal(isLessonUnlocked('preflop', ['1', '2', 'gate-foundations', '3']), false) // L4 not done
+  assert.equal(isLessonUnlocked('preflop', ['1', '2', 'gate-foundations', '3', '4']), true) // L4 done
+  // Section boundary: Playing a Hand's first lesson needs the Foundations GATE, not just L2.
+  assert.equal(isLessonUnlocked('3', ['1', '2']), false) // lessons done, gate NOT passed → locked
+  assert.equal(isLessonUnlocked('3', ['1', '2', 'gate-foundations']), true) // gate passed → opens
+  // The Math's first lesson needs the Playing a Hand gate.
+  const playingDone = ['1', '2', 'gate-foundations', '3', '4', 'preflop']
+  assert.equal(isLessonUnlocked('5', playingDone), false) // playing gate NOT passed → locked
+  assert.equal(isLessonUnlocked('5', [...playingDone, 'gate-playing']), true) // passed → opens
   assert.equal(isLessonUnlocked('99', []), true) // unknown id → page shows "not found"
-  record('5-logic', true, 'isLessonUnlocked gates each of the 9 lessons behind the previous one')
+  record(
+    '5-logic',
+    true,
+    'isLessonUnlocked keeps within-section sequencing and gates each section behind the prior gate',
+  )
+}
+
+// Section Gates progression + test-out coherence (lib/sectionGates.ts + ProgressStore
+// .saveGateResult): a section completes iff its gate is passed; passing it cold
+// (test-out) marks the section's lessons complete, so the EXISTING lesson-based casino
+// gate (Foundations + Playing a Hand lessons) is satisfied with no edits to casinoProgress.
+function testSectionGateProgression() {
+  const isSectionUnlocked = (s, completed) => {
+    const prior = priorGatedSection(s)
+    return prior ? completed.includes(gateId(prior)) : true
+  }
+  const isSectionComplete = (s, completed) => completed.includes(gateId(s))
+
+  // Unlock chain: Foundations open; later sections need the prior gate.
+  assert.equal(isSectionUnlocked('foundations', []), true)
+  assert.equal(isSectionUnlocked('playing', []), false)
+  assert.equal(isSectionUnlocked('playing', ['gate-foundations']), true)
+  assert.equal(isSectionUnlocked('math', ['gate-foundations']), false)
+  assert.equal(isSectionUnlocked('math', ['gate-foundations', 'gate-playing']), true)
+
+  // A section is complete exactly when its gate is passed.
+  assert.equal(isSectionComplete('foundations', []), false)
+  assert.equal(isSectionComplete('foundations', ['gate-foundations']), true)
+
+  // Test-out marks the skipped lessons complete (+ the gate). Mirrors saveGateResult.
+  const testOut = (completed, s) => [...completed, ...SECTION_LESSONS[s], gateId(s)]
+
+  // Downstream casino coherence: areGuidedPlayLessonsComplete checks every Foundations
+  // + Playing a Hand lesson. After testing out both sections those lessons are complete.
+  const GUIDED = new Set(['foundations', 'playing'])
+  const guidedPlayComplete = (done) =>
+    GATED_SECTIONS.filter((s) => GUIDED.has(s)).every((s) =>
+      SECTION_LESSONS[s].every((id) => done.includes(id)),
+    )
+
+  let completed = []
+  assert.equal(guidedPlayComplete(completed), false)
+  completed = testOut(completed, 'foundations')
+  assert.equal(isSectionUnlocked('playing', completed), true) // foundations gate now unlocks playing
+  completed = testOut(completed, 'playing')
+  assert.equal(guidedPlayComplete(completed), true) // casino Room 1 lesson gate is now satisfied
+  assert.equal(isSectionUnlocked('math', completed), true)
+
+  record(
+    'section-gates',
+    true,
+    'Section completes on gate pass; test-out marks lessons complete so the casino lesson gate stays coherent',
+  )
 }
 
 // New structure (mirrors data/lessons.ts): 9 lessons across 3 contiguous sections.
@@ -454,6 +529,7 @@ function testAuthLoadNeverHangs() {
 testExitPreservesSession()
 testNextLessonPath()
 testSequentialUnlock()
+testSectionGateProgression()
 testSectionStructure()
 testCasinoRooms()
 testSkillCheckThreshold()

@@ -51,9 +51,12 @@ export type LessonMeta = {
    * Path-node kind. Omitted/`'lesson'` is a normal interactive lesson (XP + skill
    * check). `'ai-table'` is a Phase 2 casino table: it navigates to `/table/:id`,
    * unlocks via its `TableConfig.prereqId`, and is kept OUT of the lesson XP /
-   * completion math (see CoursePage / HomePage).
+   * completion math (see CoursePage / HomePage). `'gate'` is a Section Gate node
+   * (a per-section mastery quiz): it is NOT a member of the `lessons` array — gate
+   * nodes are synthesized for the path by `lib/sectionGates.buildCoursePathNodes`,
+   * so the lesson-completion math never counts them.
    */
-  kind?: 'lesson' | 'ai-table'
+  kind?: 'lesson' | 'ai-table' | 'gate'
 }
 
 export const lessons: LessonMeta[] = [
