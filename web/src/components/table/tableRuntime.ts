@@ -47,6 +47,7 @@ import {
 import { decideWithLLM, type LLMOpponentContext, type OppDecision } from '../../lib/ai/llmOpponent'
 import type { CoachContext, DeepCoachContext } from '../../lib/ai/coach'
 import { analyzeSpot, type HintContext, type SpotAnalysis } from '../../lib/poker/hints'
+import { gradeDrillDecision, type DrillReason, type DrillVerdict } from '../../lib/poker/decisionDrill'
 import type { TableConfig, TableFeature } from '../../data/tables'
 import type { CasinoTableConfig } from '../../data/casinoTables'
 import type { SeatRole } from './Seat'
@@ -82,6 +83,14 @@ export type TableRuntimeConfig = {
   aiTier?: CasinoAiTier
   /** Whether opponents may emit (light) AI table-talk flavor. Defaults to on. */
   tableTalk?: boolean
+  /**
+   * Room 1 ONLY: turn the coached table into a graded Decision Drill — every hero
+   * decision is graded, a clear mistake is nudged + must be re-thought, and the
+   * session tracks first-try accuracy + modest XP. Off everywhere else (Room 2 and
+   * the Casino Floor stay free play), so it is set solely by `toRuntimeConfig` for
+   * the coached room and is never enabled for the casino runtime.
+   */
+  drill?: boolean
 }
 
 /** Derive the runtime config (decision source + support mode) from a `TableConfig`. */
@@ -94,6 +103,8 @@ export function toRuntimeConfig(table: TableConfig): TableRuntimeConfig {
     opponentSource: coached ? 'rule' : 'llm',
     tier: table.tier,
     support: coached ? 'coach' : 'hints',
+    // The graded Decision Drill rides on the coached room (Room 1) only.
+    drill: coached,
     opponents: table.opponents,
     smallBlind: table.smallBlind,
     bigBlind: table.bigBlind,
@@ -691,6 +702,83 @@ export function composeCoachReaction(
     default:
       return 'Nice. Keep weighing your hand strength against the price before each move.'
   }
+}
+
+// ---------------------------------------------------------------------------
+// Graded Decision Drill (Room 1 only) — grade the hero's chosen action, then
+// either SUPPORT it (sound → take the action) or NUDGE it (clear mistake → the
+// action is not applied and the hero re-thinks). Pure + AI-free: it reads the spot
+// with `analyzeSpot` and the Tier-3 rule recommendation with `decideAI`, then
+// defers the lenient accept/flag decision to the pure grader in `decisionDrill`.
+// ---------------------------------------------------------------------------
+
+export type HeroDecisionGrade = {
+  verdict: DrillVerdict
+  reason: DrillReason
+  /**
+   * The coach line to show: a brief, supportive "why it's right" for a sound move
+   * (reusing the existing rule-based reaction voice), or a hint nudge ("why it's
+   * not best", never the answer) for a clear mistake.
+   */
+  message: string
+}
+
+/**
+ * Grade the action the hero just chose on the coached table. `state` is the
+ * pre-action hand (the hero's turn); `applied` is their chosen action (+ size).
+ * Returns a sound/mistake verdict plus the coach message. A non-gradeable spot
+ * (no hero / not their turn) is treated as sound so the move simply applies.
+ */
+export function gradeHeroDecision(
+  state: HandState,
+  heroIndex: number,
+  applied: AppliedAction,
+): HeroDecisionGrade {
+  const seat = state.seats[heroIndex]
+  if (!seat || !seat.holeCards || state.toActIndex !== heroIndex) {
+    return { verdict: 'sound', reason: 'sound', message: '' }
+  }
+
+  const analysis = analyzeSpot(buildHintContext(state, heroIndex))
+  const rec = decideAI(buildAIDecisionInput(state, heroIndex, 3))
+  const bounds = legalActions(state).find((a) => a.action === applied.action)
+
+  const grade = gradeDrillDecision(
+    { action: applied.action, amount: applied.amount },
+    {
+      analysis,
+      recommended: rec.action,
+      toCall: toCallFor(state, heroIndex),
+      pot: state.pot,
+      currentBet: state.currentBet,
+      sizingMin: bounds?.min,
+      sizingMax: bounds?.max,
+    },
+  )
+
+  const message =
+    grade.verdict === 'mistake'
+      ? grade.nudge
+      : composeCoachReaction(applied.action, rec.action, analysis)
+
+  return { verdict: grade.verdict, reason: grade.reason, message }
+}
+
+/**
+ * Opaque per-spot signature for the drill session reducer: stable while the hero
+ * re-thinks the SAME spot (the hand does not change until a sound action applies)
+ * and different once the action moves on. `handIndex` namespaces it across hands.
+ */
+export function drillSpotSignature(handIndex: number, state: HandState, heroIndex: number): string {
+  return [
+    handIndex,
+    state.phase,
+    state.toActIndex ?? 'x',
+    state.currentBet,
+    state.pot,
+    state.board.length,
+    state.seats[heroIndex]?.committed ?? 0,
+  ].join(':')
 }
 
 // ---------------------------------------------------------------------------

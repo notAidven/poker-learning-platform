@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
   GATE_PASS_RATIO,
+  XP_DRILL_AFTER_RETHINK,
+  XP_DRILL_FIRST_TRY,
+  XP_DRILL_SESSION_CAP,
   XP_GATE_PASS,
   XP_REPLAY_BASE,
   XP_REPLAY_MIN,
   XP_TESTOUT_PER_LESSON,
+  accumulateDrillXp,
   computeReplayXp,
   computeTestOutXp,
+  drillAccuracyPct,
+  drillDecisionXp,
   gatePassMark,
   isGatePassing,
 } from './gamification'
@@ -72,5 +78,33 @@ describe('gamification — replay XP (diminishing returns, floored)', () => {
 
   it('a single replay is tiny next to a first completion (100–150 XP)', () => {
     expect(computeReplayXp(0)).toBeLessThan(100)
+  })
+})
+
+describe('gamification — coached decision drill XP (modest, first-try earns more, capped)', () => {
+  it('rewards a first-try-correct decision more than one after a rethink', () => {
+    expect(drillDecisionXp(true)).toBe(XP_DRILL_FIRST_TRY)
+    expect(drillDecisionXp(false)).toBe(XP_DRILL_AFTER_RETHINK)
+    expect(XP_DRILL_FIRST_TRY).toBeGreaterThan(XP_DRILL_AFTER_RETHINK)
+  })
+
+  it('is modest next to a lesson completion (100–150 XP)', () => {
+    expect(XP_DRILL_FIRST_TRY).toBeLessThan(20)
+    expect(XP_DRILL_SESSION_CAP).toBeLessThan(100)
+  })
+
+  it('accumulates per decision but never exceeds the session cap (anti-farm)', () => {
+    let xp = 0
+    for (let i = 0; i < 100; i += 1) xp = accumulateDrillXp(xp, true)
+    expect(xp).toBe(XP_DRILL_SESSION_CAP)
+    // A single step also respects the ceiling.
+    expect(accumulateDrillXp(XP_DRILL_SESSION_CAP, true)).toBe(XP_DRILL_SESSION_CAP)
+  })
+
+  it('computes best-on-first-try accuracy as a rounded percent', () => {
+    expect(drillAccuracyPct(0, 0)).toBe(0) // no decisions yet
+    expect(drillAccuracyPct(3, 4)).toBe(75)
+    expect(drillAccuracyPct(2, 3)).toBe(67)
+    expect(drillAccuracyPct(5, 5)).toBe(100)
   })
 })

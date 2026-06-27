@@ -29,6 +29,25 @@ type CoachPanelProps = {
    * an in-the-moment "good call" is never the last word on a hand the hero lost.
    */
   resultReflection?: string | null
+  /**
+   * DECISION DRILL (Room 1 only): a rethink hint shown WHILE it is still the hero's
+   * turn, after a clear mistake whose action was not applied. It explains why the
+   * play is not best (a hint, not the answer) so the hero can choose again.
+   */
+  nudge?: string | null
+  /**
+   * DECISION DRILL (Room 1 only): the live session readout — best-on-first-try
+   * accuracy and the modest XP earned. Null/omitted on non-drill tables.
+   */
+  sessionStats?: DrillSessionStats | null
+}
+
+/** Live drill session readout shown atop the coach panel (Room 1 only). */
+export type DrillSessionStats = {
+  decisions: number
+  firstTryCorrect: number
+  accuracyPct: number
+  xp: number
 }
 
 type Tip = { text: string; source: 'ai' | 'fallback' }
@@ -38,7 +57,7 @@ const MIN_MESSAGE_MS = 2400
 /** How many recent coach messages the scrollable feed keeps. */
 const MAX_FEED = 4
 
-type FeedTone = 'ai' | 'rule' | 'reaction' | 'recap'
+type FeedTone = 'ai' | 'rule' | 'reaction' | 'recap' | 'nudge'
 type FeedMsg = { id: string; label: string; tone: FeedTone; text: string }
 
 const TONE_CLASS: Record<FeedTone, string> = {
@@ -46,6 +65,7 @@ const TONE_CLASS: Record<FeedTone, string> = {
   rule: 'bg-night-100 text-night-700',
   reaction: 'bg-success-100 text-success-700',
   recap: 'bg-brand-100 text-brand-800',
+  nudge: 'bg-gold-100 text-gold-800',
 }
 
 /**
@@ -144,6 +164,8 @@ export function CoachPanel({
   active,
   reaction,
   resultReflection,
+  nudge,
+  sessionStats,
 }: CoachPanelProps) {
   const [entry, setEntry] = useState<{ key: string; tip: Tip } | null>(null)
   const [nonce, setNonce] = useState(0)
@@ -171,7 +193,11 @@ export function CoachPanel({
   const showReaction = !active && !showRecap && Boolean(reaction)
 
   let incoming: FeedMsg | null = null
-  if (showRecap && resultReflection) {
+  if (nudge) {
+    // Highest priority: a clear mistake whose action was NOT applied. It shows while
+    // it is still the hero's turn so they can re-think and choose again.
+    incoming = { id: `nudge:${nudge}`, label: 'Rethink', tone: 'nudge', text: nudge }
+  } else if (showRecap && resultReflection) {
     incoming = { id: `recap:${resultReflection}`, label: 'Hand recap', tone: 'recap', text: resultReflection }
   } else if (showReaction && reaction) {
     incoming = { id: `react:${reaction}`, label: 'Your move', tone: 'reaction', text: reaction }
@@ -209,9 +235,16 @@ export function CoachPanel({
       <div className="mb-2 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-bold text-brand-800">
           <span aria-hidden>&clubs;</span> Coach
+          {sessionStats && (
+            <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide text-white">
+              Drill
+            </span>
+          )}
         </h3>
         {loading && <span className="text-[0.65rem] font-semibold text-night-400">reading the spot…</span>}
       </div>
+
+      {sessionStats && <DrillReadout stats={sessionStats} />}
 
       <CoachMessageFeed
         key={handKey}
@@ -239,6 +272,7 @@ export function CoachPanel({
         </button>
       </div>
 
+      {/* (drill readout rendered above the feed) */}
       {showDeep && (
         <div
           className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-brand-200 bg-white/70 p-3"
@@ -262,5 +296,34 @@ export function CoachPanel({
         </div>
       )}
     </section>
+  )
+}
+
+/**
+ * The live Decision Drill readout: session decision accuracy (best-on-first-try)
+ * and the modest XP earned so far. Shown only on the coached drill table.
+ */
+function DrillReadout({ stats }: { stats: DrillSessionStats }) {
+  const hasData = stats.decisions > 0
+  return (
+    <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-white/70 px-2.5 py-1.5 ring-1 ring-inset ring-brand-100">
+      <div className="leading-tight">
+        <p className="text-[0.6rem] font-bold uppercase tracking-wide text-brand-700/70">
+          Decision accuracy
+        </p>
+        <p className="text-sm font-bold tabular-nums text-ink">
+          {hasData ? `${stats.accuracyPct}%` : '—'}
+          <span className="ml-1.5 text-[0.65rem] font-semibold text-night-700/60">
+            {hasData ? `${stats.firstTryCorrect}/${stats.decisions} first try` : 'no decisions yet'}
+          </span>
+        </p>
+      </div>
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-bold tabular-nums text-gold-800"
+        title="Modest XP for good decisions this session — first-try choices earn more. Capped, so it cannot be farmed."
+      >
+        +{stats.xp} XP
+      </span>
+    </div>
   )
 }

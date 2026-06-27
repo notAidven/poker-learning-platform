@@ -103,11 +103,11 @@ export function FirstTableIntro({ support, onClose }: FirstTableIntroProps) {
 
           <section className="rounded-xl bg-brand-50/60 p-3 ring-1 ring-inset ring-brand-100">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-700/70">
-              {support === 'coach' ? 'Your coach' : 'Your hint bar'}
+              {support === 'coach' ? 'Your coach — a graded drill' : 'Your hint bar'}
             </h3>
             <p className="mt-1 text-sm text-night-700/85">
               {support === 'coach'
-                ? 'On your turn, the coach panel suggests a play and explains why, then reacts to the move you make. It always works, even with AI turned off.'
+                ? 'On your turn you pick an action (and a size) and the coach grades it. A sound play is supported and taken; a clear mistake gets a hint so you can rethink and choose again. Your decision accuracy is tracked as you go. It always works, even with AI turned off.'
                 : 'On your turn, the hint bar gives an always-on, rule-based read of the spot to guide your decision.'}
             </p>
           </section>

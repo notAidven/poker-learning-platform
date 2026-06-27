@@ -85,6 +85,43 @@ export function computeReplayXp(priorReplays: number): number {
   return Math.max(XP_REPLAY_MIN, decayed)
 }
 
+// ---------------------------------------------------------------------------
+// Coached Decision Drill (Room 1 only) — XP for graded in-the-moment decisions.
+//
+// The drill grades each hero decision and rewards a SOUND one, with a first-try
+// correct choice worth more than one made after a coach nudge + rethink. The
+// amounts are deliberately tiny and the per-session total is HARD-CAPPED, so the
+// reward tracks genuine good decisions without ever becoming a grind-for-XP loop
+// (the cap, plus the fact the tally is session-scoped, keeps it non-farmable).
+// Pure policy lives here alongside the rest of the XP rules and is unit-tested in
+// gamification.test.ts; the table only accumulates and surfaces these numbers.
+// ---------------------------------------------------------------------------
+
+/** XP for a decision graded sound on the FIRST try (no nudge needed). */
+export const XP_DRILL_FIRST_TRY = 6
+
+/** XP for a decision that became sound only AFTER a coach nudge + rethink. */
+export const XP_DRILL_AFTER_RETHINK = 2
+
+/** Hard ceiling on XP earned in a single drill session (anti-farm guard). */
+export const XP_DRILL_SESSION_CAP = 30
+
+/** XP a single sound decision is worth (first try earns more than a rethink). */
+export function drillDecisionXp(firstTry: boolean): number {
+  return firstTry ? XP_DRILL_FIRST_TRY : XP_DRILL_AFTER_RETHINK
+}
+
+/** Add a sound decision's XP to the running session total, clamped to the cap. */
+export function accumulateDrillXp(current: number, firstTry: boolean): number {
+  return Math.min(XP_DRILL_SESSION_CAP, Math.max(0, current) + drillDecisionXp(firstTry))
+}
+
+/** Session decision accuracy = best-on-first-try %, rounded (0 when no decisions yet). */
+export function drillAccuracyPct(firstTryCorrect: number, decisions: number): number {
+  if (decisions <= 0) return 0
+  return Math.round((firstTryCorrect / decisions) * 100)
+}
+
 export type LessonXpBreakdown = {
   base: number
   bonus: number

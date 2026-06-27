@@ -37,13 +37,21 @@ import {
   createInitialHand,
   createNextHand,
   decideOpponentAction,
+  drillSpotSignature,
   finalizeHand,
+  gradeHeroDecision,
   groupHandLog,
   roleFor,
   summarizeHand,
   type HandSummary,
   type TableRuntimeConfig,
 } from './tableRuntime'
+import {
+  initialDrillSession,
+  recordDrillResult,
+  type DrillSessionState,
+} from '../../lib/poker/decisionDrill'
+import { drillAccuracyPct } from '../../lib/gamification'
 
 /**
  * Table-only chrome: the wood/brass rail, the championship-green felt (warm center
@@ -247,6 +255,9 @@ export function PokerTable({
   const reduceMotion = usePrefersReducedMotion()
   const aiOff = useMemo(() => !isAIConfigured(), [])
   const isCasino = theme === 'casino'
+  // Room 1 only: the coached table runs as a graded Decision Drill. Never enabled
+  // for Room 2 (hints) or the Casino Floor, so those stay free play.
+  const drill = config.drill === true && config.support === 'coach'
 
   const [baseSeed] = useState(() => (hashString(config.tableId) ^ (Date.now() >>> 0)) >>> 0)
   const [hand, setHand] = useState<HandState>(() =>
@@ -256,6 +267,10 @@ export function PokerTable({
   const [talk, setTalk] = useState<Record<string, string>>({})
   // Room 1 only: a supportive, rule-based reaction to the hero's last move.
   const [reaction, setReaction] = useState<{ handIndex: number; text: string } | null>(null)
+  // Decision Drill (Room 1 only): per-session accuracy + XP, plus a pending rethink
+  // nudge keyed to the spot it belongs to (so it auto-clears once the spot moves on).
+  const [drillSession, setDrillSession] = useState<DrillSessionState>(initialDrillSession)
+  const [nudge, setNudge] = useState<{ sig: string; text: string } | null>(null)
   // A one-time "how this table works" intro, shown on the first casino entry only.
   const [showIntro, setShowIntro] = useState(() => !hasSeenFirstTableIntro())
 
@@ -430,26 +445,50 @@ export function PokerTable({
     return () => window.clearTimeout(t)
   }, [handOver, handIndex, hand, results, reduceMotion])
 
+  const applyHeroAction = useCallback((applied: AppliedAction) => {
+    setHand((cur) => {
+      if (cur.toActIndex == null || cur.phase === 'complete' || !cur.seats[cur.toActIndex].isHero) {
+        return cur
+      }
+      return finalizeHand(applyAction(cur, applied))
+    })
+  }, [])
+
   const heroAct = useCallback(
     (applied: AppliedAction) => {
-      // Coach (Room 1) reacts to the move using the PRE-action state. Pure + AI-free.
-      if (
-        config.support === 'coach' &&
-        heroIndex >= 0 &&
-        hand.toActIndex === heroIndex &&
-        hand.phase !== 'complete'
-      ) {
+      const onHeroTurn =
+        heroIndex >= 0 && hand.toActIndex === heroIndex && hand.phase !== 'complete'
+
+      // DECISION DRILL (Room 1): grade the choice BEFORE applying. A sound play is
+      // supported and taken; a clear mistake is nudged and NOT applied, so the hero
+      // re-thinks and chooses again. Pure + AI-free (rule read + Tier-3 rec).
+      if (drill && onHeroTurn) {
+        const grade = gradeHeroDecision(hand, heroIndex, applied)
+        const sig = drillSpotSignature(handIndex, hand, heroIndex)
+        setDrillSession((s) => recordDrillResult(s, sig, grade.verdict))
+
+        if (grade.verdict === 'mistake') {
+          // Hold the hero on this spot: surface the WHY hint, do not apply the action.
+          setNudge({ sig, text: grade.message })
+          return
+        }
+
+        // Sound: clear any rethink hint, show the supportive note, and take the action.
+        setNudge(null)
+        if (grade.message) setReaction({ handIndex, text: grade.message })
+        applyHeroAction(applied)
+        return
+      }
+
+      // Non-drill coached fallback (kept for safety; no current config uses it).
+      // Room 2 / Casino tables ('hints') simply apply the action — free play.
+      if (config.support === 'coach' && onHeroTurn) {
         const text = coachReactionFor(hand, heroIndex, applied.action)
         if (text) setReaction({ handIndex, text })
       }
-      setHand((cur) => {
-        if (cur.toActIndex == null || cur.phase === 'complete' || !cur.seats[cur.toActIndex].isHero) {
-          return cur
-        }
-        return finalizeHand(applyAction(cur, applied))
-      })
+      applyHeroAction(applied)
     },
-    [config.support, heroIndex, hand, handIndex],
+    [drill, config.support, heroIndex, hand, handIndex, applyHeroAction],
   )
 
   const startNextHand = useCallback(() => {
@@ -457,6 +496,7 @@ export function PokerTable({
     if (!next) return
     setTalk({})
     setReaction(null)
+    setNudge(null)
     setHandIndex((i) => i + 1)
     setHand(next)
   }, [hand, config])
@@ -496,6 +536,19 @@ export function PokerTable({
   const toActName = hand.toActIndex != null ? hand.seats[hand.toActIndex]?.name : undefined
   const logGroups = useMemo(() => groupHandLog(hand.log), [hand.log])
   const liveReaction = reaction?.handIndex === handIndex ? reaction.text : null
+  // Drill: the rethink hint shows only while it still applies to the current spot
+  // (the hero's turn, same signature), so it auto-hides once the action moves on.
+  const currentSpotSig =
+    drill && isHeroTurn && heroIndex >= 0 ? drillSpotSignature(handIndex, hand, heroIndex) : null
+  const liveNudge = nudge && currentSpotSig && nudge.sig === currentSpotSig ? nudge.text : null
+  const sessionStats = drill
+    ? {
+        decisions: drillSession.decisions,
+        firstTryCorrect: drillSession.firstTryCorrect,
+        accuracyPct: drillAccuracyPct(drillSession.firstTryCorrect, drillSession.decisions),
+        xp: drillSession.xp,
+      }
+    : null
   // Room 1: a result-aware recap derived from the finished (settled) hand. Pure and
   // deterministic, so it needs no state and works fully with AI off.
   const liveRecap = useMemo(
@@ -713,6 +766,8 @@ export function PokerTable({
               active={isHeroTurn}
               reaction={liveReaction}
               resultReflection={liveRecap}
+              nudge={liveNudge}
+              sessionStats={sessionStats}
             />
           ) : (
             <HintBar context={hintContext} active={isHeroTurn} />

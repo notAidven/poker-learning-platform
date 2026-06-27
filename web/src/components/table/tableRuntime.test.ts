@@ -33,7 +33,9 @@ import {
   createInitialHand,
   createNextHand,
   decideRuleAction,
+  drillSpotSignature,
   finalizeHand,
+  gradeHeroDecision,
   groupHandLog,
   liveOpponents,
   makeTier3Fallback,
@@ -41,11 +43,13 @@ import {
   readPassiveThenAggressive,
   roleFor,
   summarizeHand,
+  toCasinoRuntimeConfig,
   toRuntimeConfig,
   type HandResultRead,
   type TableRuntimeConfig,
 } from './tableRuntime'
 import type { SpotAnalysis } from '../../lib/poker/hints'
+import { casinoTables } from '../../data/casinoTables'
 
 const COACHED_CFG: TableRuntimeConfig = {
   tableId: 't',
@@ -422,6 +426,104 @@ describe('coach reaction (Room 1, rule-based, AI off)', () => {
         expect(text).not.toContain('\u2014')
       }
     }
+  })
+})
+
+describe('decision drill — gated to Room 1 (coached) only', () => {
+  it('toRuntimeConfig enables the drill on the coached room, not the AI room', () => {
+    const room1 = getTable('room-1')
+    const room2 = getTable('room-2')
+    expect(room1).toBeDefined()
+    expect(room2).toBeDefined()
+    const r1 = toRuntimeConfig(room1!)
+    const r2 = toRuntimeConfig(room2!)
+    expect(r1.drill).toBe(true)
+    expect(r1.support).toBe('coach')
+    expect(r2.drill).toBeFalsy()
+    expect(r2.support).toBe('hints')
+  })
+
+  it('toCasinoRuntimeConfig never enables the drill (Casino Floor stays free play)', () => {
+    expect(casinoTables.length).toBeGreaterThan(0)
+    for (const t of casinoTables) {
+      const cfg = toCasinoRuntimeConfig(t)
+      expect(cfg.drill).toBeFalsy()
+      expect(cfg.support).toBe('hints')
+    }
+  })
+})
+
+describe('decision drill — gradeHeroDecision (Room 1, rule-based, AI off)', () => {
+  // A river spot where the hero holds two pair (Aces and Kings) made with their own
+  // hole cards, facing a bet from the opponent. Built off a real dealt hand, then
+  // overridden so the spot is deterministic.
+  function strongRiverFacingBet(): HandState {
+    const base = createHand({
+      seats: [
+        { id: 'hero', name: 'You', isHero: true, stack: 500 },
+        { id: 'opp-0', name: 'Sticky Pete', isHero: false, stack: 500 },
+      ],
+      buttonIndex: 0,
+      smallBlind: 5,
+      bigBlind: 10,
+      seed: 7,
+    })
+    return {
+      ...base,
+      phase: 'river',
+      board: ['AS', 'KD', '7C', '2H', '9S'],
+      pot: 240,
+      currentBet: 80,
+      minRaise: 80,
+      streetRaiseCount: 1,
+      toActIndex: 0,
+      seats: base.seats.map((s, i) =>
+        i === 0
+          ? { ...s, holeCards: ['AH', 'KH'], committed: 0, stack: 500, folded: false, allIn: false, hasActed: false }
+          : { ...s, holeCards: ['QS', 'QD'], committed: 80, folded: false, allIn: false },
+      ),
+    }
+  }
+
+  it('flags folding a very strong made hand as a mistake (with a hint)', () => {
+    const grade = gradeHeroDecision(strongRiverFacingBet(), 0, { action: 'fold' })
+    expect(grade.verdict).toBe('mistake')
+    expect(grade.reason).toBe('fold-strong')
+    expect(grade.message.length).toBeGreaterThan(0)
+  })
+
+  it('supports continuing with the strong hand (a call is accepted, leniently)', () => {
+    const grade = gradeHeroDecision(strongRiverFacingBet(), 0, { action: 'call' })
+    expect(grade.verdict).toBe('sound')
+    expect(grade.message.length).toBeGreaterThan(0)
+  })
+
+  it('treats a non-gradeable spot (not the hero\u2019s turn) as sound', () => {
+    const state = strongRiverFacingBet()
+    const grade = gradeHeroDecision({ ...state, toActIndex: 1 }, 0, { action: 'fold' })
+    expect(grade.verdict).toBe('sound')
+  })
+})
+
+describe('drillSpotSignature', () => {
+  it('is stable across a rethink and changes once the spot moves on', () => {
+    const base = createHand({
+      seats: [
+        { id: 'hero', name: 'You', isHero: true, stack: 500 },
+        { id: 'opp-0', name: 'A', isHero: false, stack: 500 },
+      ],
+      buttonIndex: 0,
+      smallBlind: 5,
+      bigBlind: 10,
+      seed: 11,
+    })
+    const sig = drillSpotSignature(0, base, 0)
+    // Same hand + index ⇒ identical signature (a rethink does not change the state).
+    expect(drillSpotSignature(0, base, 0)).toBe(sig)
+    // A different pot (the spot moved on) ⇒ a different signature.
+    expect(drillSpotSignature(0, { ...base, pot: base.pot + 50 }, 0)).not.toBe(sig)
+    // A new hand index ⇒ a different signature (namespaced per hand).
+    expect(drillSpotSignature(1, base, 0)).not.toBe(sig)
   })
 })
 
