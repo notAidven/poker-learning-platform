@@ -39,6 +39,8 @@ import {
   groupHandLog,
   liveOpponents,
   makeTier3Fallback,
+  opponentActionDelayMs,
+  OPPONENT_PACING,
   positionFor,
   readPassiveThenAggressive,
   roleFor,
@@ -926,5 +928,36 @@ describe('hand log grouping', () => {
     expect(groups[1].cards).toBe('2H 7D KC')
     const result = groups.find((g) => g.label === 'Result')!
     expect(result.entries.some((e) => e.includes('wins 200'))).toBe(true)
+  })
+})
+
+// Opponent action pacing (presentation timing only). Pure + deterministic: the
+// delay before an AI action is applied depends only on whether the hero is still
+// in the hand and the reduced-motion preference — never on the decision itself.
+describe('opponentActionDelayMs (AI pacing)', () => {
+  it('gives a deliberate ~1s thinking beat while the hero is still in the hand', () => {
+    const d = opponentActionDelayMs({ heroInHand: true, reduceMotion: false })
+    expect(d).toBe(OPPONENT_PACING.heroIn)
+    // A natural "~1s" feel: between 900ms and 1.2s.
+    expect(d).toBeGreaterThanOrEqual(900)
+    expect(d).toBeLessThanOrEqual(1200)
+  })
+
+  it('keeps a shorter, but still functional, beat under reduced motion (hero in)', () => {
+    const reduced = opponentActionDelayMs({ heroInHand: true, reduceMotion: true })
+    expect(reduced).toBe(OPPONENT_PACING.heroInReduced)
+    // Still a real delay you can follow, just shorter than the full beat.
+    expect(reduced).toBeGreaterThan(0)
+    expect(reduced).toBeLessThan(opponentActionDelayMs({ heroInHand: true, reduceMotion: false }))
+  })
+
+  it('resolves AI-vs-AI quickly once the hero has folded (out of the hand)', () => {
+    const folded = opponentActionDelayMs({ heroInHand: false, reduceMotion: false })
+    expect(folded).toBe(OPPONENT_PACING.heroOut)
+    // Much snappier than the hero-in pacing so the user is not left waiting.
+    expect(folded).toBeLessThan(opponentActionDelayMs({ heroInHand: true, reduceMotion: false }))
+    expect(folded).toBeLessThan(opponentActionDelayMs({ heroInHand: true, reduceMotion: true }))
+    // Reduced motion does not slow down the out-of-hand resolution.
+    expect(opponentActionDelayMs({ heroInHand: false, reduceMotion: true })).toBe(folded)
   })
 })

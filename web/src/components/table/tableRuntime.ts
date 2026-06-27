@@ -215,6 +215,50 @@ export function safeAction(state: HandState): AppliedAction {
 }
 
 // ---------------------------------------------------------------------------
+// Opponent action pacing — PRESENTATION timing only (never touches decisions)
+// ---------------------------------------------------------------------------
+
+/** Inputs that decide how long to pace a single AI opponent action. */
+export type OpponentPacingInput = {
+  /** Is the hero still contesting the hand (dealt in and not folded)? */
+  heroInHand: boolean
+  /** The user's reduced-motion preference. */
+  reduceMotion: boolean
+}
+
+/**
+ * The opponent-action pacing constants (ms). Exported so the table effect and the
+ * unit tests share one source of truth. These are purely how long the UI WAITS
+ * before applying an already-decided action — they never change the decision.
+ */
+export const OPPONENT_PACING = {
+  /** Hero still in the hand → a deliberate ~1s "thinking" beat, so each opponent
+   *  action is followable one at a time. */
+  heroIn: 1000,
+  /** Hero still in, reduced motion → a shorter but still functional beat (enough to
+   *  follow the action without relying on animation). */
+  heroInReduced: 450,
+  /** Hero has folded (out of the hand) → snappy AI-vs-AI resolution so the user is
+   *  not left waiting on a hand they are not in. */
+  heroOut: 150,
+} as const
+
+/**
+ * How long to wait before APPLYING one AI opponent's action, so the table reads
+ * clearly. Pure + deterministic (unit-tested): it picks pacing only from whether
+ * the hero is still in the hand and the reduced-motion preference, and never
+ * affects which action the opponent takes (that is `decideOpponentAction`).
+ *
+ *  - Hero still in  → ~1s thinking beat (a shorter functional beat under reduced
+ *    motion) so opponents act one at a time and the user can follow along.
+ *  - Hero folded    → minimal delay so the remaining AI-vs-AI action resolves fast.
+ */
+export function opponentActionDelayMs({ heroInHand, reduceMotion }: OpponentPacingInput): number {
+  if (!heroInHand) return OPPONENT_PACING.heroOut
+  return reduceMotion ? OPPONENT_PACING.heroInReduced : OPPONENT_PACING.heroIn
+}
+
+// ---------------------------------------------------------------------------
 // Context builders
 // ---------------------------------------------------------------------------
 

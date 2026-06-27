@@ -41,6 +41,7 @@ import {
   finalizeHand,
   gradeHeroDecision,
   groupHandLog,
+  opponentActionDelayMs,
   roleFor,
   summarizeHand,
   type HandSummary,
@@ -415,13 +416,18 @@ export function PokerTable({
   )
 
   // --- Opponent auto-drive: schedule one decision per turn (setState only fires
-  //     asynchronously inside the timer, never synchronously in the effect body). ---
+  //     asynchronously inside the timer, never synchronously in the effect body).
+  //     PACING: while the hero is still in the hand, give each opponent a deliberate
+  //     ~1s "thinking" beat so the user can follow who does what; once the hero has
+  //     folded, resolve the remaining AI-vs-AI action quickly. Timing only — the
+  //     decision itself (decideOpponentAction) is unchanged. ---
   useEffect(() => {
     if (activeOppIndex == null) return
     const idx = activeOppIndex
     const seatId = hand.seats[idx].id
     let cancelled = false
-    const delayMs = reduceMotion ? 180 : 600
+    const heroInHand = hand.seats.some((s) => s.isHero && !s.folded)
+    const delayMs = opponentActionDelayMs({ heroInHand, reduceMotion })
 
     const timer = window.setTimeout(() => {
       void (async () => {
