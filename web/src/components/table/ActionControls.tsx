@@ -15,6 +15,11 @@ type ActionControlsProps = {
   disabled?: boolean
   /** Play the depleting turn-timer (false under reduced motion). */
   animate?: boolean
+  /**
+   * Show the cosmetic per-decision turn timer. Off in the coached room (Room 1), where
+   * there is deliberately no time pressure; on by default for the Casino / Room 2.
+   */
+  showTimer?: boolean
 }
 
 /** Cosmetic per-decision turn clock (seconds). Never auto-acts — it only paces the UI. */
@@ -40,6 +45,7 @@ export function ActionControls({
   onAct,
   disabled = false,
   animate = true,
+  showTimer = true,
 }: ActionControlsProps) {
   const legal = useMemo(() => legalActions(state), [state])
   const toCall = toCallFor(state, heroIndex)
@@ -78,8 +84,9 @@ export function ActionControls({
 
   return (
     <div className="suited-apron relative overflow-hidden rounded-2xl p-3 sm:p-3.5">
-      {/* Turn timer — a slim brass bar across the top that depletes each decision. */}
-      <TurnTimerBar key={spotKey} animate={animate && !disabled} />
+      {/* Turn timer — a slim brass bar across the top that depletes each decision.
+          Hidden in the coached room (Room 1) so there is no time pressure. */}
+      {showTimer && <TurnTimerBar key={spotKey} animate={animate && !disabled} />}
 
       {/* Top row: a clear, glanceable spot readout (helps the player track the pot). */}
       <div className="mb-2.5 flex items-center justify-between gap-3 text-[0.7rem] font-semibold">
