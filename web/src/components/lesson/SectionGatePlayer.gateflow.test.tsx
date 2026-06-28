@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { createElement, type ReactNode } from 'react'
 
-vi.mock('../../contexts/AuthContext', () => ({
+vi.mock('../../contexts/useAuth', () => ({
   useAuth: () => ({ profile: null }),
 }))
 
