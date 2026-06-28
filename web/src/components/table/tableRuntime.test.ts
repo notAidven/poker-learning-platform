@@ -509,6 +509,142 @@ describe('decision drill — gradeHeroDecision (Room 1, rule-based, AI off)', ()
   })
 })
 
+describe('decision drill — gradeHeroDecision end-to-end (preflop ranges + board texture)', () => {
+  // A heads-up preflop spot with the hero (seat 0) to act, built off a real dealt
+  // hand then overridden so the hole cards, stacks, and bet are deterministic.
+  function preflopSpot(
+    heroHole: [string, string],
+    o: {
+      heroStack: number
+      oppStack: number
+      heroCommitted: number
+      oppCommitted: number
+      pot: number
+      currentBet: number
+      oppActed?: boolean
+    },
+  ): HandState {
+    const base = createHand({
+      seats: [
+        { id: 'hero', name: 'You', isHero: true, stack: 500 },
+        { id: 'opp-0', name: 'Sticky Pete', isHero: false, stack: 500 },
+      ],
+      buttonIndex: 0,
+      smallBlind: 5,
+      bigBlind: 10,
+      seed: 7,
+    })
+    return {
+      ...base,
+      phase: 'preflop',
+      board: [],
+      pot: o.pot,
+      currentBet: o.currentBet,
+      minRaise: 10,
+      streetRaiseCount: o.oppActed ? 1 : 0,
+      toActIndex: 0,
+      seats: base.seats.map((s, i) =>
+        i === 0
+          ? {
+              ...s,
+              holeCards: heroHole,
+              stack: o.heroStack,
+              committed: o.heroCommitted,
+              totalCommitted: o.heroCommitted,
+              folded: false,
+              allIn: false,
+              hasActed: false,
+            }
+          : {
+              ...s,
+              holeCards: ['QS', 'QD'],
+              stack: o.oppStack,
+              committed: o.oppCommitted,
+              totalCommitted: o.oppCommitted,
+              folded: false,
+              allIn: false,
+              hasActed: o.oppActed ?? false,
+            },
+      ),
+    }
+  }
+
+  it('the reported bug: shoving T6 offsuit all-in preflop DEEP is a mistake', () => {
+    // 50bb effective; hero jams all 500 chips with 10-6 offsuit.
+    const state = preflopSpot(['10S', '6D'], {
+      heroStack: 495,
+      oppStack: 490,
+      heroCommitted: 5,
+      oppCommitted: 10,
+      pot: 15,
+      currentBet: 10,
+    })
+    const grade = gradeHeroDecision(state, 0, { action: 'raise', amount: 500 })
+    expect(grade.verdict).toBe('mistake')
+    expect(grade.reason).toBe('shove-weak')
+    expect(grade.message.length).toBeGreaterThan(0)
+  })
+
+  it('accepts a premium all-in preflop, even short-stacked (AA jam is sound)', () => {
+    const state = preflopSpot(['AS', 'AD'], {
+      heroStack: 95,
+      oppStack: 90,
+      heroCommitted: 5,
+      oppCommitted: 10,
+      pot: 15,
+      currentBet: 10,
+    })
+    const grade = gradeHeroDecision(state, 0, { action: 'raise', amount: 100 })
+    expect(grade.verdict).toBe('sound')
+  })
+
+  it('flags folding pocket Aces preflop (fold-premium)', () => {
+    const state = preflopSpot(['AS', 'AD'], {
+      heroStack: 495,
+      oppStack: 470,
+      heroCommitted: 5,
+      oppCommitted: 30,
+      pot: 35,
+      currentBet: 30,
+      oppActed: true,
+    })
+    const grade = gradeHeroDecision(state, 0, { action: 'fold' })
+    expect(grade.verdict).toBe('mistake')
+    expect(grade.reason).toBe('fold-premium')
+  })
+
+  it('flags c-betting pure air into a wet board, end-to-end', () => {
+    const base = createHand({
+      seats: [
+        { id: 'hero', name: 'You', isHero: true, stack: 500 },
+        { id: 'opp-0', name: 'Sticky Pete', isHero: false, stack: 500 },
+      ],
+      buttonIndex: 0,
+      smallBlind: 5,
+      bigBlind: 10,
+      seed: 7,
+    })
+    const state: HandState = {
+      ...base,
+      phase: 'flop',
+      board: ['9C', '8C', '7D'], // wet: connected + a flush draw
+      pot: 60,
+      currentBet: 0,
+      minRaise: 10,
+      streetRaiseCount: 0,
+      toActIndex: 0,
+      seats: base.seats.map((s, i) =>
+        i === 0
+          ? { ...s, holeCards: ['AS', 'KD'], committed: 0, stack: 400, folded: false, allIn: false, hasActed: false }
+          : { ...s, holeCards: ['QS', 'QH'], committed: 0, stack: 400, folded: false, allIn: false, hasActed: true },
+      ),
+    }
+    const grade = gradeHeroDecision(state, 0, { action: 'bet', amount: 45 })
+    expect(grade.verdict).toBe('mistake')
+    expect(grade.reason).toBe('bet-air-wet')
+  })
+})
+
 describe('drillSpotSignature', () => {
   it('is stable across a rethink and changes once the spot moves on', () => {
     const base = createHand({

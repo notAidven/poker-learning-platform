@@ -219,16 +219,39 @@ export function gradeHeroDecision(
   const rec = decideAI(buildAIDecisionInput(state, heroIndex, 3))
   const bounds = legalActions(state).find((a) => a.action === applied.action)
 
+  // Stack/commitment context for the grader: the effective stack (the most a single
+  // live opponent can put at risk against the hero) sets the stack depth and SPR, and
+  // the commit fraction tells a preflop shove / call-off from a normal-sized bet.
+  const toCall = toCallFor(state, heroIndex)
+  const heroTotal = seat.stack + seat.committed
+  let villainTotal = 0
+  state.seats.forEach((s, i) => {
+    if (i !== heroIndex && !s.folded) villainTotal = Math.max(villainTotal, s.stack + s.committed)
+  })
+  const effectiveStack = Math.max(1, Math.min(heroTotal, villainTotal || heroTotal))
+  const added =
+    applied.action === 'bet' || applied.action === 'raise'
+      ? Math.max(0, (applied.amount ?? 0) - seat.committed)
+      : applied.action === 'call'
+        ? toCall
+        : 0
+  const commitFraction = Math.min(seat.committed + added, effectiveStack) / effectiveStack
+
   const grade = gradeDrillDecision(
     { action: applied.action, amount: applied.amount },
     {
       analysis,
       recommended: rec.action,
-      toCall: toCallFor(state, heroIndex),
+      toCall,
       pot: state.pot,
       currentBet: state.currentBet,
       sizingMin: bounds?.min,
       sizingMax: bounds?.max,
+      hole: seat.holeCards ?? undefined,
+      board: state.board,
+      bb: state.bb,
+      effectiveStack,
+      commitFraction,
     },
   )
 
