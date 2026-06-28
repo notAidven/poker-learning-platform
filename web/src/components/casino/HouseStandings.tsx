@@ -19,7 +19,7 @@ function CrownIcon({ className }: { className?: string }) {
 function NetFigure({ value }: { value: number }) {
   const shown = useCountUp(value)
   const tone =
-    value > 0 ? 'text-success-600' : value < 0 ? 'text-danger-600' : 'text-night-700/60'
+    value > 0 ? 'text-success-600' : value < 0 ? 'text-danger-600' : 'text-night-700/80'
   const sign = value > 0 ? '+' : value < 0 ? '−' : ''
   return (
     <span className={cx('font-display text-lg font-bold tabular-nums sm:text-xl', tone)}>
@@ -42,7 +42,7 @@ function BoardShell({ children }: { children: React.ReactNode }) {
         >
           House Standings
         </h2>
-        <p className="mt-1 text-xs font-medium text-night-700/60">
+        <p className="mt-1 text-xs font-medium text-night-700/80">
           Lifetime net winnings · play money
         </p>
       </header>
@@ -100,7 +100,7 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
       <BoardShell>
         <div className="mt-5 rounded-xl border border-dashed border-night-900/15 px-4 py-8 text-center">
           <p className="text-sm font-semibold text-ink">No standings posted yet.</p>
-          <p className="mt-1 text-xs text-night-700/60">
+          <p className="mt-1 text-xs text-night-700/80">
             Finish a session at any table to put your name on the board.
           </p>
         </div>
@@ -130,7 +130,7 @@ export function HouseStandings({ topN = 20 }: { topN?: number }) {
               <span
                 className={cx(
                   'w-6 shrink-0 text-center font-display text-sm font-bold tabular-nums',
-                  isLeader ? 'text-gold-700' : 'text-night-700/50',
+                  isLeader ? 'text-gold-700' : 'text-night-700/80',
                 )}
               >
                 {rank}

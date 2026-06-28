@@ -185,7 +185,7 @@ function TablePlacard({
           <h1 className="font-display text-base font-bold leading-tight text-ink sm:text-lg">
             {name}
           </h1>
-          <p className="mt-0.5 text-[0.7rem] font-medium text-night-700/60">
+          <p className="mt-0.5 text-[0.7rem] font-medium text-night-700/80">
             Blinds{' '}
             <span className="tabular-nums text-night-800">
               {smallBlind}/{bigBlind}
@@ -202,18 +202,26 @@ function TablePlacard({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-night-900 px-3 py-1.5 text-sm font-bold text-gold-300 shadow-sm">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-night-900 px-3 py-1.5 text-sm font-bold text-gold-300 shadow-sm"
+          role="img"
+          aria-label={`Bankroll, ${Math.max(0, Math.round(bankroll)).toLocaleString()} chips`}
+        >
           <Chip size={16} tone="gold" />
-          <span className="tabular-nums">{Math.max(0, Math.round(bankroll)).toLocaleString()}</span>
-          <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/50">
+          <span className="tabular-nums" aria-hidden>{Math.max(0, Math.round(bankroll)).toLocaleString()}</span>
+          <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/70" aria-hidden>
             bankroll
           </span>
         </span>
         {onTable != null && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-night-900/[0.06] px-3 py-1.5 text-sm font-bold text-ink ring-1 ring-inset ring-night-900/10">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-night-900/[0.06] px-3 py-1.5 text-sm font-bold text-ink ring-1 ring-inset ring-night-900/10"
+            role="img"
+            aria-label={`On table, ${onTable.toLocaleString()} chips`}
+          >
             <Chip size={16} tone="gold" />
-            <span className="tabular-nums">{onTable.toLocaleString()}</span>
-            <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-night-700/50">
+            <span className="tabular-nums" aria-hidden>{onTable.toLocaleString()}</span>
+            <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-night-700/70" aria-hidden>
               on table
             </span>
           </span>
@@ -245,13 +253,13 @@ function BuyInPanel({
   return (
     <div className="mx-auto max-w-md py-4 text-center">
       <div className="rounded-2xl border border-night-900/10 bg-white p-6 shadow-card">
-        <p className="text-xs font-semibold uppercase tracking-wide text-night-700/50">Buy-in</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-night-700/80">Buy-in</p>
         <p className="mt-1 inline-flex items-center gap-2 text-3xl font-bold tabular-nums text-ink">
           <Chip size={22} tone="gold" />
           {buyIn.toLocaleString()}
         </p>
 
-        <p className="mt-4 text-sm text-night-700/70">
+        <p className="mt-4 text-sm text-night-700/85">
           Your bankroll:{' '}
           <span className="font-bold tabular-nums text-ink">{safeBankroll.toLocaleString()}</span>
         </p>
@@ -278,7 +286,7 @@ function BuyInPanel({
                 Rebuy {STARTING_BANKROLL.toLocaleString()} chips
               </button>
             ) : (
-              <p className="text-sm text-night-700/70">
+              <p className="text-sm text-night-700/85">
                 Grind up at a lower-stakes table to afford this seat.
               </p>
             )}

@@ -69,7 +69,7 @@ export function CasinoLobbyPage() {
           </Stagger>
 
           <div className="anim-deal rounded-2xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-5">
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/75">
               Your floor
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -105,7 +105,7 @@ export function CasinoLobbyPage() {
             <h2 className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
               Choose your table
             </h2>
-            <p className="mt-1 text-sm text-night-700/70">
+            <p className="mt-1 text-sm text-night-700/85">
               Buy in from your shared bankroll; cash out or bust and the result returns to it.
             </p>
           </div>
@@ -116,7 +116,7 @@ export function CasinoLobbyPage() {
             ))}
           </Stagger>
 
-          <p className="mt-4 text-xs leading-relaxed text-night-700/55">
+          <p className="mt-4 text-xs leading-relaxed text-night-700/75">
             Play money only — no real wagering. Grind up at the softer games to afford the
             high-limit Vault.
           </p>
@@ -174,7 +174,7 @@ function LockedFloor() {
       </NightPanel>
 
       <div className="rounded-2xl border border-night-900/10 bg-white p-5 shadow-card sm:p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-night-700/50">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-night-700/80">
           Earn your seat
         </h2>
         <ul className="mt-4 space-y-2.5">
@@ -199,7 +199,7 @@ function LockedFloor() {
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-ink">{gate.label}</span>
-                <span className="block text-xs text-night-700/60">
+                <span className="block text-xs text-night-700/80">
                   {gate.done ? 'Cleared' : gate.sub}
                 </span>
               </span>

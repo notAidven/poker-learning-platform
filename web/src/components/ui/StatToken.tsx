@@ -74,7 +74,7 @@ export function StatToken({
         </p>
         <p
           className={cx(
-            'font-semibold uppercase tracking-wide text-white/55',
+            'font-semibold uppercase tracking-wide text-white/75',
             col ? 'mt-1 text-[10px]' : 'text-[11px]',
           )}
         >

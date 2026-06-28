@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { motion } from 'motion/react'
 import type { SeatState } from '../../lib/poker/handEngine'
 import { DUR, EASE } from '../../lib/motion'
+import { cardLabel } from '../../types/lesson'
 import {
   CardBack,
   CardFace,
@@ -81,6 +82,35 @@ export function Seat({
   const plateState = winner ? 'suited-plate--win' : active ? 'suited-plate--active' : ''
   const plateSize = compact ? 'gap-1.5 px-2 py-1' : 'gap-2 px-2.5 py-1.5'
 
+  // The stack readout previously inherited the dark page ink colour, leaving it
+  // near-invisible on the dark plate. Voice it in a warm cream (brass for the hero)
+  // so the chip count reads clearly — well above WCAG AA on the deep-green plate.
+  const stackToneClass = seat.isHero ? 'text-gold-100' : 'text-white'
+
+  // --- Screen-reader labels -------------------------------------------------
+  const displayName = seat.isHero ? 'You' : seat.name
+  const roleLabel =
+    role === 'BTN' ? 'dealer button' : role === 'SB' ? 'small blind' : role === 'BB' ? 'big blind' : null
+  const statusLabel = seat.folded ? 'folded' : seat.allIn ? 'all in' : null
+  // Name, stack, position and static status as one spoken line for the nameplate.
+  const seatLabel = [
+    displayName,
+    `${seat.stack.toLocaleString()} chips`,
+    roleLabel,
+    statusLabel,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  // A non-leaking hole-card label: opponents' hidden cards are never named (only the
+  // hero's, and any opponent's at showdown), matching what is visually revealed.
+  const holeLabel = !seat.holeCards
+    ? `${displayName}: no cards`
+    : seat.isHero
+      ? `Your hand: ${seat.holeCards.map(cardLabel).join(' and ')}`
+      : revealHole
+        ? `${seat.name}'s hand: ${seat.holeCards.map(cardLabel).join(' and ')}`
+        : `${seat.name}: two face-down cards`
+
   return (
     <div
       className={`relative flex flex-col items-center ${compact ? 'w-[6.75rem]' : 'w-[9rem]'} ${
@@ -93,8 +123,10 @@ export function Seat({
         </div>
       )}
 
-      {/* Hole cards — held above the nameplate, dipping slightly behind its top edge. */}
-      <div className="relative z-10 flex items-end justify-center gap-1">
+      {/* Hole cards — held above the nameplate, dipping slightly behind its top edge.
+          Grouped as one labelled image so a screen reader announces the hand (or that
+          the cards are face-down) instead of reading each decorative card slot. */}
+      <div className="relative z-10 flex items-end justify-center gap-1" role="img" aria-label={holeLabel}>
         {renderHole(seat, revealHole, cardSize, animate)}
       </div>
 
@@ -123,20 +155,26 @@ export function Seat({
         </div>
 
         <div className="relative min-w-0 flex-1 leading-tight">
-          <div className="truncate text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+          <div
+            className="truncate text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]"
+            aria-hidden
+          >
             {seat.isHero ? 'You' : seat.name}
           </div>
-          <div className="mt-0.5">
+          <div className={`mt-0.5 ${stackToneClass}`} aria-hidden>
             <ChipCount value={seat.stack} tone={heroTone} />
           </div>
+          <span className="sr-only">{seatLabel}</span>
         </div>
 
         {/* Dealer button / blind indicator — pinned to the plate's lower-right corner. */}
         {role && <PositionChip role={role} />}
       </div>
 
-      {/* Status line: folded / all-in / thinking (committed chips show on the felt). */}
-      <div className="relative mt-0.5 flex h-4 items-center gap-1.5 text-[0.65rem] font-semibold">
+      {/* Status line: folded / all-in / thinking (committed chips show on the felt).
+          Hidden from screen readers — folded/all-in ride the nameplate label and the
+          active turn is announced by the table's live region. */}
+      <div className="relative mt-0.5 flex h-4 items-center gap-1.5 text-[0.65rem] font-semibold" aria-hidden>
         {seat.folded ? (
           <span className="rounded bg-night-950/70 px-1.5 py-0.5 uppercase tracking-wide text-night-100/90">
             Folded
@@ -160,6 +198,7 @@ function PositionChip({ role }: { role: 'BTN' | 'SB' | 'BB' }) {
       <span
         className="absolute -bottom-2 -right-1.5 z-10 grid h-6 w-6 place-items-center rounded-full bg-white text-[0.6rem] font-black text-night-900 shadow-[0_2px_4px_rgba(0,0,0,0.45)] ring-1 ring-black/10"
         title="Dealer button"
+        aria-hidden
       >
         D
       </span>
@@ -173,6 +212,7 @@ function PositionChip({ role }: { role: 'BTN' | 'SB' | 'BB' }) {
     <span
       className={`absolute -bottom-2 -right-1.5 z-10 grid h-6 w-6 place-items-center rounded-full text-[0.5rem] font-black uppercase shadow-[0_2px_4px_rgba(0,0,0,0.45)] ring-1 ${tone}`}
       title={role === 'SB' ? 'Small blind' : 'Big blind'}
+      aria-hidden
     >
       {role}
     </span>

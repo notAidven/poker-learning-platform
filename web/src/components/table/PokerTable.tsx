@@ -17,6 +17,7 @@ import {
   EmptySlot,
 } from '../lesson/interactions/cards/PlayingCardKit'
 import { topDenom, type ChipDenom } from '../lesson/interactions/cards/chipDenoms'
+import { cardLabel } from '../../types/lesson'
 import { Seat } from './Seat'
 import { ActionControls } from './ActionControls'
 import { CoachPanel } from './CoachPanel'
@@ -221,6 +222,18 @@ const TABLE_STYLES = `
 .suited-bet-slider:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+/* Keyboard focus on the dark felt: the action buttons already paint a crisp,
+   high-contrast tone ring (success / brass / rose with a night-950 offset) via
+   :focus-visible. The app-wide oxblood outline is unlayered, so it would otherwise
+   stack on top and muddy that ring against the green; we replace it here with a
+   transparent outline (kept for Windows High-Contrast forced-colors) so the bright
+   tone ring is the clean, on-brand focus indicator. The bet slider keeps its own
+   brass outline (see .suited-bet-slider:focus-visible). */
+.suited-apron button:focus-visible,
+.suited-apron [role="button"]:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 `
 
@@ -669,6 +682,40 @@ export function PokerTable({
 
   const toActName = hand.toActIndex != null ? hand.seats[hand.toActIndex]?.name : undefined
   const logGroups = useMemo(() => groupHandLog(hand.log), [hand.log])
+
+  // The current street, as one readable label — reused by the visible signage, the
+  // board's screen-reader label, and the turn announcer below.
+  const streetLabel = handOver
+    ? results?.reachedShowdown
+      ? 'Showdown'
+      : 'Hand complete'
+    : hand.board.length >= 5
+      ? 'River'
+      : hand.board.length === 4
+        ? 'Turn'
+        : hand.board.length === 3
+          ? 'Flop'
+          : 'Pre-flop'
+  // A concise, non-leaking description of the community board for screen readers
+  // (only the already-dealt cards are named; the rest are announced as "to come").
+  const dealtBoard = hand.board.filter(Boolean)
+  const boardLabel =
+    dealtBoard.length === 0
+      ? 'Community cards: none dealt yet'
+      : `Community cards: ${dealtBoard.map(cardLabel).join(', ')}${
+          dealtBoard.length < 5 ? `, ${5 - dealtBoard.length} more to come` : ''
+        }`
+  // Whose turn it is, voiced for screen readers via a polite live region so the
+  // active turn is perceivable without seeing the brass ring.
+  const turnAnnouncement = handOver
+    ? results?.reachedShowdown
+      ? 'Hand complete — showdown.'
+      : 'Hand complete.'
+    : isHeroTurn
+      ? 'Your turn to act.'
+      : toActName
+        ? `${toActName} is acting.`
+        : 'Dealing the next hand.'
   const liveReaction = reaction?.handIndex === handIndex ? reaction.text : null
   // Drill: the rethink hint shows only while it still applies to the current spot
   // (the hero's turn, same signature), so it auto-hides once the action moves on.
@@ -701,6 +748,12 @@ export function PokerTable({
       <CardKitStyles />
       <style>{TABLE_STYLES}</style>
 
+      {/* Whose-turn announcer — voiced for screen readers so the active turn is
+          perceivable without seeing the brass ring (visual cue stays unchanged). */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {turnAnnouncement}
+      </p>
+
       {showIntro && (
         <FirstTableIntro support={config.support} onClose={() => setShowIntro(false)} />
       )}
@@ -721,10 +774,12 @@ export function PokerTable({
             <span
               className="inline-flex items-center gap-1.5 rounded-full bg-night-900 px-3 py-1.5 text-sm font-bold text-gold-300 shadow-sm"
               title="Your play-money bankroll (learning chips, no real money)"
+              role="img"
+              aria-label={`Bankroll, ${bankroll.toLocaleString()} chips`}
             >
               <Chip size={16} tone="gold" />
-              <span className="tabular-nums">{bankroll.toLocaleString()}</span>
-              <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/50">
+              <span className="tabular-nums" aria-hidden>{bankroll.toLocaleString()}</span>
+              <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/70" aria-hidden>
                 bankroll
               </span>
             </span>
@@ -758,16 +813,24 @@ export function PokerTable({
         <div className="space-y-3">
           <div className="suited-room relative mx-auto w-full max-w-2xl rounded-[1.75rem] p-2.5 sm:p-3.5">
             {/* Table info strip — blinds + hand number, for at-a-glance tracking. */}
-            <div className="mb-2.5 flex items-center justify-between gap-2 px-1 text-[0.62rem] font-semibold sm:mb-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 ring-1 ring-inset ring-white/10">
-                <span className="uppercase tracking-[0.18em] text-white/40">Blinds</span>
-                <span className="tabular-nums text-white">
+            <div className="mb-2.5 flex items-center justify-between gap-2 px-1 text-[0.66rem] font-semibold sm:mb-3">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 ring-1 ring-inset ring-white/15"
+                role="img"
+                aria-label={`Blinds ${config.smallBlind.toLocaleString()} / ${config.bigBlind.toLocaleString()} chips`}
+              >
+                <span className="uppercase tracking-[0.18em] text-gold-200/90" aria-hidden>Blinds</span>
+                <span className="tabular-nums text-white" aria-hidden>
                   {config.smallBlind.toLocaleString()}/{config.bigBlind.toLocaleString()}
                 </span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 ring-1 ring-inset ring-white/10">
-                <span className="uppercase tracking-[0.18em] text-white/40">Hand</span>
-                <span className="tabular-nums text-white">#{handIndex + 1}</span>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 ring-1 ring-inset ring-white/15"
+                role="img"
+                aria-label={`Hand number ${handIndex + 1}`}
+              >
+                <span className="uppercase tracking-[0.18em] text-gold-200/90" aria-hidden>Hand</span>
+                <span className="tabular-nums text-white" aria-hidden>#{handIndex + 1}</span>
               </span>
             </div>
 
@@ -786,35 +849,31 @@ export function PokerTable({
                       {/* The pot is a single clean coin pill, cohesive with the bankroll
                           pills and the per-seat "Bet" labels. No chip stack on the felt. */}
                       <span
-                        className={`inline-flex items-center gap-2 rounded-full bg-night-950/80 px-4 py-2 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-gold-300/35 ${
+                        className={`inline-flex items-center gap-2 rounded-full bg-night-950/80 px-4 py-2 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-gold-300/45 ${
                           handOver ? 'pck-pot-pop' : ''
                         }`}
+                        role="img"
+                        aria-label={`Pot, ${hand.pot.toLocaleString()} chips`}
                       >
                         <Chip size={18} tone="gold" />
-                        <span className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-gold-200/80">
+                        <span className="text-[0.62rem] font-bold uppercase tracking-[0.18em] text-gold-200" aria-hidden>
                           Pot
                         </span>
-                        <span className="text-xl font-bold tabular-nums text-white">
+                        <span className="text-xl font-bold tabular-nums text-white" aria-hidden>
                           {hand.pot.toLocaleString()}
                         </span>
                       </span>
                     </div>
 
                     <div className="flex flex-col items-center gap-1">
-                      <span className="text-[0.55rem] font-bold uppercase tracking-[0.18em] text-white/40">
-                        {handOver
-                          ? results?.reachedShowdown
-                            ? 'Showdown'
-                            : 'Hand complete'
-                          : hand.board.length >= 5
-                            ? 'River'
-                            : hand.board.length === 4
-                              ? 'Turn'
-                              : hand.board.length === 3
-                                ? 'Flop'
-                                : 'Pre-flop'}
+                      <span className="text-[0.66rem] font-bold uppercase tracking-[0.18em] text-gold-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]">
+                        {streetLabel}
                       </span>
-                      <div className="suited-board-tray flex items-center justify-center gap-1.5 rounded-xl px-2 py-1.5">
+                      <div
+                        className="suited-board-tray flex items-center justify-center gap-1.5 rounded-xl px-2 py-1.5"
+                        role="img"
+                        aria-label={boardLabel}
+                      >
                         {Array.from({ length: 5 }).map((_, i) => {
                           const card = hand.board[i]
                           return card ? (
@@ -828,7 +887,7 @@ export function PokerTable({
                   </div>
 
                   {/* Quieted periphery: the deck + burns tucked to the left edge. */}
-                  <div className="absolute left-[7%] top-[53%] z-[2] flex -translate-y-1/2 scale-[0.82] items-center gap-1.5 opacity-70">
+                  <div className="absolute left-[7%] top-[53%] z-[2] flex -translate-y-1/2 scale-[0.82] items-center gap-1.5 opacity-70" aria-hidden>
                     <DeckPile size="sm" count={hand.deck.length} />
                     {hand.burns.length > 0 && (
                       <div className="flex items-center">
@@ -855,11 +914,15 @@ export function PokerTable({
                         className="absolute z-[8] -translate-x-1/2 -translate-y-1/2"
                         style={{ left: `${bp.x}%`, top: `${bp.y}%` }}
                       >
-                        <span className="inline-flex items-baseline gap-1 rounded-full bg-night-950/80 px-2 py-0.5 shadow-[0_3px_8px_-4px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-gold-300/25">
-                          <span className="text-[0.5rem] font-semibold uppercase tracking-[0.1em] text-gold-200/70">
+                        <span
+                          className="inline-flex items-baseline gap-1 rounded-full bg-night-950/85 px-2 py-0.5 shadow-[0_3px_8px_-4px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-gold-300/40"
+                          role="img"
+                          aria-label={`${seat.isHero ? 'Your' : `${seat.name}'s`} bet, ${seat.committed.toLocaleString()} chips`}
+                        >
+                          <span className="text-[0.56rem] font-semibold uppercase tracking-[0.1em] text-gold-200/90">
                             Bet
                           </span>
-                          <span className="text-[0.66rem] font-bold tabular-nums text-gold-100">
+                          <span className="text-[0.72rem] font-bold tabular-nums text-gold-100">
                             {seat.committed.toLocaleString()}
                           </span>
                         </span>
@@ -985,7 +1048,7 @@ function HandLog({ groups }: { groups: ReturnType<typeof groupHandLog> }) {
         {groups.map((group, gi) => (
           <div key={`${group.label}-${gi}`} className="rounded-xl bg-night-900/[0.03] p-3">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-night-700/70">
+              <span className="text-xs font-bold uppercase tracking-wide text-night-700/85">
                 {group.label}
               </span>
               {group.cards && (
