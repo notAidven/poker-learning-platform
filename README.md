@@ -1,9 +1,12 @@
 # Suited
 
+**Live demo: [brilliant-alpha-clone-54be9.web.app](https://brilliant-alpha-clone-54be9.web.app)** &nbsp;·&nbsp; **[Read the Brainlift](BRAINLIFT.md)** (the AI-first build write-up)
+
 > **Learn Texas Hold'em by doing.** An interactive, Brilliant-style course that teaches poker
 > through hands-on lessons, then lets you take your skills to a play-money "Casino Floor"
 > against rule-based and AI opponents.
 
+[![Live demo](https://img.shields.io/badge/Live%20demo-Suited-2ea44f?logo=firebase&logoColor=white)](https://brilliant-alpha-clone-54be9.web.app)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -23,6 +26,7 @@ without any paid services.
 
 - [Overview](#overview)
 - [Key features](#key-features)
+- [Why a coach and opponents](#why-a-coach-and-opponents)
 - [Tech stack](#tech-stack)
 - [Architecture overview](#architecture-overview)
 - [Project structure](#project-structure)
@@ -38,15 +42,19 @@ without any paid services.
 
 ## Overview
 
-**Suited** teaches No-Limit Texas Hold'em the way you actually learn a game — by playing it.
-The course is split into **nine hands-on lessons** across **three sections** (Foundations →
-Playing a Hand → The Math). Each lesson mixes short concept pages with interactive problems
-(deal a board, rank hands, count outs, price a call, size a bet) and ends with a **skill check**
-that unlocks the next lesson.
+**Suited** teaches No-Limit Texas Hold'em the way you actually learn a game, by playing it.
+The course is split into **13 hands-on lessons** across **four sections** (Foundations →
+Playing a Hand → The Math → Advanced Play). Each lesson mixes short concept pages with
+interactive problems (deal a board, rank hands, count outs, price a call, size a bet, read a
+range) and ends with a **skill check** that unlocks the next lesson. A **section gate** caps each
+section with a short mixed quiz, and a spaced-repetition **Daily Review** resurfaces the concepts
+you miss so they actually stick.
 
-Finish the course and the **Casino Floor** opens: two play-money tables where you put it all
-together against opponents — first with an AI coach reading every move, then against
-LLM-driven opponents with a strategy hint bar at your side.
+As you progress, two coached **practice rooms** open on the course path: **The Coaching Room**,
+where you play real hands against rule-based opponents while a coach reacts to every decision with
+instant, engine-graded feedback, then **The AI Lounge**, where you face LLM-driven opponents with
+a strategy hint bar at your side. Clear both and the after-hours **Casino Floor** opens: three
+tougher play-money tables that scale from the friendly Parlor to the high-limit Vault.
 
 Progress, XP, levels, daily streaks, and your play-money bankroll are saved to your account
 (Firebase), with a `localStorage` mirror so signed-out play still works. **No real money is
@@ -54,7 +62,7 @@ ever involved.**
 
 ## Key features
 
-### Nine interactive lessons in three sections
+### 13 interactive lessons in four sections
 
 | # | Lesson | Section | What you practice |
 |---|--------|---------|-------------------|
@@ -65,13 +73,23 @@ ever involved.**
 | 5 | Playing Preflop | Playing a Hand | Open/call/raise/fold; suited vs. offsuit |
 | 6 | Outs & Equity | The Math | Count outs; outs → equity % |
 | 7 | Pot Odds | The Math | Price a call; call or fold |
-| 8 | Expected Value | The Math | EV of a call; fold equity |
+| 8 | Fold Equity & Bluffing | The Math | Semibluffs, bluffs, and fold equity |
 | 9 | Bet Sizing & Value Betting | The Math | Value bets; size to the board |
+| 10 | Preflop Ranges & Position | Advanced Play | Position and RFI; read ranges on a 13×13 grid |
+| 11 | Board Texture & C-Betting | Advanced Play | Dry vs. wet flops; when and how big to c-bet |
+| 12 | Implied Odds & SPR | Advanced Play | Future chips when you hit; stack-to-pot ratio |
+| 13 | Tournaments & ICM | Advanced Play | Chips are not cash; short-stack push/fold |
 
 - **Skill checks** gate progression: pass **≥ 2 of 3** questions to mark a lesson complete and
   unlock the next one. Retakes are free and never re-award XP.
+- **Section gates** cap each of the four sections with a short mixed-concept quiz, so you prove
+  you can hold a section together before moving on.
+- **Daily Review** is a spaced-repetition queue: every problem is tagged with a concept, a Leitner
+  scheduler resurfaces the ones you miss sooner and the ones you master later, and the Home page
+  surfaces your weakest concepts in a "Strengths & leaks" panel.
 - **Rich interactions** rendered from a typed content model: card deck, hand ranker, board
-  dealer, outs/odds, betting round, preflop hand, and more — with KaTeX math and drag-and-drop.
+  dealer, outs/odds, betting round, preflop hand, and a 13×13 range grid, with KaTeX math and
+  drag-and-drop.
 
 ### Gamification
 
@@ -82,16 +100,27 @@ ever involved.**
 - **Daily streaks** — +1 per qualifying calendar day (Central American Time, UTC−6); missing a
   day resets the displayed streak.
 
-### The Casino Floor — two play-money rooms
+### Practice rooms and the Casino Floor
+
+Two coached rooms sit on the course path and teach you to apply the math at the table:
 
 | Room | Opponents | Your assist | Blinds · Stack | Unlocks after |
 |------|-----------|-------------|----------------|---------------|
-| **The Coaching Room** | Rule-based AI (friendly tier-2) | **AI coach** that reacts to every move | 5 / 10 · 500 | Finishing all lessons |
+| **The Coaching Room** | Rule-based AI (friendly tier-2) | A **coach** that grades and reacts to every decision | 5 / 10 · 500 | Foundations + Playing a Hand |
 | **The AI Lounge** | **LLM-driven** opponents (tier-3 fallback) | Always-on rule-based **hint bar** | 10 / 20 · 1000 | Clearing the Coaching Room |
 
-Both rooms run on the same pure hand engine (blinds, four betting rounds, side pots, correct
+Clear both rooms and the after-hours **Casino Floor** opens (the **Play** tab): three high-limit
+tables that ramp up the pressure, all on your shared play-money bankroll.
+
+| Table | Opponents | Blinds · Buy-in |
+|-------|-----------|-----------------|
+| **The Parlor** | Rule-based "novice" callers, loose and friendly | 1 / 2 · 100 |
+| **The Lounge** | **LLM** "solid" regulars (rule fallback) | 5 / 10 · 500 |
+| **The Vault** | Full-strength **LLM** "sharp" pros | 25 / 50 · 2000 |
+
+Every table runs on the same pure hand engine (blinds, four betting rounds, side pots, correct
 showdowns). A **play-money bankroll** (1,000 chips, granted once) carries between hands, with a
-**Rebuy** so you can never hard-lock. Everything works with AI off — the coach falls back to a
+**Rebuy** so you can never hard-lock. Everything works with AI off: the coach falls back to a
 rule-based read and the LLM opponents fall back to a deterministic tier-3 strategy.
 
 ### Accounts & profile
@@ -101,6 +130,33 @@ rule-based read and the LLM opponents fall back to a deterministic tier-3 strate
   dealer button, ace; the stored field is still named `profileAnimal` for back-compat).
 - **Account settings**: change email (verify-before-update), change/Set password,
   link email-password to a Google account, and rename your username.
+
+## Why a coach and opponents
+
+Suited teaches with an AI **coach** and AI **opponents** rather than the two obvious
+alternatives. The choice is deliberate, and it follows from the one rule the whole app is built
+on: grade the decision, not the result.
+
+**Not a generator of practice problems.** A model can churn out endless "what is the right play
+here" questions, but in poker that means letting an unverified model decide what counts as
+correct, and that is the one thing this app refuses to do. Poker has a ground truth: outs, equity,
+pot odds, and EV are all computable. So Suited grades decisions in code (the Coaching Room runs a
+deterministic drill grader on top of the rule-based spot read) and uses AI only to explain why a
+graded decision was good or bad. You get checkable feedback, not a guess.
+
+**Not a one-way tutor.** A lesson reader or a chat tutor can describe pot odds, but reading about
+a fold is not the same as making one when there are chips in the middle. Skill at poker is a
+decision habit under uncertainty, and habits come from doing, not from listening. A passive tutor
+also cannot show you how a hand really unfolds against players who bet, bluff, and trap.
+
+**So you learn by playing, with help on both sides of the decision.** First you drill in **The
+Coaching Room**, where you play real hands against rule-based opponents and a coach reacts to every
+move with instant, engine-graded feedback. Then you take it to the felt in **The AI Lounge**,
+where you play full hands against LLM opponents (validated against the hand evaluator and clamped
+to legal moves) with a rule-based hint bar at your side, and finally the after-hours **Casino
+Floor**, where the tables get progressively sharper. The coach builds instincts with feedback you
+can trust; the opponents make you use those instincts in live, messy hands where the math finally
+meets a real bet.
 
 ## Tech stack
 
@@ -175,6 +231,7 @@ For the deep dive, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 ```
 .
 ├── README.md                  # You are here
+├── BRAINLIFT.md               # 1-page AI-first build write-up
 ├── firebase.json              # Hosting + Firestore config
 ├── firestore.rules            # Firestore security rules
 ├── firestore.indexes.json     # Firestore indexes (none required yet)
@@ -191,15 +248,17 @@ For the deep dive, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 │   ├── scripts/
 │   │   └── mvp-logic-check.mjs # Auth-free logic checks
 │   └── src/
-│       ├── data/              # lessons/, skillChecks/, course, tables, glossary, animals
+│       ├── data/              # lessons/, skillChecks/, sectionGates/, course, tables, casinoTables, concepts, glossary
 │       ├── components/
 │       │   ├── lesson/        # lesson player + interactions/
-│       │   └── table/         # casino UI + tableRuntime
+│       │   ├── table/         # casino UI + tableRuntime
+│       │   └── casino/        # after-hours Casino Floor lobby + table cards
 │       ├── lib/
-│       │   ├── poker/         # handEngine, handEvaluator, opponentAI, hints
+│       │   ├── poker/         # handEngine, handEvaluator, opponentAI, hints, decisionDrill
+│       │   ├── review/        # spaced-repetition scheduler + Daily Review queue
 │       │   └── ai/            # aiClient + providers/ (gemini/openai/anthropic/openai-proxy)
 │       ├── contexts/          # AuthContext
-│       └── pages/             # Home, Course, Lesson, SkillCheck, Table, Profile, auth
+│       └── pages/             # Home, Course, Lesson, SkillCheck, Gate, Review, Table, Casino, Glossary, Profile, auth
 └── worker/                    # Cloudflare Worker: secure OpenAI proxy
     ├── README.md
     ├── wrangler.toml          # Worker config + RateLimiterDO Durable Object binding/migration
@@ -321,6 +380,7 @@ in `web/.env.local`, then rebuild and redeploy hosting.
 
 | Doc | What's in it |
 |-----|--------------|
+| [BRAINLIFT.md](BRAINLIFT.md) | The 1-page AI-first build write-up: tools, prompts, phase decisions, code split, and key learnings |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Lesson/skill-check content model, poker engine, casino runtime, AI layer, Firebase data model & rules |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Step-by-step deploy runbook (Firebase + Cloudflare Worker) and free-tier notes |
 | [worker/README.md](worker/README.md) | The Cloudflare Worker OpenAI proxy (endpoints, auth, CORS, deploy) |
