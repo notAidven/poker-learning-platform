@@ -90,17 +90,21 @@ export function ActionControls({
 
       {/* Top row: a clear, glanceable spot readout (helps the player track the pot). */}
       <div className="mb-2.5 flex items-center justify-between gap-3 text-[0.7rem] font-semibold">
-        <span className="inline-flex items-center gap-1.5 text-white/70">
-          <span className="suited-apron-dot" aria-hidden />
+        <span className="inline-flex items-center gap-1.5 text-white/70" aria-hidden>
+          <span className="suited-apron-dot" />
           <span className="uppercase tracking-[0.16em] text-gold-200/90">Your turn</span>
         </span>
         <div className="flex items-center gap-3 tabular-nums">
-          <span className="text-white/60">
-            Pot <span className="font-bold text-white">{state.pot.toLocaleString()}</span>
+          <span className="text-white/80" role="img" aria-label={`Pot, ${state.pot.toLocaleString()} chips`}>
+            <span aria-hidden>
+              Pot <span className="font-bold text-white">{state.pot.toLocaleString()}</span>
+            </span>
           </span>
           {toCall > 0 && (
-            <span className="text-white/60">
-              To call <span className="font-bold text-gold-200">{toCall.toLocaleString()}</span>
+            <span className="text-white/80" role="img" aria-label={`To call, ${toCall.toLocaleString()} chips`}>
+              <span aria-hidden>
+                To call <span className="font-bold text-gold-200">{toCall.toLocaleString()}</span>
+              </span>
             </span>
           )}
         </div>
@@ -129,6 +133,7 @@ export function ActionControls({
             <ActionButton
               tone="fold"
               disabled={disabled}
+              ariaLabel="Fold"
               onClick={() => onAct({ action: 'fold' })}
             >
               Fold
@@ -138,6 +143,7 @@ export function ActionControls({
             <ActionButton
               tone="call"
               disabled={disabled}
+              ariaLabel="Check"
               onClick={() => onAct({ action: 'check' })}
             >
               Check
@@ -147,6 +153,7 @@ export function ActionControls({
             <ActionButton
               tone="call"
               disabled={disabled}
+              ariaLabel={`Call ${toCall.toLocaleString()} chips`}
               onClick={() => onAct({ action: 'call' })}
             >
               Call <span className="tabular-nums">{toCall.toLocaleString()}</span>
@@ -156,6 +163,11 @@ export function ActionControls({
             <ActionButton
               tone="raise"
               disabled={disabled}
+              ariaLabel={
+                isAllIn
+                  ? `Go all in, ${clamped.toLocaleString()} chips`
+                  : `${betOrRaise.action === 'raise' ? 'Raise to' : 'Bet'} ${clamped.toLocaleString()} chips`
+              }
               className="col-span-2 sm:col-span-1"
               onClick={() => onAct({ action: betOrRaise.action, amount: clamped })}
             >
@@ -191,9 +203,12 @@ function SizingPanel({
 }) {
   return (
     <div className="w-full rounded-xl bg-night-950/45 p-2.5 ring-1 ring-inset ring-white/10 sm:max-w-[19rem]">
-      <div className="mb-2 flex items-center justify-between text-[0.7rem] font-bold uppercase tracking-wide text-white/55">
+      <div className="mb-2 flex items-center justify-between text-[0.7rem] font-bold uppercase tracking-wide text-white/80">
         <span className="capitalize">{action} to</span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-night-900 px-2.5 py-1 text-sm font-bold text-gold-200 ring-1 ring-inset ring-gold-300/25">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-night-900 px-2.5 py-1 text-sm font-bold text-gold-200 ring-1 ring-inset ring-gold-300/35"
+          aria-hidden
+        >
           <Chip size={14} tone="gold" />
           <span className="tabular-nums">{clamped.toLocaleString()}</span>
         </span>
@@ -207,7 +222,8 @@ function SizingPanel({
         disabled={disabled || max <= min}
         onChange={(e) => onChange(Number(e.target.value))}
         className="suited-bet-slider w-full"
-        aria-label={`${action} amount`}
+        aria-label={`${action} size in chips`}
+        aria-valuetext={`${clamped.toLocaleString()} chips`}
       />
       {quickSizes.length > 0 && (
         <div className="mt-2 grid grid-cols-4 gap-1.5">
@@ -219,6 +235,7 @@ function SizingPanel({
                 type="button"
                 disabled={disabled}
                 aria-pressed={active}
+                aria-label={`${q.label}, ${action} to ${q.total.toLocaleString()} chips`}
                 onClick={() => onChange(q.total)}
                 className={`min-h-[2.5rem] rounded-lg px-1 py-1.5 text-[0.7rem] font-bold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-1 focus-visible:ring-offset-night-950 disabled:opacity-50 ${
                   active
@@ -239,7 +256,7 @@ function SizingPanel({
 const ACTION_TONES = {
   // Three unmistakable, high-contrast tones — the online-poker convention.
   fold: 'bg-night-800 text-rose-50 ring-1 ring-inset ring-rose-400/45 hover:bg-night-700 hover:ring-rose-300/80 focus-visible:ring-rose-300',
-  call: 'bg-success-500 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_0_var(--color-success-700)] hover:-translate-y-0.5 hover:bg-success-400 active:translate-y-0 focus-visible:ring-success-200',
+  call: 'bg-success-600 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_0_var(--color-success-800)] hover:-translate-y-0.5 hover:bg-success-500 active:translate-y-0 focus-visible:ring-success-200',
   raise:
     'bg-gold-400 text-night-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_2px_0_var(--color-gold-600)] hover:-translate-y-0.5 hover:bg-gold-300 active:translate-y-0 focus-visible:ring-gold-200',
 } as const
@@ -250,12 +267,15 @@ function ActionButton({
   children,
   onClick,
   disabled,
+  ariaLabel,
   className = '',
 }: {
   tone: keyof typeof ACTION_TONES
   children: ReactNode
   onClick: () => void
   disabled?: boolean
+  /** Spoken label with the full effect + amount (e.g. "Call 10 chips"). */
+  ariaLabel?: string
   className?: string
 }) {
   return (
@@ -263,6 +283,7 @@ function ActionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
+      aria-label={ariaLabel}
       className={`inline-flex h-12 select-none items-center justify-center gap-1.5 rounded-xl px-5 text-[15px] font-bold transition-[transform,background-color,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-night-950 disabled:pointer-events-none disabled:opacity-50 sm:min-w-[6.5rem] ${ACTION_TONES[tone]} ${className}`}
     >
       {children}

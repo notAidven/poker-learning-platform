@@ -34,10 +34,10 @@ export function CasinoTableCard({
         <h3 className="font-display text-lg font-bold leading-tight text-ink">{table.name}</h3>
         <DifficultyBadge tier={table.aiTier} className="shrink-0" />
       </div>
-      <p className="mt-1.5 text-sm leading-snug text-night-700/70">{table.tagline}</p>
+      <p className="mt-1.5 text-sm leading-snug text-night-700/85">{table.tagline}</p>
 
       <div className="mt-4 flex items-center justify-between rounded-xl bg-night-900/[0.03] px-4 py-3 ring-1 ring-inset ring-night-900/10">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-night-700/50">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-night-700/80">
           Buy-in
         </span>
         <span className="inline-flex items-center gap-2 font-display text-2xl font-bold tabular-nums text-ink">
@@ -48,7 +48,7 @@ export function CasinoTableCard({
 
       <dl className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-night-900/[0.03] px-3 py-2 text-center ring-1 ring-inset ring-night-900/10">
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-night-700/50">
+          <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-night-700/80">
             Blinds
           </dt>
           <dd className="mt-0.5 font-semibold tabular-nums text-ink">
@@ -56,14 +56,14 @@ export function CasinoTableCard({
           </dd>
         </div>
         <div className="rounded-xl bg-night-900/[0.03] px-3 py-2 text-center ring-1 ring-inset ring-night-900/10">
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-night-700/50">
+          <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-night-700/80">
             Seats
           </dt>
           <dd className="mt-0.5 font-semibold tabular-nums text-ink">{seats}</dd>
         </div>
       </dl>
 
-      <p className="mt-3 flex items-center gap-1.5 text-xs text-night-700/55">
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-night-700/80">
         <SpadeIcon className="h-3.5 w-3.5 shrink-0 text-gold-600" />
         {profile.blurb}
       </p>
@@ -74,7 +74,7 @@ export function CasinoTableCard({
             Take a seat <span aria-hidden>→</span>
           </span>
         ) : (
-          <span className="flex w-full items-center justify-center gap-2 rounded-xl border border-night-900/10 bg-night-900/[0.03] px-4 py-2.5 text-xs font-semibold text-night-700/55">
+          <span className="flex w-full items-center justify-center gap-2 rounded-xl border border-night-900/10 bg-night-900/[0.03] px-4 py-2.5 text-xs font-semibold text-night-700/80">
             <LockIcon className="h-3.5 w-3.5" />
             Need {shortfall.toLocaleString()} more to sit
           </span>
