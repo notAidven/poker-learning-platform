@@ -42,6 +42,13 @@ const PROVIDERS: Record<LLMProviderId, LLMProvider> = {
  * proxy (the `aiChat` callable) and is never auto-selected, so the safe default
  * (gemini, then rule-based) is unchanged until the flag is explicitly set.
  *
+ * SECURITY: the direct-key providers (`openai` / `anthropic`) are REFUSED in production
+ * builds (`import.meta.env.PROD`) — selecting either there would embed a raw
+ * `VITE_*_API_KEY` in the client bundle. In prod an explicit selection of either falls
+ * back to the safe default (`gemini` → rule-based), and the raw-key auto-detect is
+ * skipped entirely (its env reads are dead-code-eliminated, so a stray bundled key can
+ * never flip the active provider). The secure `openai-proxy` and `gemini` are unaffected.
+ *
  * Each `import.meta.env.VITE_*` is read via static member access so Vite can inline
  * the value at build time (dynamic indexing would not be statically replaced).
  */
@@ -53,10 +60,22 @@ function selectProviderId(): LLMProviderId {
     explicit === 'anthropic' ||
     explicit === 'openai-proxy'
   ) {
+    if (import.meta.env.PROD && (explicit === 'openai' || explicit === 'anthropic')) {
+      console.error(
+        `VITE_LLM_PROVIDER='${explicit}' is ignored in production: the direct-key ` +
+          `'${explicit}' provider is disabled to avoid shipping a raw API key to the ` +
+          `browser. Falling back to the default provider — use 'openai-proxy' instead.`,
+      )
+      return 'gemini'
+    }
     return explicit
   }
-  if (readEnv(import.meta.env.VITE_OPENAI_API_KEY)) return 'openai'
-  if (readEnv(import.meta.env.VITE_ANTHROPIC_API_KEY)) return 'anthropic'
+  // Auto-detect by a raw key is DEV-ONLY: in production a bundled key must never flip
+  // the active provider, and skipping the reads here keeps them out of the bundle too.
+  if (!import.meta.env.PROD) {
+    if (readEnv(import.meta.env.VITE_OPENAI_API_KEY)) return 'openai'
+    if (readEnv(import.meta.env.VITE_ANTHROPIC_API_KEY)) return 'anthropic'
+  }
   return 'gemini'
 }
 

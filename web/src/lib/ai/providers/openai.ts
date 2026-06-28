@@ -11,7 +11,12 @@
  * is therefore visible to every user who loads the app. For anything beyond local
  * prototyping, leave the key blank and set `VITE_LLM_PROXY_URL` to a backend you
  * control that injects the real key server-side.
- * TODO(secure): route via VITE_LLM_PROXY_URL in production.
+ *
+ * PRODUCTION GUARD: this direct-key provider is hard-disabled in production builds
+ * (`import.meta.env.PROD`). `isConfigured()` reports `false`, `generateText()` throws,
+ * and the raw-key read below is dead-code-eliminated so a `VITE_OPENAI_API_KEY` can
+ * never be inlined into a prod bundle — even if a future env misconfig sets one. Use
+ * the secure `openai-proxy` provider in production; this path is dev/prototyping-only.
  */
 import type { LLMProvider } from './index'
 import { readEnv } from './env'
@@ -23,6 +28,10 @@ const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini'
 const OPENAI_API_BASE = 'https://api.openai.com/v1'
 
 function apiKey(): string {
+  // SECURITY: never read a raw client key in a production build. `import.meta.env.PROD`
+  // is statically `true` in prod, so this read is dead-code-eliminated and the
+  // `VITE_OPENAI_API_KEY` value is never inlined into (and shipped with) the bundle.
+  if (import.meta.env.PROD) return ''
   return readEnv(import.meta.env.VITE_OPENAI_API_KEY)
 }
 
@@ -34,12 +43,30 @@ function modelName(): string {
   return readEnv(import.meta.env.VITE_OPENAI_MODEL) || DEFAULT_OPENAI_MODEL
 }
 
-/** Configured when a raw key is present OR a backend proxy URL is set (preferred). */
+/**
+ * Configured when a raw key is present OR a backend proxy URL is set (preferred).
+ * Always `false` in production: the direct-key provider is dev/prototyping-only (the
+ * production-safe path is the `openai-proxy` provider), so it can never be the active
+ * provider in a prod build and `aiClient` short-circuits to the rule-based fallback.
+ */
 function isConfigured(): boolean {
+  if (import.meta.env.PROD) return false
   return apiKey().length > 0 || proxyUrl().length > 0
 }
 
 async function generateText(prompt: string, signal: AbortSignal): Promise<string | null> {
+  // SECURITY (defense in depth): refuse to run in production even if invoked directly.
+  // A raw `VITE_OPENAI_API_KEY` would be exposed to every visitor; the secure
+  // `openai-proxy` provider must be used instead. `aiClient` catches this throw and
+  // falls back to the rule-based engine, so the app degrades gracefully.
+  if (import.meta.env.PROD) {
+    throw new Error(
+      "The 'openai' direct-key provider is disabled in production builds to prevent " +
+        'shipping a raw API key to the browser. Set VITE_LLM_PROVIDER=openai-proxy ' +
+        '(the secure server proxy) instead.',
+    )
+  }
+
   const key = apiKey()
   const proxy = proxyUrl()
   if (!key && !proxy) return null

@@ -15,14 +15,19 @@ const firebaseConfig = {
 }
 
 function assertFirebaseConfig() {
-  const required = [
-    'VITE_FIREBASE_API_KEY',
-    'VITE_FIREBASE_AUTH_DOMAIN',
-    'VITE_FIREBASE_PROJECT_ID',
-    'VITE_FIREBASE_APP_ID',
-  ] as const
+  // SECURITY: read each var with STATIC `import.meta.env.X` access only — never the
+  // dynamic `import.meta.env[key]` form. A dynamic lookup can't be statically replaced,
+  // so Vite inlines the ENTIRE env object (every VITE_* var, including a stray
+  // VITE_OPENAI_API_KEY / VITE_ANTHROPIC_API_KEY) into the client bundle. Listing the
+  // required keys explicitly keeps unrelated secrets out of the build.
+  const required: ReadonlyArray<readonly [name: string, value: string | undefined]> = [
+    ['VITE_FIREBASE_API_KEY', import.meta.env.VITE_FIREBASE_API_KEY],
+    ['VITE_FIREBASE_AUTH_DOMAIN', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN],
+    ['VITE_FIREBASE_PROJECT_ID', import.meta.env.VITE_FIREBASE_PROJECT_ID],
+    ['VITE_FIREBASE_APP_ID', import.meta.env.VITE_FIREBASE_APP_ID],
+  ]
 
-  const missing = required.filter((key) => !import.meta.env[key])
+  const missing = required.filter(([, value]) => !value).map(([name]) => name)
   if (missing.length === 0) return
 
   const message = `Firebase config incomplete. Missing: ${missing.join(', ')}. Copy web/.env.example to web/.env.local and add your Web app config from the Firebase console.`
