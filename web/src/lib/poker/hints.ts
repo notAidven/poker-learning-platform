@@ -10,12 +10,12 @@
 import { parseCardId, type CardId } from '../../types/lesson'
 import { HAND_CATEGORY_RANK, type HandCategory, type PokerStreet } from '../../types/poker'
 import {
-  countOuts,
   evaluateBest,
   evaluateBoardOnly,
   holeCardsImproveBoard,
   rankValue,
 } from './handEvaluator'
+import { cardsToCome, findDraw, isPricedIn, potOddsPct, ruleEquityPct } from './spotStrength'
 
 export type HintContext = {
   hole: [CardId, CardId]
@@ -68,8 +68,6 @@ export type SpotAnalysis = {
 const MAX_HINT_LEN = 140
 const PAIR_RANK = HAND_CATEGORY_RANK['pair']
 const TWO_PAIR_RANK = HAND_CATEGORY_RANK['two-pair']
-const STRAIGHT_RANK = HAND_CATEGORY_RANK['straight']
-const FLUSH_RANK = HAND_CATEGORY_RANK['flush']
 
 /**
  * One concise (<= ~140 chars), useful nudge for the current spot. Always returns
@@ -89,7 +87,10 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
   const known = [...hole, ...board]
 
   const facingBet = toCall > 0
-  const potOddsPct = facingBet ? Math.round((toCall / (pot + toCall)) * 100) : null
+  // Pot odds, outs -> equity, and "priced in" all come from the one spot-strength
+  // module (`poker/spotStrength`), so this always-on coach can never disagree with
+  // the bots, the LLM coach, or the Lesson 5/6 widgets.
+  const potOdds = potOddsPct(pot, toCall)
   // `pot` is bet-INCLUSIVE (it already contains the bet we are facing), so size the
   // bet against the PRE-bet pot. A ~2/3-pot (or larger) bet trips the "big bet"
   // / sunk-cost reminder; comparing against the raw pot would only fire near a 2x
@@ -107,7 +108,7 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
     drawName: null,
     outs: null,
     equityPct: null,
-    potOddsPct,
+    potOddsPct: potOdds,
     pricedIn: null,
     facingBet,
     bigBet,
@@ -124,9 +125,8 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
     return analysis
   }
 
-  // Rule of 2 & 4: cards still to come set the equity multiplier.
-  const cardsToCome = board.length >= 5 ? 0 : board.length === 4 ? 1 : board.length === 3 ? 2 : 0
-  const equityMultiplier = cardsToCome === 2 ? 4 : cardsToCome === 1 ? 2 : 0
+  // Cards still to come set how a draw's outs convert to equity (see spotStrength).
+  const toCome = cardsToCome(board)
 
   if (known.length >= 5) {
     try {
@@ -139,48 +139,22 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
       const boardOwn = evaluateBoardOnly(board)
       analysis.boardMadeLabel = boardOwn?.label ?? null
       analysis.boardMadeCategory = boardOwn?.category ?? null
-      const madeRank = HAND_CATEGORY_RANK[made.category]
 
-      // Clean outs toward the two classic draws — only when not already there.
-      // NOTE: countOuts(..., 'straight') counts every unseen card that lifts the hand
-      // to >= straight, which INCLUDES flush-completing cards (a flush outranks a
-      // straight). Left raw that inflates the straight outs and hides combo draws, so
-      // we treat the flush outs as the flush-completing set and subtract it to get the
-      // PURE straight outs (cards that make a straight but not a flush).
-      const flushOutCards = madeRank < FLUSH_RANK ? safeOutCards(hole, board, 'flush') : []
-      const straightOutCards = madeRank < STRAIGHT_RANK ? safeOutCards(hole, board, 'straight') : []
-      const flushSet = new Set(flushOutCards)
-      const pureStraightCards = straightOutCards.filter((c) => !flushSet.has(c))
-
-      const flushOuts = flushOutCards.length
-      const straightOuts = pureStraightCards.length
-      const hasFlushDraw = flushOuts > 0
-      const hasStraightDraw = straightOuts > 0
-
-      if (equityMultiplier > 0 && (hasFlushDraw || hasStraightDraw)) {
-        if (hasFlushDraw && hasStraightDraw) {
-          // Combined draw: count the UNION of both out sets. They are disjoint by
-          // construction (pure straight outs already exclude the flush cards), so the
-          // union is simply their sum — neither draw is double-counted or inflated.
-          analysis.drawName = 'flush draw + straight draw'
-          analysis.outs = flushOuts + straightOuts
-        } else if (hasFlushDraw) {
-          analysis.drawName = 'flush draw'
-          analysis.outs = flushOuts
-        } else {
-          analysis.drawName =
-            straightOuts >= 8
-              ? 'open-ended straight draw'
-              : straightOuts === 4
-                ? 'gutshot straight draw'
-                : 'straight draw'
-          analysis.outs = straightOuts
+      // Outs -> equity for a clean flush/straight draw, only while a card is still to
+      // come. `findDraw` owns the disjoint flush/straight out counting (so a combo
+      // draw is never an inflated straight) and `ruleEquityPct` owns the canonical
+      // Rule-of-2-&-4 (big-draw-corrected) number — the same one Lesson 5 teaches.
+      if (toCome > 0) {
+        const draw = findDraw(hole, board)
+        if (draw.drawName && draw.outs != null) {
+          analysis.drawName = draw.drawName
+          analysis.outs = draw.outs
+          analysis.equityPct = Math.min(95, ruleEquityPct(draw.outs, toCome))
         }
-        analysis.equityPct = Math.min(95, Math.round(analysis.outs * equityMultiplier))
       }
 
-      if (facingBet && analysis.equityPct != null && potOddsPct != null) {
-        analysis.pricedIn = analysis.equityPct >= potOddsPct
+      if (facingBet && analysis.equityPct != null && potOdds != null) {
+        analysis.pricedIn = isPricedIn(analysis.equityPct, potOdds)
       }
     } catch {
       // Bad/duplicate cards — leave made/draw null and fall through to a generic nudge.
@@ -190,15 +164,6 @@ export function analyzeSpot(ctx: HintContext): SpotAnalysis {
   analysis.facts = postflopFacts(analysis, ctx)
   analysis.tip = postflopTip(analysis, ctx)
   return analysis
-}
-
-/** The actual out cards toward `target`, or [] if the evaluator cannot run. */
-function safeOutCards(hole: [CardId, CardId], board: CardId[], target: HandCategory): CardId[] {
-  try {
-    return countOuts(hole, board, target).outs
-  } catch {
-    return []
-  }
 }
 
 // --- preflop -----------------------------------------------------------------

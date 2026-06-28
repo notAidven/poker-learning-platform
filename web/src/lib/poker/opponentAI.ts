@@ -13,6 +13,7 @@ import { parseCardId, type CardId, type CardSuit } from '../../types/lesson'
 import { HAND_CATEGORY_RANK, type PokerStreet } from '../../types/poker'
 import type { BettingAction } from '../../types/poker'
 import { evaluateBest, rankValue } from './handEvaluator'
+import { ruleEquityPct } from './spotStrength'
 import type { LegalAction } from './handEngine'
 
 export type AITier = 1 | 2 | 3
@@ -187,9 +188,11 @@ function assessStrength(input: AIDecisionInput): Strength {
   const madeRank = HAND_CATEGORY_RANK[made.category]
 
   const drawOuts = Math.min(flushDrawOuts(cards) + straightDrawOuts(cards), 15)
-  const cardsToCome = board.length <= 3 ? 2 : board.length === 4 ? 1 : 0
-  const multiplier = cardsToCome === 2 ? 4 : cardsToCome === 1 ? 2 : 0
-  const drawEquity = Math.min((drawOuts * multiplier) / 100, 0.95)
+  const toCome = board.length <= 3 ? 2 : board.length === 4 ? 1 : 0
+  // Price the draw with the ONE canonical outs -> equity convention (Rule of 2 & 4,
+  // big-draw corrected) shared by the coach, hints, and the lessons, so a 9-out
+  // flush draw is worth the same ~35% to a bot as it is to the learner.
+  const drawEquity = Math.min(ruleEquityPct(drawOuts, toCome) / 100, 0.95)
 
   let madeEquity: number
   if (madeRank >= HAND_CATEGORY_RANK['full-house']) madeEquity = 0.95

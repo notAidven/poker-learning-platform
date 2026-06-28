@@ -13,6 +13,16 @@ import type { LessonCompletionAward } from './progress/types'
  * works with no Firestore. The streak fields prefer the authoritative Firestore award
  * when present, falling back to the same local streak math.
  */
+/**
+ * The pre-completion gamification read-state the celebration meter starts from: the
+ * learner's XP, stored streak, and last-activity date BEFORE this completion.
+ */
+export type GamificationSnapshot = {
+  totalXp: number
+  streak: number
+  lastActivityDate: string | null
+}
+
 export type RewardModel = {
   xpGained: number
   base: number

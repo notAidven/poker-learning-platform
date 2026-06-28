@@ -111,6 +111,12 @@ service cloud.firestore {
       match /lessonProgress/{lessonId} {
         allow read, write: if isOwner(userId);
       }
+
+      // Per-concept spaced-repetition Review state (users/{uid}/review/{conceptId}).
+      // Owner-only, mirroring lessonProgress: a private, play-only learning aggregate.
+      match /review/{conceptId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // Username → email lookup before sign-in. Single-doc `get` is public so the

@@ -2,33 +2,34 @@ import { lazy, Suspense } from 'react'
 import type { ProblemStep } from '../../types/lesson'
 import type { InteractionProps } from './interactions/types'
 
+// Each PascalCase widget now has a lowercase pure-grader twin (e.g. `outsOdds.ts`
+// beside `OutsOdds.tsx`), so the import needs the explicit `.tsx` extension to
+// disambiguate the two on case-insensitive filesystems (allowImportingTsExtensions).
 const CardDeck = lazy(() =>
-  import('./interactions/CardDeck').then((m) => ({ default: m.CardDeck })),
+  import('./interactions/CardDeck.tsx').then((m) => ({ default: m.CardDeck })),
 )
 const CompareEvents = lazy(() =>
-  import('./interactions/CompareEvents').then((m) => ({ default: m.CompareEvents })),
+  import('./interactions/CompareEvents.tsx').then((m) => ({ default: m.CompareEvents })),
 )
 // Poker (Texas Hold'em revamp)
 const HandRanker = lazy(() =>
-  import('./interactions/HandRanker').then((m) => ({ default: m.HandRanker })),
+  import('./interactions/HandRanker.tsx').then((m) => ({ default: m.HandRanker })),
 )
 const BoardDealer = lazy(() =>
-  import('./interactions/BoardDealer').then((m) => ({ default: m.BoardDealer })),
+  import('./interactions/BoardDealer.tsx').then((m) => ({ default: m.BoardDealer })),
 )
 const OutsOdds = lazy(() =>
-  import('./interactions/OutsOdds').then((m) => ({ default: m.OutsOdds })),
+  import('./interactions/OutsOdds.tsx').then((m) => ({ default: m.OutsOdds })),
 )
 const BettingRound = lazy(() =>
-  import('./interactions/BettingRound').then((m) => ({ default: m.BettingRound })),
+  import('./interactions/BettingRound.tsx').then((m) => ({ default: m.BettingRound })),
 )
 const HandRankingLadder = lazy(() =>
   import('./interactions/HandRankingLadder').then((m) => ({ default: m.HandRankingLadder })),
 )
 const PreflopHand = lazy(() =>
-  import('./interactions/PreflopHand').then((m) => ({ default: m.PreflopHand })),
+  import('./interactions/PreflopHand.tsx').then((m) => ({ default: m.PreflopHand })),
 )
-// Explicit .tsx extension disambiguates the PascalCase component from the lowercase
-// `rangeGrid.ts` helpers on case-insensitive filesystems (allowImportingTsExtensions).
 const RangeGrid = lazy(() =>
   import('./interactions/RangeGrid.tsx').then((m) => ({ default: m.RangeGrid })),
 )

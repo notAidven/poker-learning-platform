@@ -6,6 +6,7 @@ import {
   type PreflopHandConfig,
 } from '../../../types/lesson'
 import type { InteractionProps } from './types'
+import { gradePreflopHand } from './preflopHand'
 import { CheckPanel } from './CheckPanel'
 import { CardFace, CardKitStyles } from './cards/PlayingCardKit'
 
@@ -89,8 +90,7 @@ export function PreflopHand({
   const animate = !initialSolved
 
   function isCorrect(): boolean {
-    if (mode === 'classify') return optionId !== null && optionId === answer.optionId
-    return side !== null && side === answer.stronger
+    return gradePreflopHand(config, answer, { optionId, side })
   }
 
   function canSubmit(): boolean {

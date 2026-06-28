@@ -4,9 +4,9 @@ import { PokerTable } from '../components/table/PokerTable'
 import { toCasinoRuntimeConfig } from '../components/table/tableRuntime'
 import { DifficultyBadge } from '../components/casino/DifficultyBadge'
 import { Chip } from '../components/lesson/interactions/cards/PlayingCardKit'
-import { buttonVariants } from '../components/ui/Button'
+import { buttonVariants } from '../components/ui/buttonVariants'
 import { getCasinoTable } from '../data/casinoTables'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { isCasinoFloorUnlocked } from '../lib/casinoProgress'
 import {
   STARTING_BANKROLL,

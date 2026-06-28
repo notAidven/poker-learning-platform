@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import { getAuthErrorMessage } from '../../lib/authErrors'
 import { validateEmailChange } from '../../lib/accountSettings'
 import { Button } from '../ui/Button'

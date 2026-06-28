@@ -2,17 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { useProgressStore } from '../../lib/progress/ProgressContext'
-import type { LessonCompletionAward } from '../../lib/progress/types'
-import { isSkillCheckPassing, skillCheckMinToPass, type LessonXpBreakdown } from '../../lib/gamification'
-import { buildRewardModel, type RewardModel } from '../../lib/reward'
+import { isSkillCheckPassing, skillCheckMinToPass } from '../../lib/gamification'
+import type { RewardModel } from '../../lib/reward'
 import { DUR, EASE } from '../../lib/motion'
 import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import type { SkillCheckDefinition } from '../../types/skillCheck'
 import { SkillCheckStepView } from './SkillCheckStepView'
 import { RewardCelebration } from '../gamification/RewardCelebration'
 import { CheckIcon, RetryIcon, StarIcon } from '../icons'
-import { Button, buttonVariants } from '../ui/Button'
+import { Button } from '../ui/Button'
+import { buttonVariants } from '../ui/buttonVariants'
 
 type SkillCheckPlayerProps = {
   skillCheck: SkillCheckDefinition
@@ -62,40 +62,18 @@ export function SkillCheckPlayer({ skillCheck, lessonTitle, onActiveChange }: Sk
       // lesson. A failing score leaves the lesson un-completed so the learner can
       // retake the skill check directly (P1 #3).
       if (didPass) {
-        // Snapshot the pre-completion profile so the celebration meter knows where
-        // it started (the profile only refreshes after the award lands).
-        const prevTotalXp = profile?.totalXp ?? 0
-        const prevStreakStored = profile?.streak ?? 0
-        const prevLastActivityDate = profile?.lastActivityDate ?? null
-        const result = store.saveSkillCheckResult(skillCheck.lessonId, finalCorrect, total)
-        // Prefer the authoritative Firestore award (streak/level), but never block
-        // the celebration on it: fall back to local math for guests / slow writes.
-        void (async () => {
-          const award = await Promise.race([
-            result.award,
-            new Promise<LessonCompletionAward | null>((resolve) => {
-              setTimeout(() => resolve(null), 1200)
-            }),
-          ])
-          // First completion uses the full XP breakdown; a retake of an already-completed
-          // lesson now shows the small replay XP the backend granted (previously 0).
-          const breakdown: LessonXpBreakdown | null =
-            result.xpBreakdown ??
-            (award && award.xpAwarded > 0
-              ? { base: award.xpAwarded, bonus: 0, total: award.xpAwarded }
-              : null)
-          if (breakdown) {
-            setReward(
-              buildRewardModel({
-                xpBreakdown: breakdown,
-                prevTotalXp,
-                prevStreakStored,
-                prevLastActivityDate,
-                award,
-              }),
-            )
-          }
-        })()
+        // One store call completes the lesson AND hands back the ready celebration —
+        // the store owns the XP/streak read-state, the award await, and the meter math
+        // (no snapshot-and-race here anymore). The pre-completion profile is the meter's
+        // starting point; the reward resolves once the award lands and never rejects.
+        const { reward } = store.completeSkillCheck(skillCheck.lessonId, finalCorrect, total, {
+          totalXp: profile?.totalXp ?? 0,
+          streak: profile?.streak ?? 0,
+          lastActivityDate: profile?.lastActivityDate ?? null,
+        })
+        void reward.then((model) => {
+          if (model) setReward(model)
+        })
       }
       setPassed(didPass)
       setFinished(true)

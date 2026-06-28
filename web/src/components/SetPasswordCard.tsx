@@ -1,5 +1,5 @@
 import { type FormEvent, useId, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { getAuthErrorMessage } from '../lib/authErrors'
 import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/accountSettings'
 import { Button } from './ui/Button'

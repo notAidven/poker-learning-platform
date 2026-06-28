@@ -14,30 +14,28 @@ export function SkillCheckPage() {
   const meta = lessons.find((l) => l.id === lessonId)
   const { getStats, isLessonUnlocked } = useProgress()
   const stats = getStats(lessonId)
-  const [skillCheck, setSkillCheck] = useState<SkillCheckDefinition | undefined>()
-  const [skillCheckLoading, setSkillCheckLoading] = useState(() => hasSkillCheck(lessonId))
+  // Async skill check, tagged with the lessonId it was loaded for so a stale result
+  // from a previously-viewed lesson is ignored after navigation.
+  const [loaded, setLoaded] = useState<{ id: string; check: SkillCheckDefinition | undefined } | null>(
+    null,
+  )
   const [skillCheckActive, setSkillCheckActive] = useState(false)
 
   useEffect(() => {
-    if (!hasSkillCheck(lessonId)) {
-      setSkillCheck(undefined)
-      setSkillCheckLoading(false)
-      return
-    }
+    if (!hasSkillCheck(lessonId)) return
 
     let cancelled = false
-    setSkillCheckLoading(true)
-    void loadSkillCheck(lessonId).then((loaded) => {
-      if (!cancelled) {
-        setSkillCheck(loaded)
-        setSkillCheckLoading(false)
-      }
+    void loadSkillCheck(lessonId).then((loadedCheck) => {
+      if (!cancelled) setLoaded({ id: lessonId, check: loadedCheck })
     })
 
     return () => {
       cancelled = true
     }
   }, [lessonId])
+
+  const skillCheck = loaded?.id === lessonId ? loaded.check : undefined
+  const skillCheckLoading = hasSkillCheck(lessonId) && !skillCheck
 
   // Warn only while actively answering. Leaving no longer resets the lesson —
   // the body stays finished so the learner returns straight to the skill check

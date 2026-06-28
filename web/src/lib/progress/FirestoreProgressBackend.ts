@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { sanitizeProblemAttempts, sanitizeStringArray } from './sanitize'
+import { sanitizeReviewState } from '../review/scheduler'
 import type {
   LessonCompletionAward,
   LessonProgressPayload,
@@ -39,6 +40,7 @@ import type {
   LessonStats,
   ProgressBackend,
 } from './types'
+import type { ReviewState } from '../review/types'
 
 /** Firestore: users/{uid}/lessonProgress/{lessonId} */
 type FirestoreLessonProgressDoc = LessonStats & {
@@ -55,6 +57,14 @@ function progressCollection(uid: string) {
 
 function progressDoc(uid: string, lessonId: string) {
   return doc(db, 'users', uid, 'lessonProgress', lessonId)
+}
+
+function reviewCollection(uid: string) {
+  return collection(db, 'users', uid, 'review')
+}
+
+function reviewDoc(uid: string, conceptId: string) {
+  return doc(db, 'users', uid, 'review', conceptId)
 }
 
 export class FirestoreProgressBackend implements ProgressBackend {
@@ -249,11 +259,37 @@ export class FirestoreProgressBackend implements ProgressBackend {
     }
   }
 
+  async loadReview(uid: string): Promise<Record<string, ReviewState>> {
+    const snap = await getDocs(reviewCollection(uid))
+    const out: Record<string, ReviewState> = {}
+    for (const docSnap of snap.docs) {
+      const state = sanitizeReviewState(docSnap.data())
+      if (state) out[docSnap.id] = state
+    }
+    return out
+  }
+
+  async writeReview(uid: string, conceptId: string, state: ReviewState): Promise<void> {
+    // merge:true so a future schema addition never clobbers fields; the doc only ever
+    // holds the ReviewState fields plus updatedAt.
+    await setDoc(
+      reviewDoc(uid, conceptId),
+      { ...state, updatedAt: serverTimestamp() },
+      { merge: true },
+    )
+  }
+
   async clear(uid: string): Promise<void> {
     // Production H1 reset wipes LOCAL state only (a shared device must not leak data),
     // so this remote clear is intentionally never called by the auth-sync seam; it
     // completes the backend contract (the in-memory adapter mirrors it in tests).
-    const snap = await getDocs(progressCollection(uid))
-    await Promise.all(snap.docs.map((docSnap) => deleteDoc(progressDoc(uid, docSnap.id))))
+    const [progressSnap, reviewSnap] = await Promise.all([
+      getDocs(progressCollection(uid)),
+      getDocs(reviewCollection(uid)),
+    ])
+    await Promise.all([
+      ...progressSnap.docs.map((docSnap) => deleteDoc(progressDoc(uid, docSnap.id))),
+      ...reviewSnap.docs.map((docSnap) => deleteDoc(reviewDoc(uid, docSnap.id))),
+    ])
   }
 }

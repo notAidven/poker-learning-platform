@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import { changeUsername, validateUsername } from '../../lib/userProfile'
 import { Button } from '../ui/Button'
 import { AtIcon } from './icons'

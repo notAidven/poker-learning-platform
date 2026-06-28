@@ -16,8 +16,9 @@ import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
 import { FractionAnswerInput } from './FractionAnswerInput'
 import { NumericAnswerInput } from './NumericAnswerInput'
-import { fractionMatches, hasValidFractionInput } from './fractionAnswer'
-import { countMatches, hasValidCountInput } from './numericAnswer'
+import { gradeCardDeck } from './cardDeck'
+import { hasValidFractionInput } from './fractionAnswer'
+import { hasValidCountInput } from './numericAnswer'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { CardKitStyles, DeckPile, SuitIcon } from './cards/PlayingCardKit'
 
@@ -173,7 +174,9 @@ function SelectAllMode({
 
   const reduceMotion = usePrefersReducedMotion()
   const wantsDeal = (config.deal ?? true) && !initialSolved
-  const [dealt, setDealt] = useState(!wantsDeal)
+  // Reduced motion shows the cards already dealt (no deal-in animation), so start
+  // "dealt" instead of flipping it synchronously inside the effect below.
+  const [dealt, setDealt] = useState(!wantsDeal || reduceMotion)
 
   const locked = disabled || submitted
   const helperText =
@@ -193,11 +196,9 @@ function SelectAllMode({
 
   useEffect(() => {
     if (dealt) return
-    if (reduceMotion) {
-      setDealt(true)
-      return
-    }
-    const timer = window.setTimeout(() => setDealt(true), 1000)
+    // setState only ever fires from the timer callback (never synchronously in the
+    // effect body); a 0ms delay covers reduced-motion being switched on mid-deal.
+    const timer = window.setTimeout(() => setDealt(true), reduceMotion ? 0 : 1000)
     return () => window.clearTimeout(timer)
   }, [dealt, reduceMotion])
 
@@ -216,26 +217,10 @@ function SelectAllMode({
     setSelected(new Set())
   }
 
-  function selectionValid() {
-    if (selected.size !== answerSet.size) return false
-    for (const card of answerSet) if (!selected.has(card)) return false
-    return true
-  }
-
-  function probabilityValid() {
-    if (!requiresProbability || !answer.probability) return true
-    return fractionMatches(fractionNum, fractionDen, answer.probability)
-  }
-
-  function countValid() {
-    if (!requiresCount || answer.count === undefined) return true
-    return countMatches(countInput, answer.count)
-  }
-
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (selectionValid() && countValid() && probabilityValid()) {
+    if (gradeCardDeck(answer, { selected, countInput, fractionNum, fractionDen })) {
       setSolved(true)
       onCorrect()
     } else {

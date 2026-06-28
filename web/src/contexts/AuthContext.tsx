@@ -1,156 +1,52 @@
-import {
-  EmailAuthProvider,
-  GoogleAuthProvider,
-  createUserWithEmailAndPassword,
-  linkWithCredential,
-  onAuthStateChanged,
-  onIdTokenChanged,
-  reauthenticateWithCredential,
-  reauthenticateWithPopup,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  updatePassword,
-  verifyBeforeUpdateEmail,
-  type User,
-} from 'firebase/auth'
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { onAuthStateChanged, onIdTokenChanged, type User } from 'firebase/auth'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { auth } from '../lib/firebase'
 import { E2E_BYPASS_AUTH, E2E_MOCK_PROFILE } from '../lib/e2eBypass'
 import {
   getProviderIds,
   hasPasswordProvider,
-  hasGoogleProvider,
   needsPasswordSetup as deriveNeedsPasswordSetup,
 } from '../lib/authProviders'
-import {
-  getEmailForUsername,
-  getUserProfile,
-  syncProfileEmail,
-  type UserProfile,
-} from '../lib/userProfile'
+import { type UserProfile } from '../lib/userProfile'
 import { useProgressStore } from '../lib/progress/ProgressContext'
-
-type AuthContextValue = {
-  user: User | null
-  profile: UserProfile | null
-  loading: boolean
-  /**
-   * True for accounts created with Google that have no email/password
-   * credential yet, so they should "set a password" to enable email sign-in.
-   */
-  needsPasswordSetup: boolean
-  /** True when an email/password credential is linked (email sign-in works). */
-  hasPassword: boolean
-  refreshProfile: () => Promise<void>
-  signUpWithEmail: (email: string, password: string) => Promise<void>
-  signInWithUsername: (username: string, password: string) => Promise<void>
-  signInWithGoogle: () => Promise<void>
-  /**
-   * Send a password-reset email for a username-based account. Resolves the
-   * username to its email first (the same lookup as sign-in), then calls
-   * Firebase `sendPasswordResetEmail`. Intentionally generic: it NEVER reveals
-   * whether the username/email exists (a no-match is a silent success), so the
-   * UI can show one "if an account exists, we emailed a link" message either way
-   * and login enumeration (L1) stays closed.
-   */
-  resetPassword: (username: string) => Promise<void>
-  /**
-   * Link an Email/Password credential to the signed-in account so the user can
-   * subsequently sign in with their email + this password (Google stays linked
-   * too). Re-authenticates with Google automatically if Firebase requires a
-   * fresh login before the link.
-   */
-  linkEmailPassword: (password: string) => Promise<void>
-  /**
-   * The single re-authentication flow shared by the email + password changes.
-   * Pass the current password for accounts that have one; Google-only accounts
-   * re-auth through a Google popup (the `password` arg is ignored). Throws the
-   * raw Firebase error so callers can map it via `getAuthErrorMessage(_, 'reauth')`.
-   */
-  reauthenticate: (password?: string) => Promise<void>
-  /**
-   * Start an email change. Sends a confirmation link to the NEW address via
-   * `verifyBeforeUpdateEmail`; the account email only changes after the user
-   * opens that link. May throw `auth/requires-recent-login` — re-auth and retry.
-   */
-  changeEmail: (newEmail: string) => Promise<void>
-  /** Set a new password (caller must `reauthenticate` first). */
-  changePassword: (newPassword: string) => Promise<void>
-  logOut: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
-
-const googleProvider = new GoogleAuthProvider()
-
-/** Firebase asks for a fresh sign-in before sensitive ops like linking. */
-function isRecentLoginError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'auth/requires-recent-login'
-  )
-}
+import {
+  AuthService,
+  createFirebaseAuthPort,
+  createFirebaseProfilePort,
+  shouldReconcileEmailOnToken,
+  type AuthIdentity,
+  type TokenSnapshot,
+} from '../lib/auth'
+import { AuthContext } from './useAuth'
 
 /**
- * A reset-email failure that would CONFIRM the account does not exist. Swallowed
- * by `resetPassword` so the response stays generic (enumeration safety, L1); any
- * other failure (e.g. `auth/too-many-requests`, network) is surfaced instead.
+ * The deep, framework-free auth module. AuthContext is a THIN adapter over it: this
+ * provider only binds React state, subscribes to Firebase's auth listeners, and wires
+ * the ProgressStore seam — all the auth orchestration lives in `AuthService`, behind a
+ * clean interface that fakes can drive in unit tests. The service is a stateless
+ * singleton: its ports read the live `auth` handle / Firestore on each call.
  */
-function isUserNotFoundError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'auth/user-not-found'
-  )
-}
+const authService = new AuthService(createFirebaseAuthPort(auth), createFirebaseProfilePort())
 
-/**
- * After `verifyBeforeUpdateEmail`, the auth email flips only once the user opens
- * the confirmation link (usually surfaced on the next load with a fresh token).
- * When we notice the live auth email no longer matches the stored profile email,
- * reconcile Firestore so the profile + username-login lookup track the new
- * address. Best-effort: a failure just leaves the prior profile and never throws.
- */
-async function reconcileProfileEmail(
-  user: User,
-  profile: UserProfile | null,
-): Promise<UserProfile | null> {
-  if (
-    !profile ||
-    !user.email ||
-    !profile.username ||
-    profile.email === user.email.toLowerCase()
-  ) {
-    return profile
-  }
-  try {
-    await syncProfileEmail(user.uid, profile.username, user.email)
-    return await getUserProfile(user.uid)
-  } catch (err) {
-    console.warn('Could not sync the updated email into the profile:', err)
-    return profile
-  }
+/** The framework-free snapshot the service reasons about, taken from a Firebase user. */
+function identityOf(user: User | null): AuthIdentity | null {
+  if (!user) return null
+  return { uid: user.uid, email: user.email, providerIds: getProviderIds(user) }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+  // E2E bypass seeds auth/profile/loading synchronously here (no listeners run
+  // below), so the test harness lands on a signed-in, finished-loading state on
+  // the very first render instead of via a setState inside the effect.
+  const [user, setUser] = useState<User | null>(
+    E2E_BYPASS_AUTH ? ({ uid: 'e2e-user' } as User) : null,
+  )
+  const [profile, setProfile] = useState<UserProfile | null>(
+    E2E_BYPASS_AUTH ? E2E_MOCK_PROFILE : null,
+  )
+  const [loading, setLoading] = useState(!E2E_BYPASS_AUTH)
   // Linked sign-in providers (e.g. ['google.com', 'password']). Tracked in state
-  // (not derived from `user`) because `linkWithCredential` mutates the existing
+  // (not derived from `user`) because linking a credential mutates the existing
   // User instance in place, so the banner/profile UI need an explicit re-render.
   const [providerIds, setProviderIds] = useState<string[]>([])
   const progressStore = useProgressStore()
@@ -160,22 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(E2E_MOCK_PROFILE)
       return
     }
-    const current = auth.currentUser
-    if (!current) {
-      setProfile(null)
-      return
-    }
-    const data = await getUserProfile(current.uid)
-    setProfile(await reconcileProfileEmail(current, data))
+    setProfile(await authService.loadProfile(identityOf(auth.currentUser)))
   }, [])
 
   useEffect(() => {
-    if (E2E_BYPASS_AUTH) {
-      setUser({ uid: 'e2e-user' } as User)
-      setProfile(E2E_MOCK_PROFILE)
-      setLoading(false)
-      return
-    }
+    // E2E bypass: user/profile/loading were seeded from the bypass flag in the
+    // useState initialisers above, so there are no Firebase listeners to wire up.
+    if (E2E_BYPASS_AUTH) return
 
     // onAuthStateChanged drives the heavy init. It fires on sign-in, sign-out,
     // and full app load (a new uid), but NOT on a silent background token refresh.
@@ -189,8 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // protected routes redirect sanely instead of hanging.
       try {
         if (nextUser) {
-          const data = await getUserProfile(nextUser.uid)
-          setProfile(await reconcileProfileEmail(nextUser, data))
+          setProfile(await authService.loadProfile(identityOf(nextUser)))
           await progressStore.syncOnAuth(nextUser.uid)
         } else {
           setProfile(null)
@@ -211,24 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // on other devices in the meantime. We reconcile here on the refresh window.
     //
     // No double-run / race with onAuthStateChanged: the two listeners handle
-    // DISJOINT events. `lastToken` (a per-subscription closure var) lets us act
-    // ONLY when the SAME uid arrives with a CHANGED email — i.e. a pure token
-    // refresh. A uid transition (sign-in/out/first load) or an unchanged email is
-    // left entirely to onAuthStateChanged, and an hourly refresh that didn't change
-    // the email is a no-op (no extra Firestore read).
-    let lastToken: { uid: string; email: string | null } | null = null
+    // DISJOINT events. `lastToken` (a per-subscription closure var) + the pure
+    // `shouldReconcileEmailOnToken` rule let us act ONLY when the SAME uid arrives
+    // with a CHANGED email — i.e. a pure token refresh. A uid transition or an
+    // unchanged email is left to onAuthStateChanged / is a no-op.
+    let lastToken: TokenSnapshot = null
     const unsubscribeToken = onIdTokenChanged(auth, async (nextUser) => {
       const prev = lastToken
-      const nextEmail = nextUser?.email ? nextUser.email.toLowerCase() : null
-      lastToken = nextUser ? { uid: nextUser.uid, email: nextEmail } : null
+      const next: TokenSnapshot = nextUser
+        ? { uid: nextUser.uid, email: nextUser.email ? nextUser.email.toLowerCase() : null }
+        : null
+      lastToken = next
 
-      if (!nextUser || !nextEmail) return
-      if (!prev || prev.uid !== nextUser.uid) return // sign-in/out → onAuthStateChanged owns it
-      if (prev.email === nextEmail) return // unchanged email (normal refresh) → nothing to do
+      if (!shouldReconcileEmailOnToken(prev, next)) return
 
       try {
-        const data = await getUserProfile(nextUser.uid)
-        setProfile(await reconcileProfileEmail(nextUser, data))
+        setProfile(await authService.loadProfile(identityOf(nextUser)))
       } catch (err) {
         console.warn('Could not reconcile the updated email after a token refresh:', err)
       }
@@ -248,130 +132,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('gamification-updated', onGamificationUpdated)
   }, [refreshProfile])
 
-  const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email.trim(), password)
-  }, [])
+  const signUpWithEmail = useCallback(
+    (email: string, password: string) => authService.signUpWithEmail(email, password),
+    [],
+  )
 
-  const signInWithUsername = useCallback(async (username: string, password: string) => {
-    const email = await getEmailForUsername(username)
-    if (!email) {
-      // Same generic message as a wrong password so we never reveal whether the
-      // username exists (L1 — login enumeration).
-      throw new Error('Incorrect username or password.')
-    }
-    await signInWithEmailAndPassword(auth, email, password)
-  }, [])
+  const signInWithUsername = useCallback(
+    (username: string, password: string) => authService.signInWithUsername(username, password),
+    [],
+  )
 
-  const signInWithGoogle = useCallback(async () => {
-    await signInWithPopup(auth, googleProvider)
-  }, [])
+  const signInWithGoogle = useCallback(() => authService.signInWithGoogle(), [])
 
-  const resetPassword = useCallback(async (username: string) => {
-    const trimmed = username.trim()
-    if (!trimmed) {
-      throw new Error('Enter your username to reset your password.')
-    }
-    // Login is username-based, so resolve the account email first (the SAME
-    // public lookup sign-in uses).
-    const email = await getEmailForUsername(trimmed)
-    // Enumeration safety (L1): a username with no match is a SILENT success — we
-    // send nothing and let the caller show the same generic confirmation as a real
-    // send, so the response can never be used to probe which usernames exist.
-    if (!email) return
-    try {
-      await sendPasswordResetEmail(auth, email)
-    } catch (err) {
-      // Swallow only the code that would confirm the account is gone; surface
-      // everything else (rate limiting, network) so the user gets real feedback.
-      if (isUserNotFoundError(err)) return
-      throw err
-    }
-  }, [])
+  const resetPassword = useCallback(
+    (identifier: string) => authService.resetPassword(identifier),
+    [],
+  )
 
   const linkEmailPassword = useCallback(async (password: string) => {
-    const current = auth.currentUser
-    if (!current) {
-      throw new Error('You need to be signed in to set a password.')
-    }
-    const email = current.email
-    if (!email) {
-      throw new Error('Your account has no email address to attach a password to.')
-    }
-
-    // The email/password credential always uses the account's existing email so
-    // it resolves to the SAME account on a later `signInWithEmailAndPassword`.
-    // Build it fresh per attempt (a credential can only be consumed once).
-    const makeCredential = () => EmailAuthProvider.credential(email, password)
-
-    try {
-      await linkWithCredential(current, makeCredential())
-    } catch (err) {
-      // Linking is sensitive: if the last sign-in is too old, Firebase demands a
-      // fresh login. Re-auth with Google (their existing provider) and retry once
-      // so the user never hits a dead end.
-      if (isRecentLoginError(err)) {
-        await reauthenticateWithPopup(current, googleProvider)
-        await linkWithCredential(current, makeCredential())
-      } else {
-        throw err
-      }
-    }
-
-    // `linkWithCredential` updated the same User instance in place, so refresh it
-    // from the server and push the new provider list into state to flip
-    // `needsPasswordSetup` off (hides the banner + the set-password form).
-    try {
-      await current.reload()
-    } catch {
-      // A failed reload is non-fatal: providerData is already updated locally.
-    }
+    await authService.linkEmailPassword(password)
+    // The link mutated/reloaded the live User in place, so push the new provider
+    // list into state to flip `needsPasswordSetup` off (hides the banner + form).
     setUser(auth.currentUser)
     setProviderIds(getProviderIds(auth.currentUser))
   }, [])
 
-  const reauthenticate = useCallback(async (password?: string) => {
-    const current = auth.currentUser
-    if (!current) {
-      throw new Error('You need to be signed in to do that.')
-    }
-    const ids = getProviderIds(current)
-    // Prefer the password path when the account has one (the user typed it).
-    if (hasPasswordProvider(ids)) {
-      if (!current.email) {
-        throw new Error('Your account has no email address.')
-      }
-      if (!password) {
-        throw new Error('Enter your current password to continue.')
-      }
-      const credential = EmailAuthProvider.credential(current.email, password)
-      await reauthenticateWithCredential(current, credential)
-    } else if (hasGoogleProvider(ids)) {
-      await reauthenticateWithPopup(current, googleProvider)
-    } else {
-      throw new Error('Re-authentication is not available for this account.')
-    }
-  }, [])
+  const reauthenticate = useCallback(
+    (password?: string) => authService.reauthenticate(password),
+    [],
+  )
 
-  const changeEmail = useCallback(async (newEmail: string) => {
-    const current = auth.currentUser
-    if (!current) {
-      throw new Error('You need to be signed in to change your email.')
-    }
-    // Firebase normalizes the address; the change only applies once the user
-    // opens the confirmation link sent to the NEW address.
-    await verifyBeforeUpdateEmail(current, newEmail.trim())
-  }, [])
+  const changeEmail = useCallback((newEmail: string) => authService.changeEmail(newEmail), [])
 
-  const changePassword = useCallback(async (newPassword: string) => {
-    const current = auth.currentUser
-    if (!current) {
-      throw new Error('You need to be signed in to change your password.')
-    }
-    await updatePassword(current, newPassword)
-  }, [])
+  const changePassword = useCallback(
+    (newPassword: string) => authService.changePassword(newPassword),
+    [],
+  )
 
   const logOut = useCallback(async () => {
-    await signOut(auth)
+    await authService.signOut()
     // Shared-device safety: drop this user's local state immediately so the next
     // account can't inherit or upload it (H1). The auth listener also clears via
     // syncOnAuth(null), but we do it here too so it happens synchronously on the
@@ -428,10 +227,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
 }

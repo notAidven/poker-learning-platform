@@ -17,7 +17,7 @@ import { doc, runTransaction } from 'firebase/firestore'
 import { db } from './firebase'
 import { notifyGamificationUpdated } from './gamification'
 import { E2E_BYPASS_AUTH } from './e2eBypass'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 
 /** Play-money chips granted once when the Casino Floor unlocks. */
 export const STARTING_BANKROLL = 1000

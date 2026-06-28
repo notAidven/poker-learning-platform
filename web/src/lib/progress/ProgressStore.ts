@@ -12,9 +12,13 @@
  * and the module-level singletons, plus the bespoke window custom-event bus.
  */
 import { computeLessonXp, computeTestOutXp, XP_GATE_PASS, type LessonXpBreakdown } from '../gamification'
+import { buildRewardModel, type GamificationSnapshot, type RewardModel } from '../reward'
 import { gateId, sectionLessonIds } from '../sectionGates'
 import type { SectionId } from '../../data/lessons'
+import { sanitizeReviewState, scheduleAfterResult, todayCAT } from '../review/scheduler'
+import type { ReviewState } from '../review/types'
 import { sanitizeProblemAttempts, sanitizeStringArray } from './sanitize'
+import { persistMirror, readMirror } from './localMirror'
 import { getCompletedIds } from './selectors'
 import {
   defaultLessonStats,
@@ -31,12 +35,28 @@ const STATS_KEY = 'lesson-stats'
 const LEGACY_COMPLETED_KEY = 'completed-lesson-ids'
 const SESSION_PREFIX = 'lesson-session-'
 const SESSION_DEBOUNCE_MS = 400
+/** Offline-first mirror of the per-concept spaced-repetition review state. */
+const REVIEW_KEY = 'review-state'
 
 const sessionKey = (lessonId: string) => `${SESSION_PREFIX}${lessonId}`
 
 export type ProgressSnapshot = {
   statsByLesson: Record<string, LessonStats>
   completedIds: string[]
+  /** Per-concept spaced-repetition review state, keyed by conceptId. */
+  reviewByConcept: Record<string, ReviewState>
+}
+
+/**
+ * A ready-to-render completion celebration. The store owns the whole thing: whether
+ * this was a first completion, and the reward meter (XP beats, level, streak). The
+ * `reward` resolves once the backend award lands — a replay shows the backend's small
+ * decaying XP — and it NEVER rejects, so callers just await it (no timeout race, no
+ * snapshot-and-reassemble in the player).
+ */
+export type LessonCelebration = {
+  isFirstCompletion: boolean
+  reward: Promise<RewardModel | null>
 }
 
 export type ProgressStoreOptions = {
@@ -54,6 +74,7 @@ export class ProgressStore {
   private readonly backend: ProgressBackend
   private readonly options: ProgressStoreOptions
   private statsByLesson: Record<string, LessonStats>
+  private reviewByConcept: Record<string, ReviewState>
   private snapshot: ProgressSnapshot
   private readonly listeners = new Set<() => void>()
   private readonly sessionWriteTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -65,6 +86,7 @@ export class ProgressStore {
     this.options = options
     this.backend = options.backend
     this.statsByLesson = this.readStatsFromStorage()
+    this.reviewByConcept = this.readReviewFromStorage()
     this.snapshot = this.buildSnapshot()
   }
 
@@ -89,6 +111,16 @@ export class ProgressStore {
 
   getCompletedIds(): string[] {
     return getCompletedIds(this.statsByLesson)
+  }
+
+  /** The spaced-repetition state for one concept, or undefined if never reviewed. */
+  getReviewState(conceptId: string): ReviewState | undefined {
+    return this.reviewByConcept[conceptId]
+  }
+
+  /** A copy of every concept's review state (for the Strengths & Leaks view). */
+  getAllReviewStates(): Record<string, ReviewState> {
+    return { ...this.reviewByConcept }
   }
 
   isLessonInProgress(lessonId: string, stepCount: number): boolean {
@@ -154,6 +186,21 @@ export class ProgressStore {
   }
 
   /**
+   * Complete a lesson via a passing skill check AND hand back the ready celebration
+   * (XP meter + streak), computed from `prev` — the pre-completion XP/streak read-state.
+   * One call replaces the old per-player snapshot -> save -> race-the-award -> rebuild
+   * dance, so completion orchestration lives here and can't drift between callers.
+   */
+  completeSkillCheck(
+    lessonId: string,
+    correct: number,
+    total: number,
+    prev: GamificationSnapshot,
+  ): LessonCelebration {
+    return this.toCelebration(this.saveSkillCheckResult(lessonId, correct, total), prev)
+  }
+
+  /**
    * Record a PASSING section-gate attempt. Gate state lives behind a synthetic
    * `gate-<sectionId>` progress doc, so passing it rides the same atomic completion +
    * idempotent-XP + replay path as a lesson:
@@ -200,6 +247,16 @@ export class ProgressStore {
     }
 
     return this.runCompletion(id, nextStats, xpBreakdown, isFirstCompletion)
+  }
+
+  /** Pass a section gate AND hand back the ready celebration (see `completeSkillCheck`). */
+  completeGate(
+    sectionId: SectionId,
+    correct: number,
+    total: number,
+    prev: GamificationSnapshot,
+  ): LessonCelebration {
+    return this.toCelebration(this.saveGateResult(sectionId, correct, total), prev)
   }
 
   /**
@@ -310,15 +367,83 @@ export class ProgressStore {
   }
 
   /**
+   * Assemble the celebration from a completion result + the pre-completion profile.
+   * Owns the (never-rejecting) award await so the meter prefers the authoritative
+   * streak/level, and a replay shows the backend's small decaying XP — all with no
+   * timeout race. The store, not the player, owns this orchestration now.
+   */
+  private toCelebration(
+    result: SkillCheckSaveResult,
+    prev: GamificationSnapshot,
+  ): LessonCelebration {
+    const reward = result.award.then((award) => {
+      // First completion uses the full authored XP; a replay shows the backend's
+      // small decaying XP (so practice is still visibly rewarded).
+      const breakdown =
+        result.xpBreakdown ??
+        (award && award.xpAwarded > 0
+          ? { base: award.xpAwarded, bonus: 0, total: award.xpAwarded }
+          : null)
+      if (!breakdown) return null
+      return buildRewardModel({
+        xpBreakdown: breakdown,
+        prevTotalXp: prev.totalXp,
+        prevStreakStored: prev.streak,
+        prevLastActivityDate: prev.lastActivityDate,
+        award,
+      })
+    })
+    return { isFirstCompletion: result.isFirstCompletion, reward }
+  }
+
+  /**
+   * Credit a qualifying daily activity that keeps the streak alive (once per CAT day)
+   * without awarding XP. The single implementation behind both public streak-only
+   * entry points — `recordReviewActivity` (a review of an already-completed lesson)
+   * and `recordReviewSessionComplete` (finishing a Daily Review) — which used to be
+   * byte-identical. `activity` only flavors the failure log.
+   */
+  private creditDailyStreak(activity: string): void {
+    const uid = this.effectiveUid()
+    if (!uid) return
+    void this.backend.touchStreak(uid).catch((err) => {
+      console.warn(`Failed to record ${activity} for streak:`, err)
+    })
+  }
+
+  /**
    * Credit a qualifying daily activity that keeps a streak alive without awarding XP
    * — e.g. finishing a review of an already-completed lesson.
    */
   recordReviewActivity(): void {
-    const uid = this.effectiveUid()
-    if (!uid) return
-    void this.backend.touchStreak(uid).catch((err) => {
-      console.warn('Failed to record review activity for streak:', err)
-    })
+    this.creditDailyStreak('review activity')
+  }
+
+  // --- spaced-repetition review --------------------------------------------
+
+  /**
+   * Grade one concept in a review session: advance its Leitner state via the pure
+   * scheduler, then persist it locally (write-through to the `review-state` mirror)
+   * and, for signed-in users, to the backend. Returns the new state so the caller can
+   * surface the next due date. The streak is NOT touched here — finishing the whole
+   * session does that once via `recordReviewSessionComplete`.
+   */
+  recordReviewResult(conceptId: string, correct: boolean): ReviewState {
+    const next = scheduleAfterResult(this.reviewByConcept[conceptId], correct, todayCAT())
+    this.reviewByConcept = { ...this.reviewByConcept, [conceptId]: next }
+    this.persistReview()
+    this.writeReviewToBackend(conceptId, next)
+    this.commit()
+    return next
+  }
+
+  /**
+   * Mark a finished review session as a qualifying daily activity: it keeps the streak
+   * alive (once per CAT day) but awards no XP. Review XP is intentionally not granted
+   * here — see the module note / RETURN for the follow-up.
+   */
+  recordReviewSessionComplete(): void {
+    this.creditDailyStreak('review session')
   }
 
   /** Clear partial lesson progress so the student must redo lesson steps from step 1. */
@@ -378,6 +503,9 @@ export class ProgressStore {
    */
   async syncOnAuth(uid: string | null): Promise<void> {
     const previousUid = this.uid
+    // Snapshot review state BEFORE any reset, so a genuine anonymous handoff can still
+    // donate the guest's review progress to the new account (mirrors the lesson rule).
+    const localReviewBefore = { ...this.reviewByConcept }
 
     // Sign-out (or no user): wipe local progress so the next person on this shared
     // device starts clean and we never upload the prior user's data (H1).
@@ -395,6 +523,7 @@ export class ProgressStore {
     }
 
     this.uid = uid
+    const isAnonymousHandoff = previousUid == null
 
     try {
       const remote = await this.backend.loadAll(uid)
@@ -404,7 +533,6 @@ export class ProgressStore {
         // real uid was synced earlier this session. For a freshly signed-in different
         // account we must NOT donate the prior local data; clear it and treat remote
         // (empty) as the source of truth (H1).
-        const isAnonymousHandoff = previousUid == null
         const local = this.exportLocalProgress()
         if (isAnonymousHandoff && Object.keys(local).length > 0) {
           await Promise.all(
@@ -422,8 +550,43 @@ export class ProgressStore {
       }
     } catch (err) {
       console.warn('Failed to sync lesson progress from Firestore:', err)
-    } finally {
-      this.commit()
+    }
+
+    // Review state follows the same H1 rules but is loaded independently, so a lesson
+    // sync failure never blocks it (and vice versa).
+    await this.syncReviewOnAuth(uid, isAnonymousHandoff, localReviewBefore)
+
+    this.commit()
+  }
+
+  /**
+   * Load the per-concept review state on an auth change, mirroring the lesson H1 rules:
+   * a non-empty remote is authoritative; an empty remote on a genuine anonymous handoff
+   * donates the guest's local review to the new account; otherwise local review is
+   * dropped (a different account must never inherit the prior user's review).
+   */
+  private async syncReviewOnAuth(
+    uid: string,
+    isAnonymousHandoff: boolean,
+    localReviewBefore: Record<string, ReviewState>,
+  ): Promise<void> {
+    try {
+      const remote = await this.backend.loadReview(uid)
+      if (Object.keys(remote).length > 0) {
+        this.reviewByConcept = remote
+      } else if (isAnonymousHandoff && Object.keys(localReviewBefore).length > 0) {
+        await Promise.all(
+          Object.entries(localReviewBefore).map(([conceptId, state]) =>
+            this.backend.writeReview(uid, conceptId, state),
+          ),
+        )
+        this.reviewByConcept = localReviewBefore
+      } else {
+        this.reviewByConcept = {}
+      }
+      this.persistReview()
+    } catch (err) {
+      console.warn('Failed to sync review state from Firestore:', err)
     }
   }
 
@@ -439,12 +602,14 @@ export class ProgressStore {
 
   // --- local cache helpers -------------------------------------------------
 
-  /** Wipe locally-persisted lesson progress only (stats + sessions); leaves remote intact. */
+  /** Wipe locally-persisted lesson progress only (stats + sessions + review); leaves remote intact. */
   private clearLocalProgress(): void {
     this.statsByLesson = {}
+    this.reviewByConcept = {}
     try {
       localStorage.removeItem(STATS_KEY)
       localStorage.removeItem(LEGACY_COMPLETED_KEY)
+      localStorage.removeItem(REVIEW_KEY)
       const sessionKeys: string[] = []
       for (let i = 0; i < localStorage.length; i += 1) {
         const key = localStorage.key(i)
@@ -501,23 +666,22 @@ export class ProgressStore {
     return out
   }
 
+  // Lesson stats and per-concept review both ride the one write-through cache
+  // primitive (`localMirror`): key + JSON record + optional per-entry sanitize.
   private readStatsFromStorage(): Record<string, LessonStats> {
-    try {
-      const raw = localStorage.getItem(STATS_KEY)
-      if (!raw) return {}
-      const parsed = JSON.parse(raw)
-      return typeof parsed === 'object' && parsed !== null ? parsed : {}
-    } catch {
-      return {}
-    }
+    return readMirror<LessonStats>(STATS_KEY)
   }
 
   private persistStats(): void {
-    try {
-      localStorage.setItem(STATS_KEY, JSON.stringify(this.statsByLesson))
-    } catch {
-      // Ignore storage errors.
-    }
+    persistMirror(STATS_KEY, this.statsByLesson)
+  }
+
+  private readReviewFromStorage(): Record<string, ReviewState> {
+    return readMirror<ReviewState>(REVIEW_KEY, sanitizeReviewState)
+  }
+
+  private persistReview(): void {
+    persistMirror(REVIEW_KEY, this.reviewByConcept)
   }
 
   // --- backend writes (mirrors the former progressSync queue helpers) ------
@@ -534,6 +698,15 @@ export class ProgressStore {
 
     void this.backend.writeLesson(uid, lessonId, payload).catch((err) => {
       console.warn(`Failed to persist lesson stats for ${lessonId}:`, err)
+    })
+  }
+
+  private writeReviewToBackend(conceptId: string, state: ReviewState): void {
+    const uid = this.effectiveUid()
+    if (!uid) return
+
+    void this.backend.writeReview(uid, conceptId, state).catch((err) => {
+      console.warn(`Failed to persist review state for ${conceptId}:`, err)
     })
   }
 
@@ -602,6 +775,7 @@ export class ProgressStore {
     return {
       statsByLesson: { ...this.statsByLesson },
       completedIds: getCompletedIds(this.statsByLesson),
+      reviewByConcept: { ...this.reviewByConcept },
     }
   }
 
@@ -623,10 +797,22 @@ export class ProgressStore {
     this.storageAttached = false
   }
 
-  /** Cross-tab: another tab changed the persisted stats (or cleared storage). */
+  /** Cross-tab: another tab changed the persisted stats / review (or cleared storage). */
   private handleStorageEvent = (event: StorageEvent): void => {
-    if (event.key === STATS_KEY || event.key === null) {
+    if (event.key === null) {
+      // Whole-storage clear: re-read both caches.
       this.statsByLesson = this.readStatsFromStorage()
+      this.reviewByConcept = this.readReviewFromStorage()
+      this.commit()
+      return
+    }
+    if (event.key === STATS_KEY) {
+      this.statsByLesson = this.readStatsFromStorage()
+      this.commit()
+      return
+    }
+    if (event.key === REVIEW_KEY) {
+      this.reviewByConcept = this.readReviewFromStorage()
       this.commit()
     }
   }

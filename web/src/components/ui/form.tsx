@@ -1,7 +1,7 @@
 import { type InputHTMLAttributes, type ReactNode, useId } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { cx } from './cx'
-import { buttonVariants } from './Button'
+import { buttonVariants } from './buttonVariants'
 import { DUR, EASE } from '../../lib/motion'
 import { usePrefersReducedMotion } from '../lesson/interactions/usePrefersReducedMotion'
 import { WarningIcon } from '../icons'

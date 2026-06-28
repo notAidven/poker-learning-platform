@@ -19,29 +19,29 @@ export function LessonPage() {
   const store = useProgressStore()
   const { getStats, isLessonUnlocked } = useProgress()
   const stats = getStats(lessonId)
-  const [content, setContent] = useState<LessonDefinition | undefined>()
-  const [contentLoading, setContentLoading] = useState(() => hasLessonContent(lessonId))
+  // Async lesson content, tagged with the lessonId it was loaded for so a stale
+  // result from a previously-viewed lesson is ignored after navigation.
+  const [loaded, setLoaded] = useState<{ id: string; lesson: LessonDefinition | undefined } | null>(
+    null,
+  )
 
   useEffect(() => {
-    if (!hasLessonContent(lessonId)) {
-      setContent(undefined)
-      setContentLoading(false)
-      return
-    }
+    if (!hasLessonContent(lessonId)) return
 
     let cancelled = false
-    setContentLoading(true)
     void loadLesson(lessonId).then((lesson) => {
-      if (!cancelled) {
-        setContent(lesson)
-        setContentLoading(false)
-      }
+      if (!cancelled) setLoaded({ id: lessonId, lesson })
     })
 
     return () => {
       cancelled = true
     }
   }, [lessonId])
+
+  const content = loaded?.id === lessonId ? loaded.lesson : undefined
+  // Lessons without bundled content resolve synchronously to "no content"; anything
+  // with content is "loading" until the content for the current lessonId is in hand.
+  const contentLoading = hasLessonContent(lessonId) && !content
 
   const stepCount = content?.steps.length ?? 1
   const savedSession = useMemo(
@@ -59,13 +59,22 @@ export function LessonPage() {
     stats.completed ? false : stats.lessonFinished,
   )
 
-  useEffect(() => {
-    if (!content) return
-    setProgress({
-      stepIndex: stats.completed ? 0 : savedSession.stepIndex,
-      solvedCount: stats.completed ? 0 : savedSession.solvedStepIds.length,
-    })
-  }, [content, stats.completed, savedSession.stepIndex, savedSession.solvedStepIds.length])
+  // Re-seed progress once the real content (hence the real saved session) is known,
+  // and again if the saved session / completed flag changes — mirrors the previous
+  // effect, but as an adjust-during-render so we never setState inside an effect.
+  const progressSignature = content
+    ? `${stats.completed}:${savedSession.stepIndex}:${savedSession.solvedStepIds.length}`
+    : null
+  const [syncedProgressSignature, setSyncedProgressSignature] = useState(progressSignature)
+  if (progressSignature !== syncedProgressSignature) {
+    setSyncedProgressSignature(progressSignature)
+    if (progressSignature !== null) {
+      setProgress({
+        stepIndex: stats.completed ? 0 : savedSession.stepIndex,
+        solvedCount: stats.completed ? 0 : savedSession.solvedStepIds.length,
+      })
+    }
+  }
 
   const isReview = stats.completed
   const hasLiveProgress = progress.stepIndex > 0 || progress.solvedCount > 0
