@@ -23,20 +23,21 @@ type SeatProps = {
   revealHole: boolean
   /** Won (part of) the pot this hand. */
   winner: boolean
-  /** Play the deal-in / flip / glow / timer animations (false under reduced motion). */
+  /** Play the deal-in / flip / win / timer animations (false under reduced motion). */
   animate: boolean
   /** Opponents render compact (smaller cards + nameplate). */
   compact?: boolean
   /** Optional in-character table-talk quip (AI tables; hidden when null). */
   talk?: string | null
   /**
-   * Draw the active-seat countdown ring. Off in the coached room (Room 1) so there is
-   * no time pressure; on by default elsewhere (the glow + plate still flag the turn).
+   * Draw the active-seat countdown timer ring. Off in the coached room (Room 1) so
+   * there is no time pressure; on by default elsewhere. When off, the active seat still
+   * shows a static brass ring (StaticTurnRing), so the turn reads without a timer.
    */
   showTurnTimer?: boolean
 }
 
-/** Cosmetic seat clock (seconds) — paces the active glow; it never auto-acts. */
+/** Cosmetic seat clock (seconds) — paces the timer ring; it never auto-acts. */
 const TURN_SECONDS = 20
 
 /** Deterministic avatar gradients (from → to) picked by seat id, so each rival is stable. */
@@ -99,7 +100,7 @@ export function Seat({
 
       {/* The pro nameplate: avatar (+ active timer ring) · name · stack. */}
       <div className={`suited-plate relative -mt-1 flex items-center ${plateSize} ${plateTone} ${plateState}`}>
-        {(winner || active) && <GlowRing tone={winner ? 'win' : 'active'} animate={animate} />}
+        {winner && <WinHalo animate={animate} />}
 
         <div className="relative shrink-0" style={{ width: avatarSize, height: avatarSize }}>
           <span
@@ -113,7 +114,12 @@ export function Seat({
           >
             {initial}
           </span>
-          {active && showTurnTimer && <TurnTimerRing size={avatarSize} animate={animate} />}
+          {active &&
+            (showTurnTimer ? (
+              <TurnTimerRing size={avatarSize} animate={animate} />
+            ) : (
+              <StaticTurnRing size={avatarSize} />
+            ))}
         </div>
 
         <div className="relative min-w-0 flex-1 leading-tight">
@@ -176,9 +182,10 @@ function PositionChip({ role }: { role: 'BTN' | 'SB' | 'BB' }) {
 /**
  * The active-turn countdown ring drawn around the avatar — the pro "it's on you"
  * cue. It wipes from a full ring to empty over `TURN_SECONDS`; under reduced motion
- * it renders as a static full ring (the glow + brightened plate still flag the turn).
- * Purely cosmetic: the timer never forces an action, so the drill + free play are
- * unaffected.
+ * it renders as a static full ring (the brightened plate + brass ring still flag the
+ * turn). Purely cosmetic: the timer never forces an action, so the drill + free play
+ * are unaffected. Shown only where a timer is wanted (the Casino / Room 2); the
+ * coached room uses the timer-free `StaticTurnRing` instead.
  */
 function TurnTimerRing({ size, animate }: { size: number; animate: boolean }) {
   const box = size + 6
@@ -215,35 +222,44 @@ function TurnTimerRing({ size, animate }: { size: number; animate: boolean }) {
 }
 
 /**
- * The soft, animated halo around an active or winning seat. The active seat breathes
- * gently (looping); a winner gets a single brass pop that then holds its glow. Under
- * reduced motion it renders as a static halo (no looping, no pop).
+ * The timer-free active-turn cue for the coached room: a crisp, static brass ring
+ * around the avatar (no depletion, no glow). Pairs with the brightened plate + brass
+ * plate ring so "it's on you" reads clearly without reintroducing time pressure.
  */
-function GlowRing({ tone, animate }: { tone: 'win' | 'active'; animate: boolean }) {
-  const shadow =
-    tone === 'win'
-      ? '0 0 26px -2px rgba(212, 173, 87, 0.75)' // gold-400 halo
-      : '0 0 22px -2px rgba(231, 205, 134, 0.7)'
+function StaticTurnRing({ size }: { size: number }) {
+  const box = size + 6
+  const stroke = Math.max(2, Math.round(size * 0.09))
+  const r = (box - stroke) / 2
+  const c = box / 2
+  return (
+    <svg
+      className="pointer-events-none absolute"
+      style={{ left: -3, top: -3 }}
+      width={box}
+      height={box}
+      viewBox={`0 0 ${box} ${box}`}
+      aria-hidden
+    >
+      <circle cx={c} cy={c} r={r} fill="none" stroke="rgba(7,21,15,0.55)" strokeWidth={stroke} />
+      <circle cx={c} cy={c} r={r} fill="none" stroke="#e7cd86" strokeWidth={stroke - 1} />
+    </svg>
+  )
+}
+
+/**
+ * A single, restrained brass celebration on a winning seat: one springy pop that
+ * settles into a tight brass ring (NOT a soft breathing halo — that was a glow tell).
+ * Reserved for the win moment only; under reduced motion it just holds the ring.
+ */
+function WinHalo({ animate }: { animate: boolean }) {
   return (
     <motion.span
       aria-hidden
-      className="pointer-events-none absolute inset-0 rounded-2xl"
-      style={{ boxShadow: shadow }}
+      className="pointer-events-none absolute inset-0 rounded-[0.85rem]"
+      style={{ boxShadow: '0 0 16px -4px rgba(212, 173, 87, 0.6), inset 0 0 0 1.5px rgba(231, 205, 134, 0.85)' }}
       initial={false}
-      animate={
-        !animate
-          ? { opacity: tone === 'win' ? 0.85 : 0.6, scale: 1 }
-          : tone === 'win'
-            ? { opacity: [0, 1, 0.9], scale: [0.85, 1.06, 1] }
-            : { opacity: [0.4, 0.85, 0.4], scale: [1, 1.02, 1] }
-      }
-      transition={
-        !animate
-          ? { duration: 0 }
-          : tone === 'win'
-            ? { duration: DUR.celebrate, ease: EASE.chip }
-            : { duration: 1.6, ease: EASE.standard, repeat: Infinity }
-      }
+      animate={!animate ? { opacity: 0.95, scale: 1 } : { opacity: [0, 1, 0.95], scale: [0.9, 1.05, 1] }}
+      transition={!animate ? { duration: 0 } : { duration: DUR.celebrate, ease: EASE.chip }}
     />
   )
 }

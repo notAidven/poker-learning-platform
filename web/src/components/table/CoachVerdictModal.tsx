@@ -132,7 +132,7 @@ export function CoachVerdictModal({
             </p>
             {!sound && (
               <p className="mt-2 text-[0.8rem] font-medium leading-relaxed text-gold-800/90">
-                That move was not locked in — take another look and pick the line you like best.
+                That move was not locked in. Take another look and pick the line you like best.
               </p>
             )}
           </div>

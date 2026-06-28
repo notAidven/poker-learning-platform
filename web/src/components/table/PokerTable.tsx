@@ -60,94 +60,96 @@ import { drillAccuracyPct } from '../../lib/gamification'
 
 /**
  * Table-only chrome for the pro online-poker layout: the dark "room" the felt is
- * inset into, the wood/brass rail, the championship-green felt (warm dealer spotlight
- * + emerald dome + felt weave + vignette + a brass hairline), the centered board
- * tray, the seat nameplates, the spotlit pot glow, the action apron + bet slider, and
- * the "your turn" pulse. Injected once via a <style> in the table tree (the shared
- * chip/card CSS lives in <CardKitStyles />). All CSS motion here is frozen by the
- * global reduced-motion kill-switch; the JS-driven motion is gated on `animate`.
+ * inset into, the wood/brass rail, the muted championship-green felt (one restrained
+ * overhead dealer light + a crisp brass betting-line inlay + a quiet weave), the
+ * centered board tray, the seat nameplates (active = brightened plate + crisp brass
+ * ring, no glow), the action apron + bet slider, and the "your turn" pulse. Injected
+ * once via a <style> in the table tree (the shared chip/card CSS lives in
+ * <CardKitStyles />). All CSS motion here is frozen by the global reduced-motion
+ * kill-switch; the JS-driven motion is gated on `animate`.
+ *
+ * Palette is on-brand: the felt rides the `night`/`success` green ramp (no neon
+ * emerald), brass (`gold-300`) is the lone metal accent, used with restraint.
  */
 const TABLE_STYLES = `
 .suited-room {
   background:
-    radial-gradient(130% 120% at 50% -12%, rgba(23, 73, 47, 0.38), transparent 58%),
-    radial-gradient(120% 120% at 50% 126%, rgba(0, 0, 0, 0.5), transparent 72%),
-    linear-gradient(180deg, #08180f 0%, #050f0a 100%);
+    radial-gradient(120% 110% at 50% -10%, rgba(20, 64, 42, 0.26), transparent 60%),
+    linear-gradient(180deg, #0a1b12 0%, #050f0a 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 0 0 1px rgba(212, 173, 87, 0.12),
-    0 30px 60px -30px rgba(0, 0, 0, 0.7);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(212, 173, 87, 0.1),
+    0 28px 56px -32px rgba(0, 0, 0, 0.72);
 }
 .suited-rail-wood {
-  background: radial-gradient(130% 140% at 50% -10%, #6e5230 0%, #4a371f 44%, #2c2012 100%);
+  background: radial-gradient(135% 150% at 50% -12%, #5b4527 0%, #41301c 46%, #271c10 100%);
   box-shadow:
-    0 26px 54px -22px rgba(0, 0, 0, 0.78),
-    0 4px 10px rgba(0, 0, 0, 0.4),
-    inset 0 2px 2px rgba(255, 231, 176, 0.22),
-    inset 0 -10px 26px rgba(0, 0, 0, 0.5);
+    0 22px 46px -22px rgba(0, 0, 0, 0.74),
+    0 3px 8px rgba(0, 0, 0, 0.36),
+    inset 0 2px 2px rgba(255, 226, 168, 0.16),
+    inset 0 -10px 22px rgba(0, 0, 0, 0.48);
 }
 .suited-felt {
-  background-color: #0a5a3d;
+  position: relative;
+  background-color: #0f4a30;
   background-image:
-    radial-gradient(50% 40% at 50% 44%, rgba(255, 248, 224, 0.30) 0%, rgba(255, 246, 214, 0.07) 42%, transparent 66%),
-    radial-gradient(126% 124% at 50% 42%, #1aa873 0%, #128a5c 24%, #0a5c40 50%, #073e2a 74%, #04271a 100%),
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 6px),
-    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 6px);
+    radial-gradient(54% 44% at 50% 15%, rgba(244, 236, 208, 0.1) 0%, rgba(244, 236, 208, 0.028) 46%, transparent 72%),
+    radial-gradient(125% 122% at 50% 30%, #145c3a 0%, #0f4a30 36%, #0c3b27 64%, #082c1f 86%, #061d14 100%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.013) 0 2px, transparent 2px 7px);
   box-shadow:
-    inset 0 0 0 2px rgba(212, 173, 87, 0.6),
-    inset 0 0 0 6px rgba(7, 21, 15, 0.4),
-    inset 0 18px 50px rgba(0, 0, 0, 0.45),
-    inset 0 -26px 72px rgba(0, 0, 0, 0.52);
+    inset 0 0 0 1px rgba(231, 205, 134, 0.32),
+    inset 0 0 0 5px rgba(6, 20, 14, 0.5),
+    inset 0 16px 42px rgba(0, 0, 0, 0.36),
+    inset 0 -24px 60px rgba(0, 0, 0, 0.46);
 }
-/* A faint brass center logo so an empty felt still reads as "a real table". */
+/* The brass "betting line" inlay — the one real-table signature; quiet everywhere else. */
+.suited-felt::after {
+  content: "";
+  position: absolute;
+  inset: 8% 6%;
+  border-radius: 44% / 50%;
+  border: 1px solid rgba(231, 205, 134, 0.14);
+  pointer-events: none;
+  z-index: 1;
+}
+/* A faint brass center monogram so an empty felt still reads as "a real table". */
 .suited-center-mark {
   position: absolute;
   left: 50%;
-  top: 45%;
+  top: 46%;
   transform: translate(-50%, -50%);
-  font-size: 5.5rem;
+  font-size: 3.5rem;
   line-height: 1;
-  color: rgba(255, 246, 214, 0.06);
+  color: rgba(244, 236, 208, 0.05);
   pointer-events: none;
   z-index: 0;
   user-select: none;
 }
-.suited-pot-glow {
-  position: absolute;
-  left: 50%;
-  top: 40%;
-  width: 18rem;
-  height: 11rem;
-  transform: translate(-50%, -50%);
-  border-radius: 9999px;
-  background: radial-gradient(closest-side, rgba(255, 248, 224, 0.42), rgba(255, 246, 214, 0.08) 55%, transparent 72%);
-  pointer-events: none;
-  z-index: -1;
-  filter: blur(3px);
-}
 /* The community-board tray — a quiet dark inlay the five cards sit in, dead center. */
 .suited-board-tray {
-  background: linear-gradient(180deg, rgba(4, 16, 11, 0.55), rgba(4, 16, 11, 0.22));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), inset 0 2px 7px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, rgba(4, 16, 11, 0.52), rgba(4, 16, 11, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 2px 7px rgba(0, 0, 0, 0.38);
 }
-/* The seat nameplate "pod". */
+/* The seat nameplate "pod". Active = brightened plate + a crisp brass ring (no glow). */
 .suited-plate {
-  border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(26, 50, 38, 0.92), rgba(7, 20, 14, 0.94));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 16px -8px rgba(0, 0, 0, 0.65);
-  outline: 1.5px solid rgba(255, 255, 255, 0.08);
-  outline-offset: -1.5px;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #123523 0%, #0a2014 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 14px -10px rgba(0, 0, 0, 0.6);
+  outline: 1px solid rgba(255, 255, 255, 0.07);
+  outline-offset: -1px;
 }
 .suited-plate--active {
-  background: linear-gradient(180deg, rgba(42, 76, 56, 0.96), rgba(12, 34, 23, 0.96));
-  outline-color: rgba(231, 205, 134, 0.9);
+  background: linear-gradient(180deg, #1b4530 0%, #0e2c1d 100%);
+  outline: 1.5px solid rgba(231, 205, 134, 0.85);
+  outline-offset: -1.5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(231, 205, 134, 0.22), 0 6px 14px -10px rgba(0, 0, 0, 0.6);
 }
 .suited-plate--win {
-  outline-color: rgba(212, 173, 87, 0.95);
+  outline: 1.5px solid rgba(212, 173, 87, 0.95);
+  outline-offset: -1.5px;
 }
 .suited-plate--hero {
-  outline-color: rgba(231, 205, 134, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 1px rgba(212, 173, 87, 0.28), 0 10px 20px -8px rgba(0, 0, 0, 0.7);
+  outline-color: rgba(231, 205, 134, 0.5);
 }
 .suited-plate--hero.suited-plate--active {
   outline-color: rgba(231, 205, 134, 0.95);
@@ -758,13 +760,13 @@ export function PokerTable({
             {/* Table info strip — blinds + hand number, for at-a-glance tracking. */}
             <div className="mb-2.5 flex items-center justify-between gap-2 px-1 text-[0.62rem] font-semibold sm:mb-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 ring-1 ring-inset ring-white/10">
-                <span className="uppercase tracking-[0.14em] text-white/45">Blinds</span>
+                <span className="uppercase tracking-[0.18em] text-white/40">Blinds</span>
                 <span className="tabular-nums text-white">
                   {config.smallBlind.toLocaleString()}/{config.bigBlind.toLocaleString()}
                 </span>
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 ring-1 ring-inset ring-white/10">
-                <span className="uppercase tracking-[0.14em] text-white/45">Hand</span>
+                <span className="uppercase tracking-[0.18em] text-white/40">Hand</span>
                 <span className="tabular-nums text-white">#{handIndex + 1}</span>
               </span>
             </div>
@@ -781,16 +783,15 @@ export function PokerTable({
                   {/* DEAD CENTER — the gaze anchor: the pot, then the community board. */}
                   <div className="absolute left-1/2 top-[43%] z-[4] flex w-[82%] max-w-[21rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2.5">
                     <div className="relative flex flex-col items-center">
-                      <span className="suited-pot-glow" aria-hidden />
-                      {/* The pot is a single clean coin pill — cohesive with the bankroll
+                      {/* The pot is a single clean coin pill, cohesive with the bankroll
                           pills and the per-seat "Bet" labels. No chip stack on the felt. */}
                       <span
-                        className={`inline-flex items-center gap-2 rounded-full bg-night-950/70 px-4 py-2 shadow-lg ring-1 ring-inset ring-gold-300/40 ${
+                        className={`inline-flex items-center gap-2 rounded-full bg-night-950/80 px-4 py-2 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-gold-300/35 ${
                           handOver ? 'pck-pot-pop' : ''
                         }`}
                       >
                         <Chip size={18} tone="gold" />
-                        <span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-gold-200/85">
+                        <span className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-gold-200/80">
                           Pot
                         </span>
                         <span className="text-xl font-bold tabular-nums text-white">
@@ -800,7 +801,7 @@ export function PokerTable({
                     </div>
 
                     <div className="flex flex-col items-center gap-1">
-                      <span className="text-[0.52rem] font-bold uppercase tracking-[0.24em] text-white/45">
+                      <span className="text-[0.55rem] font-bold uppercase tracking-[0.18em] text-white/40">
                         {handOver
                           ? results?.reachedShowdown
                             ? 'Showdown'
@@ -854,8 +855,8 @@ export function PokerTable({
                         className="absolute z-[8] -translate-x-1/2 -translate-y-1/2"
                         style={{ left: `${bp.x}%`, top: `${bp.y}%` }}
                       >
-                        <span className="inline-flex items-baseline gap-1 rounded-full bg-night-950/80 px-2 py-0.5 shadow-md ring-1 ring-inset ring-gold-300/30">
-                          <span className="text-[0.5rem] font-semibold uppercase tracking-wide text-gold-200/70">
+                        <span className="inline-flex items-baseline gap-1 rounded-full bg-night-950/80 px-2 py-0.5 shadow-[0_3px_8px_-4px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-gold-300/25">
+                          <span className="text-[0.5rem] font-semibold uppercase tracking-[0.1em] text-gold-200/70">
                             Bet
                           </span>
                           <span className="text-[0.66rem] font-bold tabular-nums text-gold-100">
@@ -886,7 +887,8 @@ export function PokerTable({
                           compact={!seat.isHero}
                           talk={talk[seat.id] ?? null}
                           // Coaching room (Room 1): drop the active-seat countdown ring so
-                          // there is no time pressure (the glow + plate still flag the turn).
+                          // there is no time pressure (the brightened plate + crisp brass
+                          // ring still flag the turn).
                           showTurnTimer={!drill}
                         />
                       </div>

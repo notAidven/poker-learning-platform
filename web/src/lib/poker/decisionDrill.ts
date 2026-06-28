@@ -76,11 +76,11 @@ const PAIR_RANK = HAND_CATEGORY_RANK['pair']
 
 const NUDGE: Record<Exclude<DrillReason, 'sound'>, string> = {
   'fold-strong':
-    "That's a big hand to let go — you've made two pair or better with your own cards. How often do you really think you're beaten here?",
+    "That's a big hand to let go. You've made two pair or better with your own cards, so how often do you really think you're beaten here?",
   'call-no-equity':
     'You would be paying a big bet with no pair and no real draw. What hand are you hoping to beat, and which cards actually improve you?',
   'raise-trash':
-    'Raising with no pair and no draw turns your hand into a pure bluff against shown strength. What worse hand can call you — and what is your plan if it does?',
+    'Raising with no pair and no draw turns your hand into a pure bluff against shown strength. What worse hand can call you, and what is your plan if it does?',
   'bad-sizing':
     'That sizing does not fit the spot. Think about the pot: a strong hand wants a size that gets paid, and a bluff should not risk far more than the pot.',
 }
