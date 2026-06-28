@@ -122,18 +122,6 @@ export const CONCEPTS: Record<ConceptId, ConceptMeta> = {
     section: 'advanced',
     blurb: 'How deep stacks change commitment decisions.',
   },
-  combinatorics: {
-    id: 'combinatorics',
-    label: 'Combinatorics',
-    section: 'advanced',
-    blurb: 'Counting the combos of a holding.',
-  },
-  blockers: {
-    id: 'blockers',
-    label: 'Blockers',
-    section: 'advanced',
-    blurb: 'Cards in your hand that remove opponent combos.',
-  },
   icm: {
     id: 'icm',
     label: 'ICM',
@@ -173,7 +161,6 @@ export const LESSON_CONCEPTS: Record<string, ConceptId[]> = {
   'adv-ranges': ['preflop-ranges', 'position'],
   'adv-texture': ['board-texture', 'c-betting'],
   'adv-implied': ['implied-odds', 'spr'],
-  'adv-combos': ['combinatorics', 'blockers'],
   'adv-icm': ['icm', 'push-fold'],
 }
 

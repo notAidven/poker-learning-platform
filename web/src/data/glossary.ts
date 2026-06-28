@@ -153,13 +153,9 @@ const GLOSSARY: Record<string, string> = {
   'thin value':
     'A value bet with a hand only a little ahead, made because just enough worse hands will still call.',
 
-  // --- combinatorics & blockers (advanced play) ---
-  combinatorics:
-    'Counting the exact number of ways a hand can be dealt. It tells you how likely each holding is.',
+  // --- combinations & blockers (advanced play) ---
   combination:
     'One specific two-card holding. A hand class like A-K is made of several combinations, one for each way its suits can pair up.',
-  combo:
-    'Short for combination: one specific two-card holding. A single hand class can have several combos (a pocket pair has 6, for example).',
   blocker:
     'A card in your hand that removes some of the hands your opponent could have. Holding an Ace, for example, means they can have fewer pairs of Aces.',
 

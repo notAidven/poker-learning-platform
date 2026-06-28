@@ -1,4 +1,4 @@
-/** Canonical course path: 14 lessons in 4 sections (plus the casino floor) for "Suited", a Texas Hold'em poker course. */
+/** Canonical course path: 13 lessons in 4 sections (plus the casino floor) for "Suited", a Texas Hold'em poker course. */
 
 /** The visually-distinct sections of the learning path. */
 export type SectionId = 'foundations' | 'playing' | 'math' | 'advanced' | 'casino'
@@ -36,7 +36,7 @@ export const sections: SectionMeta[] = [
   {
     id: 'advanced',
     title: 'Advanced Play',
-    subtitle: 'Ranges, board texture, implied odds, combos, and ICM',
+    subtitle: 'Ranges, board texture, implied odds, and ICM',
     accent: 'brand',
   },
   {
@@ -130,7 +130,7 @@ export const lessons: LessonMeta[] = [
     primaryInteraction: 'Value bets; size to the board',
   },
 
-  // --- Advanced Play (Part A): five lessons between The Math and the Casino Floor.
+  // --- Advanced Play (Part A): four lessons between The Math and the Casino Floor.
   // ids are stable and referenced by concepts.ts (LESSON_CONCEPTS) + the section gate.
   {
     id: 'adv-ranges',
@@ -152,13 +152,6 @@ export const lessons: LessonMeta[] = [
     section: 'advanced',
     unit: 'Advanced Play · Implied odds',
     primaryInteraction: 'Future chips when you hit; stack-to-pot ratio',
-  },
-  {
-    id: 'adv-combos',
-    title: 'Combinatorics & Blockers',
-    section: 'advanced',
-    unit: 'Advanced Play · Combinatorics',
-    primaryInteraction: 'Counting combos (pairs 6, suited 4, offsuit 12); blockers',
   },
   {
     id: 'adv-icm',

@@ -149,16 +149,10 @@ async function answerAdvanced(index: number, correct: boolean): Promise<void> {
     case 5: // a-q6 betting-round choose-action: call (facing a bet → call/raise/fold)
       fireEvent.click(await screen.findByRole('button', { name: correct ? /Call/ : 'Fold' }))
       break
-    case 6: // a-q7 compare-events more:'a'
-      fireEvent.click(await screen.findByRole('button', { name: correct ? /Pocket Jacks/ : /A-Q suited/ }))
-      break
-    case 7: // a-q8 compare-events more:'a'
-      fireEvent.click(await screen.findByRole('button', { name: correct ? /Pocket Queens/ : /Pocket Aces/ }))
-      break
-    case 8: // a-q9 range-grid inRange:true
+    case 6: // a-q9 range-grid inRange:true
       fireEvent.click(await screen.findByRole('button', { name: correct ? 'In range' : 'Out of range' }))
       break
-    case 9: // a-q10 compare-events more:'a'
+    case 7: // a-q10 compare-events more:'a'
       fireEvent.click(await screen.findByRole('button', { name: correct ? /Push or fold/ : /Small raises/ }))
       break
   }
@@ -168,34 +162,34 @@ async function answerAdvanced(index: number, correct: boolean): Promise<void> {
   )
 }
 
-/** Drive the advanced gate with exactly `numCorrect` of 10 answered correctly. */
+/** Drive the advanced gate with exactly `numCorrect` of 8 answered correctly. */
 async function driveAdvanced(numCorrect: number): Promise<void> {
   for (let i = 0; i < gateAdvanced.questions.length; i += 1) {
     await answerAdvanced(i, i < numCorrect)
   }
 }
 
-describe('SectionGatePlayer — real Advanced Play gate (10 questions, ~70% bar = 7/10)', () => {
-  it('answering all 10 correctly completes gate-advanced', async () => {
+describe('SectionGatePlayer — real Advanced Play gate (8 questions, ~70% bar = 6/8)', () => {
+  it('answering all 8 correctly completes gate-advanced', async () => {
     const store = makeStore()
     renderPlayer(gateAdvanced, store)
-    await driveAdvanced(10)
+    await driveAdvanced(8)
     await screen.findByText('Section complete')
     await waitFor(() => expect(store.getStats(gateId('advanced')).completed).toBe(true))
   })
 
-  it('exactly 7 of 10 correct PASSES (the displayed pass bar must match grading)', async () => {
-    const store = makeStore()
-    renderPlayer(gateAdvanced, store)
-    await driveAdvanced(7)
-    await screen.findByText('Section complete')
-    await waitFor(() => expect(store.getStats(gateId('advanced')).completed).toBe(true))
-  })
-
-  it('6 of 10 correct FAILS (does not complete the section)', async () => {
+  it('exactly 6 of 8 correct PASSES (the displayed pass bar must match grading)', async () => {
     const store = makeStore()
     renderPlayer(gateAdvanced, store)
     await driveAdvanced(6)
+    await screen.findByText('Section complete')
+    await waitFor(() => expect(store.getStats(gateId('advanced')).completed).toBe(true))
+  })
+
+  it('5 of 8 correct FAILS (does not complete the section)', async () => {
+    const store = makeStore()
+    renderPlayer(gateAdvanced, store)
+    await driveAdvanced(5)
     await screen.findByText('Gate not cleared')
     expect(store.getStats(gateId('advanced')).completed).toBe(false)
   })

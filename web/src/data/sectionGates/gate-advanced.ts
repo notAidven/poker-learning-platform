@@ -2,7 +2,7 @@ import type { SectionGateDefinition } from './types'
 
 /**
  * The Advanced Play Section Gate — covers adv-ranges, adv-texture, adv-implied,
- * adv-combos, and adv-icm, 2 fresh questions each (10 total, mirroring gate-math's
+ * and adv-icm, 2 fresh questions each (8 total, mirroring gate-math's
  * 2-per-lesson coverage). Every spot is BRAND-NEW (no lesson / skill-check reuse). No
  * hints (gate rules); pass at ~70%. All questions grade against an authored answer
  * (betting-round / compare-events / range-grid), so there is no evaluator dependency.
@@ -10,7 +10,6 @@ import type { SectionGateDefinition } from './types'
  *  adv-ranges:  (q1) a weak offsuit Ace is OUT of an early open, (q2) fold junk UTG.
  *  adv-texture: (q3) tell wet from dry, (q4) do not c-bet air into a wet board.
  *  adv-implied: (q5) high SPR favors a draw, (q6) take the cheap flush-draw call (price vs equity).
- *  adv-combos:  (q7) a pair has more combos than a suited hand, (q8) a Queen blocks QQ.
  *  adv-icm:     (q9) a wide 10bb button jam, (q10) push/fold at a very short stack.
  * Keep `sectionId: 'advanced'`.
  */
@@ -162,48 +161,6 @@ export const gateAdvanced: SectionGateDefinition = {
       answer: { action: 'call' },
       incorrectFeedback:
         'The price is tiny: 20 to win 80, so you need only about 20% equity, and your flush draw is about 35%. With implied odds on top, this is an easy call.',
-    },
-    {
-      id: 'a-q7',
-      lessonId: 'adv-combos',
-      prompt: 'Which specific starting hand can be dealt MORE ways?',
-      interaction: 'compare-events',
-      config: {
-        chooseLabel: 'Which has more combos?',
-        helperText: 'Count the combinations of each exact hand.',
-        eventA: {
-          label: 'Pocket Jacks (JJ)',
-          detail: '6 combos: choose 2 of the 4 Jacks.',
-        },
-        eventB: {
-          label: 'A-Q suited (AQs)',
-          detail: '4 combos: one per suit.',
-        },
-      },
-      answer: { more: 'a' },
-      incorrectFeedback:
-        'A specific pair is 6 combos; a specific suited hand is only 4. Pocket Jacks can be dealt more ways than A-Q suited.',
-    },
-    {
-      id: 'a-q8',
-      lessonId: 'adv-combos',
-      prompt: 'You hold the Queen of spades. Which premium pair do you block for your opponent?',
-      interaction: 'compare-events',
-      config: {
-        chooseLabel: 'Which hand does your Queen block?',
-        helperText: 'A blocker only removes hands that use the card you hold.',
-        eventA: {
-          label: 'Pocket Queens (QQ)',
-          detail: 'You hold a Queen, so QQ drops from 6 combos to 3.',
-        },
-        eventB: {
-          label: 'Pocket Aces (AA)',
-          detail: 'You hold no Ace, so AA still has 6 combos.',
-        },
-      },
-      answer: { more: 'a' },
-      incorrectFeedback:
-        'A blocker only affects hands containing your card. Your Queen cuts QQ from 6 to 3 combos; it does nothing to AA.',
     },
     {
       id: 'a-q9',

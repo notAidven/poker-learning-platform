@@ -60,7 +60,7 @@ const SECTION_LESSONS = {
   foundations: ['1', '2'],
   playing: ['3', '4', 'preflop'],
   math: ['5', '6', '7', '8'],
-  advanced: ['adv-ranges', 'adv-texture', 'adv-implied', 'adv-combos', 'adv-icm'],
+  advanced: ['adv-ranges', 'adv-texture', 'adv-implied', 'adv-icm'],
 }
 const GATED_SECTIONS = ['foundations', 'playing', 'math', 'advanced']
 const gateId = (s) => `gate-${s}`
@@ -176,12 +176,11 @@ function testSectionStructure() {
     { id: 'adv-ranges', section: 'advanced' },
     { id: 'adv-texture', section: 'advanced' },
     { id: 'adv-implied', section: 'advanced' },
-    { id: 'adv-combos', section: 'advanced' },
     { id: 'adv-icm', section: 'advanced' },
   ]
   const expectedOrder = ['foundations', 'playing', 'math', 'advanced']
 
-  assert.equal(lessons.length, 14, 'course has 14 lessons total')
+  assert.equal(lessons.length, 13, 'course has 13 lessons total')
 
   // Sections appear in the intended order.
   const order = []
@@ -205,11 +204,11 @@ function testSectionStructure() {
   )
   assert.equal(
     lessons.filter((l) => l.section === 'advanced').length,
-    5,
-    'Advanced Play has 5 lessons',
+    4,
+    'Advanced Play has 4 lessons',
   )
 
-  record('sections', true, '14 lessons in 4 contiguous sections; Advanced Play adds 5')
+  record('sections', true, '13 lessons in 4 contiguous sections; Advanced Play adds 4')
 }
 
 // Two-room Casino Floor (mirrors data/tables.ts + isTableUnlocked in

@@ -30,7 +30,5 @@ export type ConceptId =
   | 'c-betting'
   | 'implied-odds'
   | 'spr'
-  | 'combinatorics'
-  | 'blockers'
   | 'icm'
   | 'push-fold'

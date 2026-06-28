@@ -49,7 +49,6 @@ describe('sectionGates — ids and section membership', () => {
       'adv-ranges',
       'adv-texture',
       'adv-implied',
-      'adv-combos',
       'adv-icm',
     ])
     expect(priorGatedSection('foundations')).toBeNull()
@@ -170,7 +169,6 @@ describe('sectionGates — buildCoursePathNodes', () => {
       'adv-ranges',
       'adv-texture',
       'adv-implied',
-      'adv-combos',
       'adv-icm',
       'gate-advanced',
       'room-1',
