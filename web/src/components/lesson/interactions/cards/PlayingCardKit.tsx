@@ -12,7 +12,7 @@ import type { CSSProperties } from 'react'
 import { motion } from 'motion/react'
 import { EASE } from '../../../../lib/motion'
 import { cardLabel, isRedSuit, parseCardId, type CardId, type CardSuit } from '../../../../types/lesson'
-import { breakIntoChips, denomVars, type ChipDenom } from './chipDenoms'
+import { denomVars, topDenom, type ChipDenom } from './chipDenoms'
 
 export type CardSize = 'sm' | 'md' | 'lg'
 
@@ -364,25 +364,31 @@ export function ChipDisc({
   )
 }
 
-/** Physical chips drawn per denomination column (the count label carries the exact total). */
-const MAX_PER_COLUMN = 6
+/** Most chips drawn in one stack — kept low so the felt stays calm (the numeric label
+ *  beside the stack always carries the exact value, so the chips never have to). */
+const MAX_STACK = 5
 
-/** One denomination's stack: edge-on chips with a face-on cap, viewed at a slight tilt. */
+/**
+ * A calm stack height for an amount: two chips for small bets, then one more per order
+ * of magnitude, capped at MAX_STACK. The height is only an at-a-glance cue to size —
+ * the precise value is always shown as a number next to the stack — so a growing pot
+ * reads as a taller stack without ever fanning out into a noisy pile.
+ */
+function stackHeight(amount: number): number {
+  return Math.max(2, Math.min(MAX_STACK, Math.floor(Math.log10(amount)) + 1))
+}
+
+/** A single tilted column of edge-on chips topped by a face-on cap. Purely decorative. */
 function ChipColumn({ denom, count, width }: { denom: ChipDenom; count: number; width: number }) {
   const edge = Math.max(4, Math.round(width * 0.3))
   const step = Math.max(3, Math.round(width * 0.22))
   const capH = Math.max(6, Math.round(width * 0.46))
-  const n = Math.min(Math.max(1, count), MAX_PER_COLUMN)
+  const n = Math.min(Math.max(1, count), MAX_STACK)
   const stackTop = (n - 1) * step
   const height = stackTop + edge + capH * 0.5
 
   return (
-    <span
-      className="suited-col"
-      style={{ width, height, ...denomVars(denom) }}
-      role="img"
-      aria-label={`${count} ${count === 1 ? 'chip' : 'chips'} of ${denom}`}
-    >
+    <span className="suited-col" style={{ width, height, ...denomVars(denom) }} aria-hidden="true">
       {Array.from({ length: n }).map((_, i) => (
         <span key={i} className="suited-edge" style={{ bottom: i * step, height: edge, zIndex: i + 1 }} />
       ))}
@@ -395,10 +401,12 @@ function ChipColumn({ denom, count, width }: { denom: ChipDenom; count: number; 
 }
 
 /**
- * A real chip stack for an amount: the value broken into standard denominations,
- * each rendered as its own little stack of colored, edge-striped discs (high → low,
- * left → right). Decorative — callers show the exact number alongside; this is the
- * felt's "physical" representation of the pot and players' committed bets.
+ * The felt's "physical chips" for an amount — a single, compact stack of ONE
+ * denomination (coloured by the largest chip that fits the amount), tall in rough
+ * proportion to the size of the bet/pot. Deliberately NOT broken into every
+ * denomination: one quiet token reads far cleaner on a busy felt than a rainbow of
+ * columns, and the exact value is always shown as a number beside it (callers pair
+ * this with a count label). Decorative only — pot math and bets are unchanged.
  */
 export function ChipStack({
   amount,
@@ -409,13 +417,11 @@ export function ChipStack({
   size?: number
   className?: string
 }) {
-  const columns = breakIntoChips(amount)
-  if (columns.length === 0) return null
+  const value = Math.round(amount)
+  if (value <= 0) return null
   return (
-    <span className={`suited-stack ${className}`} style={{ gap: Math.round(size * 0.22) }} aria-hidden="true">
-      {columns.map(({ denom, count }) => (
-        <ChipColumn key={denom} denom={denom} count={count} width={size} />
-      ))}
+    <span className={`suited-stack ${className}`} aria-hidden="true">
+      <ChipColumn denom={topDenom(value)} count={stackHeight(value)} width={size} />
     </span>
   )
 }
@@ -547,10 +553,12 @@ export const CARD_KIT_STYLES = `
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: repeating-linear-gradient(90deg, var(--spot) 0 2px, transparent 2px 8px);
+  /* A few quiet edge ticks — the classic chip detail, dialed down so a stack reads as
+     calm bands of colour rather than a busy striped pattern. */
+  background: repeating-linear-gradient(90deg, var(--spot) 0 1.5px, transparent 1.5px 11px);
   -webkit-mask: linear-gradient(to bottom, transparent 24%, #000 30% 70%, transparent 76%);
   mask: linear-gradient(to bottom, transparent 24%, #000 30% 70%, transparent 76%);
-  opacity: 0.85;
+  opacity: 0.5;
 }
 .suited-cap {
   position: absolute;

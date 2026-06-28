@@ -754,8 +754,9 @@ export function PokerTable({
                           <ChipStack amount={hand.pot} size={32} />
                         </div>
                       )}
-                      <span className="inline-flex items-center gap-2 rounded-full bg-night-950/70 px-4 py-1.5 shadow-lg ring-1 ring-inset ring-gold-300/40">
-                        <Chip size={15} tone="gold" />
+                      {/* The pile above is the chip imagery; this pill is the clean value
+                          label (no extra chip glyph — the stack already carries that read). */}
+                      <span className="inline-flex items-baseline gap-2 rounded-full bg-night-950/70 px-4 py-1.5 shadow-lg ring-1 ring-inset ring-gold-300/40">
                         <span className="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-gold-200/85">
                           Pot
                         </span>
