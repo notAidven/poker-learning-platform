@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import {
-  applyAction,
-  type AppliedAction,
-  type HandState,
-} from '../../lib/poker/handEngine'
+import { type AppliedAction, type HandState } from '../../lib/poker/handEngine'
 import { isAIConfigured } from '../../lib/ai/aiClient'
 import { getTableTalk } from '../../lib/ai/llmOpponent'
 import { STARTING_BANKROLL } from '../../lib/bankroll'
@@ -32,21 +28,29 @@ import {
   buildCoachContext,
   buildDeepCoachContext,
   buildHintContext,
-  coachReactionFor,
-  coachResultReaction,
   createInitialHand,
   createNextHand,
   decideOpponentAction,
-  drillSpotSignature,
-  finalizeHand,
-  gradeHeroDecision,
-  groupHandLog,
   opponentActionDelayMs,
   roleFor,
   summarizeHand,
   type HandSummary,
   type TableRuntimeConfig,
 } from './tableRuntime'
+import {
+  coachReactionFor,
+  coachResultReaction,
+  drillSpotSignature,
+  gradeHeroDecision,
+  groupHandLog,
+} from './coachFeedback'
+import {
+  advanceWithHeroAction,
+  advanceWithOpponentAction,
+  clearsTable,
+  heroToAct,
+  opponentToAct,
+} from './tableSession'
 import {
   initialDrillSession,
   recordDrillResult,
@@ -401,11 +405,9 @@ export function PokerTable({
     () => (handOver ? summarizeHand(hand) : null),
     [handOver, hand],
   )
-  const isHeroTurn = !handOver && hand.toActIndex === heroIndex && heroIndex >= 0
-  const activeOppIndex =
-    !handOver && hand.toActIndex != null && !hand.seats[hand.toActIndex].isHero
-      ? hand.toActIndex
-      : null
+  // Turn order comes from the pure session module, so the sequencing is testable.
+  const isHeroTurn = heroToAct(hand, heroIndex)
+  const activeOppIndex = opponentToAct(hand)
 
   const personaForSeat = useCallback(
     (id: string): string | undefined => {
@@ -433,12 +435,8 @@ export function PokerTable({
       void (async () => {
         const decision = await decideOpponentAction(hand, idx, config, personaForSeat(seatId))
         if (cancelled) return
-        // Stale-guard: only apply if the same seat is still to act.
-        setHand((cur) =>
-          cur.toActIndex === idx && cur.phase !== 'complete'
-            ? finalizeHand(applyAction(cur, decision.applied))
-            : cur,
-        )
+        // Stale-guard lives in the pure session: a re-fired timer is a no-op.
+        setHand((cur) => advanceWithOpponentAction(cur, idx, decision.applied))
       })()
     }, delayMs)
 
@@ -452,7 +450,7 @@ export function PokerTable({
   useEffect(() => {
     if (clearedRef.current || !handOver) return
     const summary = summarizeHand(hand)
-    if (summary.reachedShowdown || summary.winnerIds.includes('hero')) {
+    if (clearsTable(summary)) {
       clearedRef.current = true
       onCleared?.()
     }
@@ -555,12 +553,7 @@ export function PokerTable({
   }, [handOver, handIndex, hand, results, reduceMotion])
 
   const applyHeroAction = useCallback((applied: AppliedAction) => {
-    setHand((cur) => {
-      if (cur.toActIndex == null || cur.phase === 'complete' || !cur.seats[cur.toActIndex].isHero) {
-        return cur
-      }
-      return finalizeHand(applyAction(cur, applied))
-    })
+    setHand((cur) => advanceWithHeroAction(cur, applied))
   }, [])
 
   const heroAct = useCallback(

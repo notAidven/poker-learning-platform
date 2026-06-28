@@ -5,6 +5,12 @@ import {
 } from '../../../types/lesson'
 import type { BettingAction } from '../../../types/poker'
 import type { InteractionProps } from './types'
+import {
+  buildEvBreakdown,
+  gradeBettingRound,
+  parseSignedNumber,
+  type BettingRoundSubmission,
+} from './bettingRound'
 import { CheckPanel } from './CheckPanel'
 import { MathContent } from '../MathContent'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
@@ -50,18 +56,6 @@ const PRETTY_FRACTION: { max: number; label: string }[] = [
 function fractionLabel(f: number): string {
   for (const entry of PRETTY_FRACTION) if (f <= entry.max) return entry.label
   return `${Math.round(f * 100)}% pot`
-}
-
-function parseSignedNumber(raw: string): number | null {
-  const t = raw.trim()
-  if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(t)) return null
-  const n = Number(t)
-  return Number.isFinite(n) ? n : null
-}
-
-function evMatches(raw: string, expected: number, tolerance: number): boolean {
-  const n = parseSignedNumber(raw)
-  return n !== null && Math.abs(n - expected) <= tolerance
 }
 
 function closestSizeIndex(options: number[], target: number | undefined): number | null {
@@ -161,26 +155,6 @@ function buildTableReveal(
   }
 
   return { potAfter: pot, heroStackAfter: heroStack, villainStackAfter: villainStack, lines, villainAction, priceLaidPercent }
-}
-
-type EvBreakdown = {
-  equity: number
-  win: number
-  lose: number
-  ev: number
-  required: number
-  decision: 'call' | 'fold'
-}
-
-/** Recover equity from the authored EV so the reveal can show the full arithmetic. */
-function buildEvBreakdown(config: BettingRoundConfig, answer: BettingRoundAnswer): EvBreakdown {
-  const win = config.pot
-  const lose = config.facing?.amount ?? 0
-  const ev = answer.evChips ?? 0
-  const denom = win + lose
-  const equity = denom > 0 ? (ev + lose) / denom : 0
-  const required = denom > 0 ? lose / denom : 0
-  return { equity, win, lose, ev, required, decision: ev > 0 ? 'call' : 'fold' }
 }
 
 /** Count up an integer toward `target`; instant when motion is reduced. */
@@ -307,12 +281,12 @@ export function BettingRound({
   const wantsDeal = !reduceMotion && !initialSolved
 
   function isCorrect(): boolean {
-    if (task === 'choose-action') return action !== null && action === answer.action
-    if (task === 'choose-size') {
-      if (sizeIdx === null || answer.sizeFraction === undefined) return false
-      return Math.abs(sizingOptions[sizeIdx] - answer.sizeFraction) <= (answer.sizeTolerance ?? 0.05)
+    const submission: BettingRoundSubmission = {
+      action,
+      sizeFraction: sizeIdx !== null ? sizingOptions[sizeIdx] : null,
+      evInput,
     }
-    return evMatches(evInput, answer.evChips ?? 0, answer.evTolerance ?? 1)
+    return gradeBettingRound(config, answer, submission)
   }
 
   function canSubmit(): boolean {

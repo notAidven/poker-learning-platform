@@ -9,7 +9,7 @@ import { areAllLessonsComplete, isTableCleared } from '../lib/casinoProgress'
 import { areSectionLessonsComplete } from '../lib/sectionGates'
 import { Modal } from './ui/Modal'
 import { Badge } from './ui/Badge'
-import { buttonVariants } from './ui/Button'
+import { buttonVariants } from './ui/buttonVariants'
 
 type LessonStatus = 'completed' | 'current' | 'locked'
 

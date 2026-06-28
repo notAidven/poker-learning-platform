@@ -8,6 +8,7 @@ import type {
 } from '../../../types/lesson'
 import type { InteractionProps } from './types'
 import { CheckPanel } from './CheckPanel'
+import { gradeCompareEvents } from './compareEvents'
 import { reduceFraction } from './fractionAnswer'
 
 type CompareEventsProps = InteractionProps & {
@@ -83,7 +84,7 @@ export function CompareEvents({
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (choice === answer.more) {
+    if (gradeCompareEvents(answer, choice)) {
       setSolved(true)
       onCorrect()
     } else {

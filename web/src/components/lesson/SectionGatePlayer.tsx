@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { useProgressStore } from '../../lib/progress/ProgressContext'
-import type { LessonCompletionAward } from '../../lib/progress/types'
-import { gatePassMark, isGatePassing, type LessonXpBreakdown } from '../../lib/gamification'
-import { buildRewardModel, type RewardModel } from '../../lib/reward'
+import { gatePassMark, isGatePassing } from '../../lib/gamification'
+import type { RewardModel } from '../../lib/reward'
 import { DUR, EASE } from '../../lib/motion'
 import { usePrefersReducedMotion } from './interactions/usePrefersReducedMotion'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import type { SectionId } from '../../data/lessons'
 import type { SectionGateDefinition } from '../../data/sectionGates'
 import { SkillCheckStepView } from './SkillCheckStepView'
 import { RewardCelebration } from '../gamification/RewardCelebration'
 import { CheckIcon, RetryIcon, StarIcon } from '../icons'
-import { Button, buttonVariants } from '../ui/Button'
+import { Button } from '../ui/Button'
+import { buttonVariants } from '../ui/buttonVariants'
 
 type SectionGatePlayerProps = {
   gate: SectionGateDefinition
@@ -81,36 +81,16 @@ export function SectionGatePlayer({
       // Only a passing score completes the section. A failing score changes nothing —
       // the lessons stay available and the gate stays retryable.
       if (didPass) {
-        const prevTotalXp = profile?.totalXp ?? 0
-        const prevStreakStored = profile?.streak ?? 0
-        const prevLastActivityDate = profile?.lastActivityDate ?? null
-        const result = store.saveGateResult(sectionId, finalCorrect, total)
-        void (async () => {
-          const award = await Promise.race([
-            result.award,
-            new Promise<LessonCompletionAward | null>((resolve) => {
-              setTimeout(() => resolve(null), 1200)
-            }),
-          ])
-          // First pass uses the authored gate/test-out XP; a re-pass shows the small
-          // replay XP the backend granted (so practice is still visibly rewarded).
-          const breakdown: LessonXpBreakdown | null =
-            result.xpBreakdown ??
-            (award && award.xpAwarded > 0
-              ? { base: award.xpAwarded, bonus: 0, total: award.xpAwarded }
-              : null)
-          if (breakdown) {
-            setReward(
-              buildRewardModel({
-                xpBreakdown: breakdown,
-                prevTotalXp,
-                prevStreakStored,
-                prevLastActivityDate,
-                award,
-              }),
-            )
-          }
-        })()
+        // One store call passes the gate AND returns the ready celebration (the store
+        // owns the XP/streak read-state + award await + meter math). No snapshot-race.
+        const { reward } = store.completeGate(sectionId, finalCorrect, total, {
+          totalXp: profile?.totalXp ?? 0,
+          streak: profile?.streak ?? 0,
+          lastActivityDate: profile?.lastActivityDate ?? null,
+        })
+        void reward.then((model) => {
+          if (model) setReward(model)
+        })
       }
       setPassed(didPass)
       setFinished(true)
@@ -195,8 +175,15 @@ export function SectionGatePlayer({
               <RewardCelebration {...reward} />
             </div>
           )}
+          <p className="mt-5 rounded-2xl bg-white/80 px-4 py-3 text-sm text-night-700">
+            Lock it in with a quick mixed review — a few problems pulled from everything you have
+            learned so far, spaced out so it sticks.
+          </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link to="/course" className={buttonVariants({ variant: 'primary' })}>
+            <Link to="/review" className={buttonVariants({ variant: 'primary' })}>
+              Start a mixed review
+            </Link>
+            <Link to="/course" className={buttonVariants({ variant: 'secondary' })}>
               Back to course path
             </Link>
           </div>

@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { DUR, EASE } from '../lib/motion'
-import { buttonVariants } from './ui/Button'
+import { buttonVariants } from './ui/buttonVariants'
 import { usePrefersReducedMotion } from './lesson/interactions/usePrefersReducedMotion'
 import { LockIcon } from './icons'
 

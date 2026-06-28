@@ -36,6 +36,9 @@ const CasinoTablePage = lazy(() =>
 const GlossaryPage = lazy(() =>
   import('./pages/GlossaryPage').then((m) => ({ default: m.GlossaryPage })),
 )
+const ReviewPage = lazy(() =>
+  import('./pages/ReviewPage').then((m) => ({ default: m.ReviewPage })),
+)
 
 function RouteFallback() {
   return (
@@ -97,6 +100,14 @@ const router = createBrowserRouter([
             element: (
               <Lazy>
                 <SectionGatePage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'review',
+            element: (
+              <Lazy>
+                <ReviewPage />
               </Lazy>
             ),
           },

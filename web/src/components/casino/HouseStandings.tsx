@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchLeaderboard, type LeaderboardEntry } from '../../lib/leaderboard'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import { AnimalAvatar } from '../AnimalAvatar'
 import { Badge } from '../ui/Badge'
 import { cx } from '../ui/cx'

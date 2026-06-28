@@ -15,6 +15,18 @@
 > describe a single "Lesson 6 / `full-hand`" capstone are kept as **historical design context** —
 > the poker pedagogy and math (§3) remain the source of truth.
 
+> **Advanced Play + Spaced Review (latest).** The path now adds an **Advanced Play** section
+> (`adv-ranges`, `adv-texture`, `adv-implied`, `adv-combos`, `adv-icm`), gated like the others
+> via `lib/sectionGates`, built on a new **13x13 range-grid** interaction
+> (`web/src/components/lesson/interactions/RangeGrid.tsx`). A **spaced-repetition Review system**
+> operationalizes the retrieval science: every problem carries `concepts?: ConceptId[]`
+> (taxonomy in `web/src/data/concepts.ts`), a Leitner scheduler
+> (`web/src/lib/review/scheduler.ts`, CAT-day intervals) resurfaces missed concepts sooner and
+> mastered ones later, and the **Daily Review** at `/review` (`web/src/pages/ReviewPage.tsx`)
+> serves an **interleaved** mixed-concept queue (`web/src/lib/review/reviewQueue.ts`). Per-concept
+> state persists to `users/{uid}/review/{conceptId}`; a completed review keeps the daily streak.
+> Review content is authored and code-graded (no AI), per the brainlift SPOV.
+
 ---
 
 ## 1. Overview & goals

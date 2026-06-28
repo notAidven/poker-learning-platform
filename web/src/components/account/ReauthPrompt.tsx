@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import { getAuthErrorMessage } from '../../lib/authErrors'
 import { Button } from '../ui/Button'
 import { DarkAlert, DarkField } from './fields'

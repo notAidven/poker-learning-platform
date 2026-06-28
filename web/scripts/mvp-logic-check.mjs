@@ -60,8 +60,9 @@ const SECTION_LESSONS = {
   foundations: ['1', '2'],
   playing: ['3', '4', 'preflop'],
   math: ['5', '6', '7', '8'],
+  advanced: ['adv-ranges', 'adv-texture', 'adv-implied', 'adv-combos', 'adv-icm'],
 }
-const GATED_SECTIONS = ['foundations', 'playing', 'math']
+const GATED_SECTIONS = ['foundations', 'playing', 'math', 'advanced']
 const gateId = (s) => `gate-${s}`
 const priorGatedSection = (s) => {
   const i = GATED_SECTIONS.indexOf(s)
@@ -96,6 +97,12 @@ function testSequentialUnlock() {
   const playingDone = ['1', '2', 'gate-foundations', '3', '4', 'preflop']
   assert.equal(isLessonUnlocked('5', playingDone), false) // playing gate NOT passed → locked
   assert.equal(isLessonUnlocked('5', [...playingDone, 'gate-playing']), true) // passed → opens
+  // Advanced Play's first lesson needs the Math gate; then it sequences internally.
+  const mathDone = [...playingDone, 'gate-playing', '5', '6', '7', '8']
+  assert.equal(isLessonUnlocked('adv-ranges', mathDone), false) // math gate NOT passed → locked
+  assert.equal(isLessonUnlocked('adv-ranges', [...mathDone, 'gate-math']), true) // passed → opens
+  assert.equal(isLessonUnlocked('adv-texture', [...mathDone, 'gate-math']), false) // needs adv-ranges
+  assert.equal(isLessonUnlocked('adv-texture', [...mathDone, 'gate-math', 'adv-ranges']), true)
   assert.equal(isLessonUnlocked('99', []), true) // unknown id → page shows "not found"
   record(
     '5-logic',
@@ -166,10 +173,15 @@ function testSectionStructure() {
     { id: '6', section: 'math' },
     { id: '7', section: 'math' },
     { id: '8', section: 'math' },
+    { id: 'adv-ranges', section: 'advanced' },
+    { id: 'adv-texture', section: 'advanced' },
+    { id: 'adv-implied', section: 'advanced' },
+    { id: 'adv-combos', section: 'advanced' },
+    { id: 'adv-icm', section: 'advanced' },
   ]
-  const expectedOrder = ['foundations', 'playing', 'math']
+  const expectedOrder = ['foundations', 'playing', 'math', 'advanced']
 
-  assert.equal(lessons.length, 9, 'course has 9 lessons total')
+  assert.equal(lessons.length, 14, 'course has 14 lessons total')
 
   // Sections appear in the intended order.
   const order = []
@@ -191,8 +203,13 @@ function testSectionStructure() {
     3,
     'Playing a Hand has 3 (incl. the preflop lesson)',
   )
+  assert.equal(
+    lessons.filter((l) => l.section === 'advanced').length,
+    5,
+    'Advanced Play has 5 lessons',
+  )
 
-  record('sections', true, '9 lessons in 3 contiguous sections; Playing a Hand now has 3 lessons')
+  record('sections', true, '14 lessons in 4 contiguous sections; Advanced Play adds 5')
 }
 
 // Two-room Casino Floor (mirrors data/tables.ts + isTableUnlocked in
@@ -526,6 +543,80 @@ function testAuthLoadNeverHangs() {
   )
 }
 
+// Spaced-repetition Review (mirrors lib/review/scheduler.isDue + lib/review/selectors
+// .introducedConcepts + lib/review/reviewQueue.buildReviewQueue): only concepts from a
+// completed lesson are eligible ("introduced"); among those a concept is due when it has
+// no schedule yet or its dueDay is on/before today; the queue interleaves due concepts
+// round-robin and caps the session length.
+function testReviewDueQueue() {
+  const LESSON_CONCEPTS = { '5': ['outs-counting', 'equity'], '6': ['pot-odds', 'ev'] }
+  const introduced = (completed) => {
+    const s = new Set()
+    for (const id of completed) for (const c of LESSON_CONCEPTS[id] ?? []) s.add(c)
+    return [...s]
+  }
+  const isDue = (state, today) => !state || !state.dueDay || state.dueDay <= today
+  const dueConcepts = (states, ids, today) => ids.filter((id) => isDue(states[id], today))
+
+  // Introduced gating: nothing is reviewable until a lesson that teaches it is completed.
+  assert.deepEqual(introduced([]), [], 'no completed lessons → nothing introduced')
+  assert.deepEqual(introduced(['5']).sort(), ['equity', 'outs-counting'])
+
+  // A future-scheduled concept is NOT due; an overdue one IS.
+  const today = '2026-06-27'
+  const states = { 'outs-counting': { dueDay: '2026-07-10' }, equity: { dueDay: '2026-06-20' } }
+  assert.deepEqual(dueConcepts(states, introduced(['5']), today), ['equity'])
+
+  // buildReviewQueue mirror: bucket by first due concept, interleave round-robin, cap.
+  function buildQueue(pool, due, limit) {
+    if (limit <= 0 || due.length === 0) return []
+    const buckets = new Map(due.map((c) => [c, []]))
+    for (const it of pool) {
+      const key = due.find((c) => it.concepts.includes(c))
+      if (key !== undefined) buckets.get(key).push(it)
+    }
+    const order = [...buckets.values()].filter((b) => b.length)
+    const out = []
+    let round = 0
+    let progressed = true
+    while (out.length < limit && progressed) {
+      progressed = false
+      for (const b of order) {
+        if (round < b.length) {
+          out.push(b[round])
+          progressed = true
+          if (out.length >= limit) break
+        }
+      }
+      round += 1
+    }
+    return out
+  }
+
+  const pool = [
+    { id: 'a1', concepts: ['equity'] },
+    { id: 'a2', concepts: ['equity'] },
+    { id: 'b1', concepts: ['pot-odds'] },
+  ]
+  assert.deepEqual(
+    buildQueue(pool, ['equity', 'pot-odds'], 10).map((x) => x.id),
+    ['a1', 'b1', 'a2'],
+    'queue interleaves concepts (equity, pot-odds, then equity) instead of blocking',
+  )
+  assert.deepEqual(
+    buildQueue(pool, ['equity', 'pot-odds'], 2).map((x) => x.id),
+    ['a1', 'b1'],
+    'session cap respected',
+  )
+  assert.deepEqual(buildQueue(pool, [], 10), [], 'nothing due → empty queue')
+
+  record(
+    'review-queue',
+    true,
+    'Review: introduced-concept gating, due filtering, interleaving, and session cap mirror the engine',
+  )
+}
+
 testExitPreservesSession()
 testNextLessonPath()
 testSequentialUnlock()
@@ -539,6 +630,7 @@ testLesson1CardSelectAll()
 testHandRankingOrder()
 testErrorBoundaryRecovery()
 testAuthLoadNeverHangs()
+testReviewDueQueue()
 
 const failed = results.filter((r) => !r.pass)
 console.log('\n--- Logic summary ---')

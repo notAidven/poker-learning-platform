@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   cardLabel,
   fullDeck,
-  parseCardId,
   type BoardDealerAnswer,
   type BoardDealerConfig,
   type CardId,
   type ShowdownWinner,
 } from '../../../types/lesson'
 import type { HandCategory, PokerStreet } from '../../../types/poker'
-import { compareHands, evaluateHoldem } from '../../../lib/poker/handEvaluator'
+import { evaluateHoldem } from '../../../lib/poker/handEvaluator'
 import type { InteractionProps } from './types'
+import { bestHandCategoryAt, gradeBoardDealer, showdownWinner } from './boardDealer'
 import { CheckPanel } from './CheckPanel'
 import { Button } from '../../ui/Button'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
@@ -116,12 +116,11 @@ export function BoardDealer({
     [config.askBestHandAt, streets],
   )
 
-  // One stable seed: honor config.seed, otherwise pick once so the deal is fixed
-  // across re-renders (revealing a street must not re-shuffle the deck).
-  const effectiveSeed = useMemo(
-    () => config.seed ?? Math.floor(Math.random() * 1_000_000_000),
-    [config.seed],
-  )
+  // One stable seed: honor config.seed, otherwise pick one once via a useState
+  // initialiser (so Math.random never runs during render) and keep it fixed across
+  // re-renders — revealing a street must not re-shuffle the deck.
+  const [randomSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000))
+  const effectiveSeed = config.seed ?? randomSeed
 
   const maxCommunity = useMemo(
     () => streets.reduce((n, s) => n + COMMUNITY_PER_STREET[s], 0),
@@ -170,12 +169,7 @@ export function BoardDealer({
         continue
       }
       const board = deal.community.slice(0, commUpTo(streets.indexOf(s) + 1))
-      out[s] =
-        board.length + 2 >= 5
-          ? evaluateHoldem(deal.hole, board).category
-          : parseCardId(deal.hole[0]).rank === parseCardId(deal.hole[1]).rank
-            ? 'pair'
-            : 'high-card'
+      out[s] = bestHandCategoryAt(deal.hole, board)
     }
     return out
   }, [askedStreets, streets, answer.bestHandByStreet, deal])
@@ -193,8 +187,7 @@ export function BoardDealer({
     if (!isShowdown || !config.villain) return null
     const hero = evaluateHoldem(deal.hole, deal.community)
     const villain = evaluateHoldem(config.villain, deal.community)
-    const cmp = compareHands(hero, villain)
-    const winner: ShowdownWinner = cmp > 0 ? 'hero' : cmp < 0 ? 'opponent' : 'split'
+    const winner = showdownWinner(deal.hole, config.villain, deal.community)
     return { hero, villain, winner }
   }, [isShowdown, config.villain, deal])
 
@@ -240,17 +233,6 @@ export function BoardDealer({
   // The villain's hole cards flip face-up only once the whole board (incl. river) is out.
   const villainShown = isShowdown && revealed >= streets.length
 
-  // Auto-complete the reveal-gate: once the required streets are showing, mark
-  // the step solved exactly once so the learner just proceeds with the lesson's
-  // own Continue button — no "Check answer" for a step with no answer.
-  useEffect(() => {
-    if (!isRevealGate || submitted || disabled) return
-    if (revealed < requiredReveals) return
-    setSubmitted(true)
-    setSolved(true)
-    onCorrect()
-  }, [isRevealGate, submitted, disabled, revealed, requiredReveals, onCorrect])
-
   const communityGroups = streets
     .filter((s) => COMMUNITY_PER_STREET[s] > 0)
     .map((s) => {
@@ -280,7 +262,16 @@ export function BoardDealer({
 
   function dealNext() {
     if (locked || revealed >= streets.length) return
-    setRevealed((r) => Math.min(r + 1, streets.length))
+    const next = Math.min(revealed + 1, streets.length)
+    setRevealed(next)
+    // Reveal-gate auto-complete: a no-input "watch the cards" step finishes the
+    // moment the required streets are showing (there is no Check button to press).
+    // Driving it from the click — not a setState-in-effect — keeps it solved once.
+    if (isRevealGate && next >= requiredReveals) {
+      setSubmitted(true)
+      setSolved(true)
+      onCorrect()
+    }
   }
 
   const askedRevealed = askedStreets.every((s) => revealed > streets.indexOf(s))
@@ -307,9 +298,12 @@ export function BoardDealer({
   function handleSubmit() {
     if (!canSubmit) return
     setSubmitted(true)
-    const streetsCorrect = askedStreets.every((s) => picks[s] === expectedByStreet[s])
-    const showdownCorrect = !isShowdown || winnerPick === showdown?.winner
-    if (streetsCorrect && showdownCorrect) {
+    const correct = gradeBoardDealer(
+      { askedStreets, picks, isShowdown, winnerPick },
+      expectedByStreet,
+      showdown?.winner ?? null,
+    )
+    if (correct) {
       setSolved(true)
       onCorrect()
     } else {

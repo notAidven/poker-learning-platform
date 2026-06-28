@@ -1,4 +1,5 @@
 import type { LessonXpBreakdown } from '../gamification'
+import type { ReviewState } from '../review/types'
 
 export type LessonXpBreakdownStored = {
   base: number
@@ -111,4 +112,13 @@ export interface ProgressBackend {
   touchStreak(uid: string): Promise<void>
   /** Drop all of a user's remote lesson progress. */
   clear(uid: string): Promise<void>
+  /**
+   * Read every persisted per-concept spaced-repetition review state for a user
+   * (keyed by conceptId). Values are sanitized on read, so a corrupt doc is skipped.
+   */
+  loadReview(uid: string): Promise<Record<string, ReviewState>>
+  /** Persist one concept's review state (Firestore: users/{uid}/review/{conceptId}). */
+  writeReview(uid: string, conceptId: string, state: ReviewState): Promise<void>
 }
+
+export type { ReviewState }

@@ -3,12 +3,16 @@ import { course } from '../data/course'
 import { lessonNumber, lessons } from '../data/lessons'
 import { hasLessonContent } from '../data/lessonContent'
 import { tables } from '../data/tables'
-import { useAuth } from '../contexts/AuthContext'
-import { useProgress } from '../lib/progress'
+import { useAuth } from '../contexts/useAuth'
+import { useProgress, useProgressStore } from '../lib/progress'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
 import { isTableCleared, isTableUnlocked } from '../lib/casinoProgress'
+import { accuracy, todayCAT } from '../lib/review/scheduler'
+import { dueReviewConcepts, introducedConcepts } from '../lib/review/selectors'
+import { conceptMeta } from '../data/concepts'
+import type { ConceptId } from '../types/concept'
 import { Badge } from '../components/ui/Badge'
-import { buttonVariants } from '../components/ui/Button'
+import { buttonVariants } from '../components/ui/buttonVariants'
 import { NightPanel } from '../components/ui/NightPanel'
 import { StatToken } from '../components/ui/StatToken'
 import { Stagger } from '../components/ui/Stagger'
@@ -26,7 +30,20 @@ import {
 export function HomePage() {
   const { profile } = useAuth()
   const { completedIds, getNextLessonPath, isLessonUnlocked } = useProgress()
+  const store = useProgressStore()
   const continueTo = getNextLessonPath()
+
+  // Spaced-repetition Review: which learned concepts are due today, and the learner's
+  // weakest concepts (lowest recall accuracy) for the Strengths & Leaks panel.
+  const reviewStates = store.getAllReviewStates()
+  const introducedConceptIds = introducedConcepts(completedIds)
+  const dueReviewCount = dueReviewConcepts(reviewStates, completedIds, todayCAT()).length
+  const leaks = introducedConceptIds
+    .map((id) => ({ id, state: reviewStates[id] }))
+    .filter((entry) => entry.state != null && entry.state.seen > 0)
+    .sort((a, b) => accuracy(a.state) - accuracy(b.state))
+    .slice(0, 3)
+    .map((entry) => ({ id: entry.id, pct: Math.round(accuracy(entry.state) * 100) }))
 
   const totalXp = profile?.totalXp ?? 0
   const levelProgress = getLevelProgress(totalXp)
@@ -163,6 +180,12 @@ export function HomePage() {
         </Stagger>
       </section>
 
+      {introducedConceptIds.length > 0 && (
+        <section>
+          <ReviewSection dueCount={dueReviewCount} leaks={leaks} />
+        </section>
+      )}
+
       {room1 && (
         <section>
           <CasinoCard
@@ -173,6 +196,74 @@ export function HomePage() {
           />
         </section>
       )}
+    </div>
+  )
+}
+
+function ReviewSection({
+  dueCount,
+  leaks,
+}: {
+  dueCount: number
+  leaks: { id: ConceptId; pct: number }[]
+}) {
+  const hasDue = dueCount > 0
+  return (
+    <div className="grid gap-4 rounded-2xl border border-night-900/10 bg-white p-5 shadow-card sm:grid-cols-[1.2fr_1fr] sm:p-6">
+      <div className="flex flex-col">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-600">
+          Daily Review
+        </p>
+        <h3 className="mt-1 font-display text-lg font-bold text-ink">
+          {hasDue ? 'Keep what you have learned' : 'All caught up'}
+        </h3>
+        <p className="mt-1 text-sm text-night-700/70">
+          {hasDue
+            ? `${dueCount} ${dueCount === 1 ? 'concept is' : 'concepts are'} due for a quick, spaced review. Recalling beats re-reading.`
+            : 'Nothing is due right now. Spacing is working — check back tomorrow.'}
+        </p>
+        <div className="mt-4">
+          <Link to="/review" className={buttonVariants({ variant: hasDue ? 'primary' : 'secondary' })}>
+            {hasDue ? 'Start review' : 'Review anyway'}
+            {hasDue && (
+              <span className="ml-2 rounded-full bg-white/25 px-2 py-0.5 text-xs font-bold">
+                {dueCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-night-900/[0.03] p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-night-700/55">
+          Strengths &amp; leaks
+        </p>
+        {leaks.length > 0 ? (
+          <ul className="mt-2 space-y-2">
+            {leaks.map((leak) => (
+              <li key={leak.id} className="flex items-center justify-between gap-3 text-sm">
+                <span className="truncate text-night-800">{conceptMeta(leak.id).label}</span>
+                <span
+                  className={cx(
+                    'shrink-0 rounded-full px-2 py-0.5 text-xs font-bold',
+                    leak.pct >= 80
+                      ? 'bg-success-100 text-success-700'
+                      : leak.pct >= 50
+                        ? 'bg-gold-200/70 text-gold-700'
+                        : 'bg-danger-100 text-danger-700',
+                  )}
+                >
+                  {leak.pct}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-night-700/60">
+            Answer a review and your weakest concepts will show up here.
+          </p>
+        )}
+      </div>
     </div>
   )
 }

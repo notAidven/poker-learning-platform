@@ -13,6 +13,7 @@ import { HAND_CATEGORY_RANK, type BettingAction, type PokerStreet } from '../../
 import { lookupGlossaryTerm } from '../../data/glossary'
 import { rankValue } from '../poker/handEvaluator'
 import { analyzeSpot, type HintContext, type SpotAnalysis } from '../poker/hints'
+import { callEvChips, potOddsPct } from '../poker/spotStrength'
 import { generateText, isAIConfigured } from './aiClient'
 import { describeLegalActions, tidyModelText } from './aiText'
 
@@ -247,20 +248,21 @@ export function computeDeepReadNumbers(
   analysis: SpotAnalysis,
 ): DeepReadNumbers {
   const facingBet = ctx.toCall > 0
-  const potOddsPct = facingBet ? Math.round((ctx.toCall / (ctx.pot + ctx.toCall)) * 100) : null
+  // Pot odds and the EV of calling come from the one spot-strength module, so the
+  // deep read can never price a spot differently from the bots or the lessons.
+  const potOdds = potOddsPct(ctx.pot, ctx.toCall)
   const winPct = roughWinPct(ctx, analysis)
   const equityLowPct = Math.max(2, winPct - EQUITY_BAND_PCT)
   const equityHighPct = Math.min(98, winPct + EQUITY_BAND_PCT)
-  const evAt = (p: number) => Math.round((p / 100) * ctx.pot - (1 - p / 100) * ctx.toCall)
   return {
     facingBet,
-    potOddsPct,
+    potOddsPct: potOdds,
     winPct,
     equityLowPct,
     equityHighPct,
-    evChips: facingBet ? evAt(winPct) : null,
-    evLowChips: facingBet ? evAt(equityLowPct) : null,
-    evHighChips: facingBet ? evAt(equityHighPct) : null,
+    evChips: facingBet ? callEvChips(winPct, ctx.pot, ctx.toCall) : null,
+    evLowChips: facingBet ? callEvChips(equityLowPct, ctx.pot, ctx.toCall) : null,
+    evHighChips: facingBet ? callEvChips(equityHighPct, ctx.pot, ctx.toCall) : null,
   }
 }
 

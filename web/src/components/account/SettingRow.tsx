@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { buttonVariants } from '../ui/Button'
+import { buttonVariants } from '../ui/buttonVariants'
 
 type SettingRowProps = {
   /** Small leading visual (icon chip or avatar). Decorative. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useBlocker } from 'react-router-dom'
 
 type UseActivityExitGuardOptions = {
@@ -13,7 +13,6 @@ type UseActivityExitGuardOptions = {
 
 export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGuardOptions) {
   const allowNavigationRef = useRef(false)
-  const [showModal, setShowModal] = useState(false)
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -36,12 +35,6 @@ export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGua
   }, [when])
 
   useEffect(() => {
-    if (blocker.state === 'blocked') {
-      setShowModal(true)
-    }
-  }, [blocker.state])
-
-  useEffect(() => {
     if (!when) {
       allowNavigationRef.current = false
     }
@@ -52,7 +45,6 @@ export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGua
   }, [])
 
   const stay = useCallback(() => {
-    setShowModal(false)
     if (blocker.state === 'blocked') {
       blocker.reset()
     }
@@ -61,14 +53,15 @@ export function useActivityExitGuard({ when, onConfirmExit }: UseActivityExitGua
   const confirmExit = useCallback(() => {
     onConfirmExit?.()
     allowNavigationRef.current = true
-    setShowModal(false)
     if (blocker.state === 'blocked') {
       blocker.proceed()
     }
   }, [blocker, onConfirmExit])
 
+  // The modal is open exactly while React Router is holding a blocked navigation.
+  // `stay` (reset) and `confirmExit` (proceed) both clear that state, which closes it.
   return {
-    modalOpen: showModal || blocker.state === 'blocked',
+    modalOpen: blocker.state === 'blocked',
     stay,
     confirmExit,
     allowNavigation,

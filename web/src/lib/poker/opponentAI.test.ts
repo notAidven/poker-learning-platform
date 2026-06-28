@@ -201,7 +201,7 @@ describe('Tier 2 — pot odds', () => {
       makeInput({
         tier: 2,
         hole: ['AH', 'KH'],
-        board: ['QH', '7H', '2C'], // four hearts → 9-out flush draw (~36% on the flop)
+        board: ['QH', '7H', '2C'], // four hearts → 9-out flush draw (~35% on the flop)
         street: 'flop',
         legalActions: FACING_BET,
         pot: 100,

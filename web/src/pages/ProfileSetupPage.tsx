@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { AnimalPicker } from '../components/AnimalPicker'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import type { ProfileAnimalId } from '../data/animals'
 import {
   completeProfileSetup,

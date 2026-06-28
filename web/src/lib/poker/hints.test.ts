@@ -69,7 +69,10 @@ describe('analyzeSpot — draw detection (combo draws are not mislabeled straigh
     const a = flopDraw(['9H', '8H'], ['7H', '6S', '2H'])
     expect(a.drawName).toBe('flush draw + straight draw')
     expect(a.outs).toBe(15)
-    expect(a.equityPct).toBe(60) // rule of 4 on the flop, capped at 95
+    // CORRECTNESS FIX (candidate 01): equity is now the big-draw-corrected Rule of
+    // 2 & 4 (the single canonical convention in `poker/spotStrength`), shared with
+    // the lessons. 15 outs -> 15x4 - (15-8) = 53, not the old uncorrected 60.
+    expect(a.equityPct).toBe(53)
   })
 
   it('labels a gutshot + flush combo as a combo with the union out count', () => {
@@ -78,14 +81,18 @@ describe('analyzeSpot — draw detection (combo draws are not mislabeled straigh
     const a = flopDraw(['AH', '10H'], ['KH', 'QH', '3S'])
     expect(a.drawName).toBe('flush draw + straight draw')
     expect(a.outs).toBe(12)
-    expect(a.equityPct).toBe(48)
+    // CORRECTNESS FIX (candidate 01): 12 outs -> 12x4 - (12-8) = 44, not 48.
+    expect(a.equityPct).toBe(44)
   })
 
   it('labels a pure flush draw as a flush draw with 9 outs', () => {
     const a = flopDraw(['AS', 'KS'], ['QS', '7S', '2D'])
     expect(a.drawName).toBe('flush draw')
     expect(a.outs).toBe(9)
-    expect(a.equityPct).toBe(36)
+    // CORRECTNESS FIX (candidate 01): this is the headline unification. The coach
+    // used to read 36% here while Lesson 5 read 35%; both now read the corrected
+    // 35% (9x4 - (9-8)), which also matches the exact hypergeometric value.
+    expect(a.equityPct).toBe(35)
   })
 
   it('labels a pure open-ended straight draw as OESD with 8 outs', () => {

@@ -9,58 +9,21 @@ import {
   type OutsOddsAsk,
   type OutsOddsConfig,
 } from '../../../types/lesson'
-import type { HandCategory } from '../../../types/poker'
 import { countOuts } from '../../../lib/poker/handEvaluator'
+import { exactEquityPct } from '../../../lib/poker/spotStrength'
 import type { InteractionProps } from './types'
+import { deriveOutsOdds, deriveTarget, gradeOutsOdds, type OutsOddsSubmission } from './outsOdds'
 import { CheckPanel } from './CheckPanel'
 import { Button } from '../../ui/Button'
 import { NumericAnswerInput } from './NumericAnswerInput'
-import { countMatches, hasValidCountInput, percentMatches } from './numericAnswer'
-import { fractionPercentMatches, hasValidFractionInput } from './fractionAnswer'
+import { hasValidCountInput } from './numericAnswer'
+import { hasValidFractionInput } from './fractionAnswer'
 import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 import { SuitIcon } from './cards/PlayingCardKit'
 
 type OutsOddsProps = InteractionProps & {
   config: OutsOddsConfig
   answer: OutsOddsAnswer
-}
-
-/** Pot odds is an exact price, so only round-off slack is allowed. */
-const POT_ODDS_TOLERANCE = 1
-/** Rule of 2 & 4 is an estimate — accept a band around it (the rule *or* the exact value). */
-const DEFAULT_EQUITY_TOLERANCE = 3
-
-/**
- * Map a draw's plain-language label to the hand category it completes, so outs can
- * be validated by the evaluator (`countOuts`) instead of a hard-coded number. A
- * flush+straight combo maps to `straight` because that's the lower category — every
- * card that makes either draw lifts the hand to at least a straight.
- */
-function deriveTarget(drawLabel: string): HandCategory | undefined {
-  const s = drawLabel.toLowerCase()
-  if (s.includes('straight')) return 'straight'
-  if (s.includes('flush')) return 'flush'
-  if (s.includes('full')) return 'full-house'
-  if (s.includes('quad') || s.includes('four of a kind')) return 'quads'
-  if (s.includes('trip') || s.includes('set') || s.includes('three of a kind')) return 'trips'
-  if (s.includes('two pair')) return 'two-pair'
-  if (s.includes('pair') || s.includes('overcard')) return 'pair'
-  return undefined
-}
-
-/** Rule of 2 & 4 estimate, with the big-draw correction `(outs×4) − (outs−8)` for ≥9 outs. */
-function ruleEstimate(outs: number, street: 'flop' | 'turn'): number {
-  if (street === 'turn') return outs * 2
-  const raw = outs * 4
-  return outs > 8 ? raw - (outs - 8) : raw
-}
-
-/** Exact chance ≥1 out lands across `cardsToCome` cards drawn from `unseen` unseen cards. */
-function exactEquityPercent(outs: number, unseen: number, cardsToCome: number): number {
-  if (unseen <= 0) return 0
-  let miss = 1
-  for (let i = 0; i < cardsToCome; i++) miss *= Math.max(0, unseen - outs - i) / (unseen - i)
-  return (1 - miss) * 100
 }
 
 /** A full hand/board card. */
@@ -269,28 +232,19 @@ export function OutsOdds({
     }
   }, [config.hole, config.board, target])
 
-  // Outs are validated by the evaluator, never hard-coded; the authored answer.outs
-  // is only a fallback if the spot can't be evaluated.
-  const expectedOuts = outsResult?.count ?? answer.outs ?? 0
+  // Out cards (for the reveal) still come from the evaluator here, but every EXPECTED
+  // answer — outs, equity, the pot-odds price, the decision — comes from the one pure
+  // grader (`./outsOdds`), which reads the spot-strength module. The widget never
+  // re-derives the math, so it can never drift from the coach or the bots.
   const outCards = outsResult?.outs ?? []
-
-  const cardsToCome = config.street === 'flop' ? 2 : 1
+  const expected = useMemo(() => deriveOutsOdds(config, answer), [config, answer])
+  const expectedOuts = expected.outs
+  const cardsToCome = expected.cardsToCome
   const unseenCount = 52 - config.hole.length - config.board.length
-
-  const requiredEquity =
-    config.pot != null && config.betToCall != null
-      ? (config.betToCall / (config.pot + config.betToCall)) * 100
-      : (answer.potOddsPercent ?? null)
-
-  const decisionEquity = ruleEstimate(expectedOuts, config.street)
-  const expectedDecision: 'call' | 'fold' | null =
-    requiredEquity != null
-      ? decisionEquity >= requiredEquity
-        ? 'call'
-        : 'fold'
-      : (answer.decision ?? null)
-
-  const equityCenter = answer.equityPercent ?? ruleEstimate(expectedOuts, config.street)
+  const requiredEquity = expected.requiredEquityPct
+  const decisionEquity = expected.ruleEquity
+  const expectedDecision = expected.decision
+  const equityCenter = expected.equityCenter
 
   const [outsInput, setOutsInput] = useState(initialSolved ? String(expectedOuts) : '')
   const [equityInput, setEquityInput] = useState(initialSolved ? String(equityCenter) : '')
@@ -338,27 +292,6 @@ export function OutsOdds({
   const equityAsFraction = fractionEquity && equityFormat === 'fraction'
   const potOddsAsFraction = fractionPotOdds && potOddsFormat === 'fraction'
 
-  function outsOk() {
-    return !asked('outs') || countMatches(outsInput, expectedOuts)
-  }
-  function equityOk() {
-    if (!asked('equity')) return true
-    const tol = answer.equityTolerance ?? DEFAULT_EQUITY_TOLERANCE
-    if (equityAsFraction) return fractionPercentMatches(equityNum, equityDen, equityCenter, tol)
-    return percentMatches(equityInput, equityCenter, tol)
-  }
-  function potOddsOk() {
-    if (!asked('potOdds')) return true
-    if (requiredEquity == null) return true
-    if (potOddsAsFraction) {
-      return fractionPercentMatches(potOddsNum, potOddsDen, requiredEquity, POT_ODDS_TOLERANCE)
-    }
-    return percentMatches(potOddsInput, requiredEquity, POT_ODDS_TOLERANCE)
-  }
-  function decisionOk() {
-    return !asked('decision') || (decisionChoice != null && decisionChoice === expectedDecision)
-  }
-
   const outsReady = !asked('outs') || hasValidCountInput(outsInput)
   const equityReady =
     !asked('equity') ||
@@ -385,7 +318,17 @@ export function OutsOdds({
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (outsOk() && equityOk() && potOddsOk() && decisionOk()) {
+    const submission: OutsOddsSubmission = {
+      outsInput,
+      equity: equityAsFraction
+        ? { kind: 'fraction', num: equityNum, den: equityDen }
+        : { kind: 'percent', value: equityInput },
+      potOdds: potOddsAsFraction
+        ? { kind: 'fraction', num: potOddsNum, den: potOddsDen }
+        : { kind: 'percent', value: potOddsInput },
+      decision: decisionChoice,
+    }
+    if (gradeOutsOdds(config, answer, submission).correct) {
       setSolved(true)
       onCorrect()
     } else {
@@ -420,7 +363,7 @@ export function OutsOdds({
   }
 
   const empiricalPct = trials > 0 ? (hits / trials) * 100 : 0
-  const theoreticalPct = exactEquityPercent(expectedOuts, unseenCount, cardsToCome)
+  const theoreticalPct = exactEquityPct(expectedOuts, unseenCount, cardsToCome)
 
   const streetLabel =
     config.street === 'flop' ? 'Flop · two cards to come' : 'Turn · one card to come'

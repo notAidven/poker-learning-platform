@@ -20,6 +20,7 @@ import type {
   LessonStats,
   ProgressBackend,
 } from './types'
+import type { ReviewState } from '../review/types'
 
 export type InMemoryUser = {
   totalXp: number
@@ -63,6 +64,7 @@ export type InMemoryProgressBackendOptions = {
 export class InMemoryProgressBackend implements ProgressBackend {
   private readonly users = new Map<string, InMemoryUser>()
   private readonly docs = new Map<string, Map<string, ProgressDoc>>()
+  private readonly reviewDocs = new Map<string, Map<string, ReviewState>>()
   private readonly today: () => string
 
   constructor(options: InMemoryProgressBackendOptions = {}) {
@@ -90,6 +92,15 @@ export class InMemoryProgressBackend implements ProgressBackend {
     if (!docs) {
       docs = new Map()
       this.docs.set(uid, docs)
+    }
+    return docs
+  }
+
+  private reviewFor(uid: string): Map<string, ReviewState> {
+    let docs = this.reviewDocs.get(uid)
+    if (!docs) {
+      docs = new Map()
+      this.reviewDocs.set(uid, docs)
     }
     return docs
   }
@@ -195,7 +206,20 @@ export class InMemoryProgressBackend implements ProgressBackend {
     user.lastActivityDate = streakUpdate.lastActivityDate
   }
 
+  async loadReview(uid: string): Promise<Record<string, ReviewState>> {
+    const out: Record<string, ReviewState> = {}
+    for (const [conceptId, state] of this.reviewFor(uid)) {
+      out[conceptId] = { ...state }
+    }
+    return out
+  }
+
+  async writeReview(uid: string, conceptId: string, state: ReviewState): Promise<void> {
+    this.reviewFor(uid).set(conceptId, { ...state })
+  }
+
   async clear(uid: string): Promise<void> {
     this.docs.delete(uid)
+    this.reviewDocs.delete(uid)
   }
 }

@@ -13,11 +13,19 @@ import {
 } from '../../../types/lesson'
 import {
   HAND_CATEGORIES_STRONGEST_FIRST,
-  HAND_CATEGORY_RANK,
   type EvaluatedHand,
   type HandCategory,
 } from '../../../types/poker'
 import { compareHands, evaluateBest, evaluateFive } from '../../../lib/poker/handEvaluator'
+import {
+  expectedCategory,
+  expectedCategoryOrder,
+  gradeBuildHand,
+  gradeIdentifyCategory,
+  gradeOrderCategories,
+  gradeOrderHands,
+  gradePickBestFive,
+} from './handRanker'
 import {
   DndContext,
   KeyboardSensor,
@@ -352,10 +360,6 @@ function OrientationLabel({ text }: { text: string }) {
   )
 }
 
-function arraysEqual<T>(a: T[], b: T[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i])
-}
-
 /** Reorderable list state shared by the two ordering modes. */
 function useOrder(initial: string[]) {
   const [order, setOrder] = useState<string[]>(initial)
@@ -383,7 +387,8 @@ function IdentifyCategory({
     () => (cards.length >= 5 ? evaluateBest(cards) : null),
     [cards],
   )
-  const expected = evaluated?.category ?? answer.category ?? null
+  // Verdict + expected category both come from the pure grader (`handRanker`).
+  const expected = expectedCategory(cards, answer.category ?? null)
 
   const options = useMemo<HandCategory[]>(
     () =>
@@ -401,7 +406,7 @@ function IdentifyCategory({
   function handleSubmit() {
     if (locked || choice === null) return
     setSubmitted(true)
-    if (choice === expected) {
+    if (gradeIdentifyCategory(cards, answer.category ?? null, choice)) {
       setSolved(true)
       onCorrect()
     } else {
@@ -488,10 +493,7 @@ function OrderCategories({
   reduceMotion,
 }: HandRankerProps & { reduceMotion: boolean }) {
   const categories = useMemo(() => config.categories ?? [], [config.categories])
-  const expected = useMemo(
-    () => [...categories].sort((a, b) => HAND_CATEGORY_RANK[b] - HAND_CATEGORY_RANK[a]),
-    [categories],
-  )
+  const expected = useMemo(() => expectedCategoryOrder(categories), [categories])
   const { order, setOrder } = useOrder(initialSolved ? expected : categories)
   const [submitted, setSubmitted] = useState(initialSolved)
   const [solved, setSolved] = useState(initialSolved)
@@ -500,7 +502,7 @@ function OrderCategories({
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (arraysEqual(order, expected)) {
+    if (gradeOrderCategories(categories, order)) {
       setSolved(true)
       onCorrect()
     } else {
@@ -608,16 +610,6 @@ function OrderHands({
   const [solved, setSolved] = useState(initialSolved)
   const locked = disabled || submitted
 
-  /** Each adjacent pair must be non-increasing in strength. */
-  function isMonotonic(seq: string[]): boolean {
-    for (let i = 1; i < seq.length; i++) {
-      const prev = evalById.get(seq[i - 1])
-      const cur = evalById.get(seq[i])
-      if (prev && cur && compareHands(prev, cur) < 0) return false
-    }
-    return true
-  }
-
   function rowOk(i: number): boolean {
     if (i === 0) return true
     const prev = evalById.get(order[i - 1])
@@ -629,7 +621,7 @@ function OrderHands({
   function handleSubmit() {
     if (locked) return
     setSubmitted(true)
-    if (isMonotonic(order)) {
+    if (gradeOrderHands(hands, order)) {
       setSolved(true)
       onCorrect()
     } else {
@@ -863,8 +855,7 @@ function BuildHand({
   const bySuit = pool.length > 16
 
   function validate(selected: CardId[]): boolean {
-    if (selected.length !== 5) return false
-    return evaluateFive(selected).category === target
+    return gradeBuildHand(selected, target)
   }
 
   function describe(selected: CardId[]): string | null {
@@ -911,8 +902,7 @@ function PickBestFive({
   )
 
   function validate(selected: CardId[]): boolean {
-    if (selected.length !== 5 || !best) return false
-    return compareHands(evaluateFive(selected), best) === 0
+    return gradePickBestFive(cards, selected)
   }
 
   function describe(selected: CardId[]): string | null {

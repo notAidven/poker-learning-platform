@@ -179,6 +179,60 @@ describe('ProgressStore — completion XP (computeLessonXp) and idempotency', ()
   })
 })
 
+describe('ProgressStore — completion celebration (store-owned)', () => {
+  const fresh = { totalXp: 0, streak: 0, lastActivityDate: null }
+
+  it('completeSkillCheck returns a ready reward meter (XP beats + streak), no race', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-05-01' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    store.saveLessonFinished('1', 100, { a: 1, b: 1 }, ['a', 'b'])
+    const { isFirstCompletion, reward } = store.completeSkillCheck('1', 3, 3, fresh)
+    expect(isFirstCompletion).toBe(true)
+
+    const model = await reward
+    expect(model).not.toBeNull()
+    expect(model?.xpGained).toBe(150) // base 100 + full 50 bonus, meter built from prev=0
+    expect(model?.streak).toBe(1)
+    expect(model?.streakIncreased).toBe(true)
+  })
+
+  it('completeGate celebrates a first gate pass with the authoritative XP + streak', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-05-02' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    const { isFirstCompletion, reward } = store.completeGate('foundations', 4, 4, fresh)
+    expect(isFirstCompletion).toBe(true)
+    const model = await reward
+    expect(model?.xpGained).toBe(computeTestOutXp(2)) // tested out 2 lessons
+    expect(model?.streak).toBe(1)
+  })
+
+  it('a replay celebration shows the backend decaying XP, not the full first award', async () => {
+    const backend = new InMemoryProgressBackend({ today: () => '2026-05-03' })
+    backend.seedUser('u')
+    const store = newStore({ backend })
+    await store.syncOnAuth('u')
+
+    store.saveLessonFinished('1', 100, { a: 1 }, ['a'])
+    await store.completeSkillCheck('1', 3, 3, fresh).reward
+    const prevXp = backend.getUser('u')!.totalXp
+
+    // Retaking an already-completed lesson celebrates the small replay XP (not 150).
+    const { reward } = store.completeSkillCheck('1', 3, 3, {
+      totalXp: prevXp,
+      streak: 1,
+      lastActivityDate: '2026-05-03',
+    })
+    const model = await reward
+    expect(model?.xpGained).toBe(computeReplayXp(0))
+  })
+})
+
 describe('ProgressStore — sessions (debounce, deleteField, resume)', () => {
   it('debounces the backend session write and coalesces rapid saves', async () => {
     vi.useFakeTimers()

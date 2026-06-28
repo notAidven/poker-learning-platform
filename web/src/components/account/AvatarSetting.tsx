@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/useAuth'
 import { profileAnimals, type ProfileAnimalId } from '../../data/animals'
 import { updateProfileAnimal } from '../../lib/userProfile'
 import { AnimalAvatar } from '../AnimalAvatar'

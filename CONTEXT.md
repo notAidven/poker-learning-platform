@@ -52,6 +52,39 @@ to name good **seams** in domain terms; grow it lazily as concepts crystallize.
   on sign-out or account switch, wipes all per-user *local* state (progress + casino
   table-clears + bankroll) so a shared device never leaks one account's data into another.
 
+- **AuthService** — the deep, framework-free module that owns the auth orchestration:
+  username->email sign-in, enumeration-safe password reset, reauth-retry credential
+  linking, the shared re-authentication flow, email/password change, and the
+  verify-before-update **email reconciliation**. It depends only on two ports
+  (`AuthPort`, `ProfilePort`) and imports neither `firebase/*` nor React, so the
+  security-sensitive flows are exercised through the service interface — *the interface
+  is the test surface*. `AuthContext` is the thin React adapter that binds it to state,
+  subscribes to the Firebase auth listeners, and wires the **ProgressStore** seam.
+
+- **AuthPort / ProfilePort** — the seams in front of Firebase Auth and the Firestore
+  profile/username-index. Contracts: `AuthPort` = current-user snapshot + sign-in/up,
+  reset, single-attempt link, re-auth (password / Google), reload, verify-email,
+  update-password; `ProfilePort` = `getEmailForUsername · getUserProfile ·
+  syncProfileEmail`. `FirebaseAuthPort` / `FirebaseProfilePort` are the production
+  adapters; in-memory fakes reproduce the same contracts in tests (as
+  `InMemoryProgressBackend` does for progress). The lowercased id-token snapshot the
+  reconcile rule compares is the **token snapshot** (`shouldReconcileEmailOnToken`).
+
+## Poker reads
+
+- **Spot strength** — "what do I hold and how likely am I to win this spot": the
+  equity/odds layer that sits ON TOP of the hand evaluator. The deep **spotStrength**
+  module (`lib/poker/spotStrength`) owns it — a draw's outs → equity, the pot-odds
+  price, "priced in", and the EV of a call — and is the single source of truth read
+  by the casino bots (`opponentAI`), the coach (`lib/ai/coach`), the always-on hints
+  (`poker/hints`), the drill grader (`poker/decisionDrill`), and the Lesson 5/6 math
+  widgets. It never re-implements hand ranking; that stays in **handEvaluator**.
+  - **Equity convention** — a draw's rough equity is the Rule of 2 & 4 *with the
+    big-draw correction* (subtract one point per out above 8 with two cards to come),
+    so a 9-out flush draw on the flop is **35%** (matching Lesson 5 and the exact
+    hypergeometric value), never the uncorrected 36%. Pot odds is an exact price;
+    equity is a deliberately rough teaching estimate.
+
 ## Casino floor
 
 - **Casino table-clear** — a room is "cleared" the first time a hand reaches showdown

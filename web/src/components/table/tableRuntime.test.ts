@@ -24,32 +24,34 @@ import {
 } from '../../lib/poker/handEngine'
 import { getTable } from '../../data/tables'
 import {
-  boardThreatOf,
   buildDeepCoachContext,
   buildLLMContext,
-  coachResultReaction,
-  composeCoachReaction,
-  composeCoachResultReaction,
   createInitialHand,
   createNextHand,
   decideRuleAction,
-  drillSpotSignature,
   finalizeHand,
-  gradeHeroDecision,
-  groupHandLog,
   liveOpponents,
   makeTier3Fallback,
   opponentActionDelayMs,
   OPPONENT_PACING,
   positionFor,
-  readPassiveThenAggressive,
   roleFor,
   summarizeHand,
   toCasinoRuntimeConfig,
   toRuntimeConfig,
-  type HandResultRead,
   type TableRuntimeConfig,
 } from './tableRuntime'
+import {
+  boardThreatOf,
+  coachResultReaction,
+  composeCoachReaction,
+  composeCoachResultReaction,
+  drillSpotSignature,
+  gradeHeroDecision,
+  groupHandLog,
+  readPassiveThenAggressive,
+  type HandResultRead,
+} from './coachFeedback'
 import type { SpotAnalysis } from '../../lib/poker/hints'
 import { casinoTables } from '../../data/casinoTables'
 

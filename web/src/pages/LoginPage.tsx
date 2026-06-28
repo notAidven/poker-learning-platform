@@ -1,7 +1,7 @@
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { getAuthErrorMessage } from '../lib/authErrors'
 import { DUR, EASE } from '../lib/motion'
 import { AuthLayout } from '../components/ui/AuthLayout'
@@ -22,6 +22,9 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  // The reset form accepts an email OR a username, so it keeps its own field
+  // separate from the username used to sign in.
+  const [resetId, setResetId] = useState('')
 
   function goToReset() {
     setError(null)
@@ -66,9 +69,9 @@ export function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await resetPassword(username)
+      await resetPassword(resetId)
       // Generic confirmation regardless of whether the account exists, so the
-      // form can never be used to discover which usernames are registered.
+      // form can never be used to discover which accounts are registered.
       setResetSent(true)
     } catch (err) {
       setError(getAuthErrorMessage(err))
@@ -84,7 +87,7 @@ export function LoginPage() {
     ? {
         title: 'Reset your password',
         subtitle:
-          'Enter your username and we will email a reset link to the address on the account.',
+          'Enter the email or username on your account and we will send a reset link to your email.',
         footer: (
           <p className="text-center text-sm text-night-700/70">
             Remembered it?{' '}
@@ -116,8 +119,12 @@ export function LoginPage() {
     body = (
       <div className="space-y-4">
         <p className="rounded-control border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-800">
-          If an account matches that username, a password reset link is on its way to the email on
-          file. Check your inbox — and your spam folder — to continue.
+          If an account matches that email or username, a password reset link is on its way. Check
+          your inbox — and your spam folder — to continue.
+        </p>
+        <p className="text-center text-xs text-night-700/60">
+          No email? If you signed up with Google, there is no password to reset — use Continue with
+          Google to sign in, then add a password from your profile.
         </p>
         <Button type="button" variant="primary" size="lg" fullWidth onClick={goToSignIn}>
           Back to sign in
@@ -128,18 +135,22 @@ export function LoginPage() {
     body = (
       <form onSubmit={handleReset} className="space-y-4">
         <Field
-          label="Username"
+          label="Email or username"
           type="text"
           autoComplete="username"
           required
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="your_username"
-          hint="Sign in with your username, not the email you signed up with."
+          value={resetId}
+          onChange={(e) => setResetId(e.target.value)}
+          placeholder="you@example.com"
+          hint="Enter the email on your account (or your username) and we will email the reset link."
         />
         <Button type="submit" variant="primary" size="lg" fullWidth loading={submitting}>
           Send reset link
         </Button>
+        <p className="text-center text-xs text-night-700/60">
+          Signed up with Google? There is no password to reset — use Continue with Google to sign
+          in, then add a password from your profile.
+        </p>
       </form>
     )
   } else {
