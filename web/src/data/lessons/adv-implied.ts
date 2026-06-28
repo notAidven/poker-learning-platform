@@ -31,7 +31,9 @@ So a draw that direct pot odds say to **fold** can still be a profitable **call*
 Two cautions:
 
 - You will not always get paid. Opponents can check behind or fold when the scary card comes.
-- **Reverse implied odds**: sometimes you hit but still lose (your small flush runs into a bigger one).`,
+- **Reverse implied odds**: sometimes you hit but still lose (your small flush runs into a bigger one).
+
+You will not need exact math in this lesson. A rough sense of your chances and the chips at stake is enough to make the right call, and a scratchpad is there when you want it.`,
     },
     {
       type: 'problem',
@@ -49,7 +51,10 @@ Two cautions:
         ask: ['potOdds', 'decision'],
         pot: 80,
         betToCall: 40,
-        helperText: 'Compare your one-card equity to the price, ignoring future streets for now.',
+        allowFractionAnswer: true,
+        empiricalTieIn: true,
+        helperText:
+          'Estimate your draw with the Rule of 2 (outs x 2 with one card to come), then compare it to the price. You can enter the price as a fraction, use the scratchpad, or deal it out below to check your estimate.',
       },
       answer: { potOddsPercent: 33, decision: 'fold' },
       feedback: {
@@ -108,7 +113,9 @@ It tells you how much room there is to maneuver.
 - **Low SPR** (small stacks relative to the pot): you are close to **committed**. Hands play for stacks quickly, and there is little extra to win later, so **implied odds shrink**.
 - **High SPR** (deep stacks relative to the pot): lots of betting still to come, so **implied odds grow**. Speculative hands like small pairs and suited connectors go up in value.
 
-Match your plan to the SPR: chase implied odds when deep, and lean on made-hand value when short.`,
+Match your plan to the SPR: chase implied odds when deep, and lean on made-hand value when short.
+
+You do not need to calculate SPR exactly. Just notice whether the stacks are deep or short compared with the pot.`,
     },
     {
       type: 'problem',
@@ -146,7 +153,7 @@ Match your plan to the SPR: chase implied odds when deep, and lean on made-hand 
       id: 'p4',
       showCalculator: true,
       prompt:
-        'A draw on the turn that is about 20% to hit. The pot is 120 and it costs 20 to call. Using EV = (win chance) x (pot) - (lose chance) x (call), what is the EV of calling, in chips?',
+        'A draw on the turn that is about 20% to hit, so you win about 1 in 5 times. The pot is 120 and it costs 20 to call. Using EV = (win chance) x (pot) - (lose chance) x (call), what is the EV of calling, in chips? Use the scratchpad if you like.',
       interaction: 'betting-round',
       concepts: ['ev', 'implied-odds'],
       config: {

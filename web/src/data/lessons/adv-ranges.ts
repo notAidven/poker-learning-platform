@@ -114,7 +114,9 @@ Being first to raise is a **raise-first-in (RFI)**, also called an **open**. A s
 - **Above** the diagonal are the **suited** hands, written with an "s" (AKs).
 - **Below** the diagonal are the **offsuit** hands, written with an "o" (AKo).
 
-There are more offsuit combinations than suited ones, but **suited** hands play a little better because they can make a **flush**. As you move from early to late position, your range grows down and to the right: more pairs, more suited hands, then the offsuit broadways.`,
+There are more offsuit combinations than suited ones, but **suited** hands play a little better because they can make a **flush**. As you move from early to late position, your range grows down and to the right: more pairs, more suited hands, then the offsuit broadways.
+
+You do not need to memorize the grid. It is just a map: pairs on the diagonal, suited above it, offsuit below.`,
     },
     {
       type: 'problem',

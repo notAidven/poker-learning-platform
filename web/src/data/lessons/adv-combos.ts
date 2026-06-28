@@ -29,7 +29,9 @@ export const advCombos: LessonDefinition = {
 - A specific **suited** hand (like AKs): **4** combos, one per suit.
 - A specific **offsuit** hand (like AKo): **12** combos. That is 4 x 4 ways, minus the 4 suited ones.
 
-So offsuit hands are the **most** common kind, and pairs the **rarest**. Counting combos is how you measure how likely a particular holding is.`,
+So offsuit hands are the **most** common kind, and pairs the **rarest**. Counting combos is how you measure how likely a particular holding is.
+
+You do not need to calculate any of this. Just remember the three counts: a pair is 6, a suited hand is 4, and an offsuit hand is 12.`,
     },
     {
       type: 'problem',
@@ -81,7 +83,7 @@ So offsuit hands are the **most** common kind, and pairs the **rarest**. Countin
           'A suited hand has one combo per suit.',
           'Compare 6 versus 4.',
         ],
-        why: 'A specific **pair** has $\\binom{4}{2} = 6$ combos, while a specific **suited** hand has only **4** (one per suit). So before any cards are seen, a pair like KK is a bit more likely than a single suited hand like AKs.',
+        why: 'A specific **pair** has 6 combos. (The notation $\\binom{4}{2} = 6$ is just a shorthand for "the number of ways to choose 2 of the 4 cards.") A specific **suited** hand has only **4**, one per suit. So before any cards are seen, a pair like KK is a bit more likely than a single suited hand like AKs.',
       },
     },
     {
@@ -149,7 +151,7 @@ Blockers make your **bluffs** and big **calls** better. If you hold a card that 
           'Tap only the Aces that are still in the deck for others.',
           'Four Aces minus the one you hold leaves how many?',
         ],
-        why: 'Holding the **Ace of spades** removes it from everyone else. With only **3** Aces left, the opponent can make pocket Aces just $\\binom{3}{2} = 3$ ways instead of 6. That is a **blocker** cutting their combos in half.',
+        why: 'Holding the **Ace of spades** removes it from everyone else. With only **3** Aces left, the opponent can make pocket Aces just 3 ways instead of 6. (Again, $\\binom{3}{2} = 3$ just means "the number of ways to choose 2 of the 3 cards.") That is a **blocker** cutting their combos in half.',
       },
     },
     {

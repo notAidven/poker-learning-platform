@@ -584,6 +584,10 @@ export function BettingRound({
               `$$= ${evBreakdown.equity.toFixed(3)} \\times ${evBreakdown.win} - ${(1 - evBreakdown.equity).toFixed(3)} \\times ${evBreakdown.lose} = ${evBreakdown.ev >= 0 ? '+' : ''}${evBreakdown.ev}\\ \\text{chips}$$`,
             ].join('\n\n')}
           </MathContent>
+          <p className="text-xs text-slate-500">
+            Here <span className="font-semibold">p</span> is your chance to win, so (1 - p) is your
+            chance to lose.
+          </p>
           <p className="text-sm font-semibold text-slate-900">
             {evBreakdown.decision === 'call'
               ? `EV is positive, so calling is profitable (you only needed ${(evBreakdown.required * 100).toFixed(1)}% equity).`

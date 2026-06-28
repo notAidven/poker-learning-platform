@@ -106,7 +106,7 @@ A cash game is different: there, a chip is always worth its face value, so ICM d
       type: 'concept',
       id: 'c2',
       title: 'Push or fold',
-      content: `When your stack is short, about **10 big blinds** or less, a small raise commits most of your chips anyway. So short stacks play **push or fold**: move **all-in** or **fold**, with nothing in between.
+      content: `Stack depth is counted in big blinds: a 10 big blind stack just means you have ten times the big blind in front of you. When your stack is short, about **10 big blinds** or less, a small raise commits most of your chips anyway. So short stacks play **push or fold**: move **all-in** or **fold**, with nothing in between.
 
 Going all-in stacks two edges: your **fold equity** (they may fold now) on top of your hand's equity when called.
 

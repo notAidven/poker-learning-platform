@@ -146,11 +146,9 @@ async function answerAdvanced(index: number, correct: boolean): Promise<void> {
     case 4: // a-q5 compare-events more:'a'
       fireEvent.click(await screen.findByRole('button', { name: correct ? /High SPR/ : /Low SPR/ }))
       break
-    case 5: { // a-q6 betting-round ev-of-call: 15
-      const input = await screen.findByRole('textbox')
-      fireEvent.change(input, { target: { value: correct ? '15' : '99' } })
+    case 5: // a-q6 betting-round choose-action: call (facing a bet → call/raise/fold)
+      fireEvent.click(await screen.findByRole('button', { name: correct ? /Call/ : 'Fold' }))
       break
-    }
     case 6: // a-q7 compare-events more:'a'
       fireEvent.click(await screen.findByRole('button', { name: correct ? /Pocket Jacks/ : /A-Q suited/ }))
       break

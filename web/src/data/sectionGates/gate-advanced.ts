@@ -9,7 +9,7 @@ import type { SectionGateDefinition } from './types'
  *
  *  adv-ranges:  (q1) a weak offsuit Ace is OUT of an early open, (q2) fold junk UTG.
  *  adv-texture: (q3) tell wet from dry, (q4) do not c-bet air into a wet board.
- *  adv-implied: (q5) high SPR favors a draw, (q6) EV of a cheap flush-draw call.
+ *  adv-implied: (q5) high SPR favors a draw, (q6) take the cheap flush-draw call (price vs equity).
  *  adv-combos:  (q7) a pair has more combos than a suited hand, (q8) a Queen blocks QQ.
  *  adv-icm:     (q9) a wide 10bb button jam, (q10) push/fold at a very short stack.
  * Keep `sectionId: 'advanced'`.
@@ -143,7 +143,7 @@ export const gateAdvanced: SectionGateDefinition = {
       id: 'a-q6',
       lessonId: 'adv-implied',
       prompt:
-        'Flop flush draw, about 35% to hit by the river. The pot is 80 and it costs 20 to call. Using EV = (win chance) x (pot) - (lose chance) x (call), what is the EV of calling, in chips?',
+        'Flop flush draw, about 35% to hit by the river. The pot is 80 and it costs only 20 to call, with deep stacks behind. What is the best action?',
       interaction: 'betting-round',
       config: {
         hole: ['AH', 'KH'],
@@ -153,12 +153,15 @@ export const gateAdvanced: SectionGateDefinition = {
         heroStack: 400,
         villainStack: 400,
         facing: { action: 'bet', amount: 20 },
+        sizingOptions: [0.5, 0.75, 1],
         seed: 473,
-        task: 'ev-of-call',
-        helperText: 'There is 80 in the pot and it costs 20 to call. Your flush draw is about 35% to hit.',
+        task: 'choose-action',
+        helperText:
+          'There is 80 in the pot and it costs only 20 to call. A cheap call needs only a small chance to win.',
       },
-      answer: { evChips: 15, evTolerance: 1 },
-      incorrectFeedback: 'EV = 0.35 x 80 - 0.65 x 20 = 28 - 13 = +15 chips, a clearly profitable call.',
+      answer: { action: 'call' },
+      incorrectFeedback:
+        'The price is tiny: 20 to win 80, so you need only about 20% equity, and your flush draw is about 35%. With implied odds on top, this is an easy call.',
     },
     {
       id: 'a-q7',

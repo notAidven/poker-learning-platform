@@ -163,6 +163,49 @@ const GLOSSARY: Record<string, string> = {
   blocker:
     'A card in your hand that removes some of the hands your opponent could have. Holding an Ace, for example, means they can have fewer pairs of Aces.',
 
+  // --- preflop ranges & position (advanced play) ---
+  range: 'The whole set of hands a player could have in a spot, instead of one exact hand.',
+  rfi: 'Raise-first-in: being the first player to enter the pot with a raise before the flop.',
+  'raise-first-in':
+    'Being the first player to enter the pot with a raise before the flop. Also called an RFI.',
+  'tight-aggressive':
+    'A solid style: play relatively few hands (tight), but bet and raise with the ones you do play (aggressive).',
+  dominated:
+    'A hand that shares a card with a stronger one and usually loses to it, like A-9 against A-K.',
+
+  // --- board texture & c-betting (advanced play) ---
+  'board texture': 'How coordinated the flop is: how many straights and flushes it makes possible.',
+  texture: 'How coordinated the board is: how many straights and flushes it makes possible.',
+  'continuation bet':
+    'A bet on the flop by the player who raised before the flop, keeping the pressure on.',
+  'c-bet': 'Short for continuation bet: a flop bet by the player who raised before the flop.',
+  'preflop raiser':
+    'The player who made the last raise before the flop. They often keep betting on the flop.',
+  'pure air': 'A hand with no pair and no draw, so nothing of value yet.',
+
+  // --- implied odds & SPR (advanced play) ---
+  'implied odds':
+    'The extra chips you expect to win on later streets when your draw hits. They can make a call worth it even when the current pot odds say fold.',
+  'reverse implied odds':
+    'The chips you risk losing when you complete your draw but still finish second best, like making a small flush against a bigger one.',
+  spr: 'Stack-to-pot ratio: the effective stack divided by the pot. A low SPR means you are close to all-in; a high SPR leaves room to bet later.',
+  'stack-to-pot ratio':
+    'The effective stack divided by the pot (SPR). It shows how much room is left to bet on later streets.',
+  'effective stack':
+    'The smaller of the two stacks in a pot, since that is the most either player can win or lose.',
+  committed:
+    'So invested in the pot that folding no longer makes sense, because the price to call is small next to what is already there.',
+  'set-mine':
+    'Calling before the flop with a small pocket pair, hoping to flop a set and win a big pot.',
+
+  // --- tournaments & ICM (advanced play) ---
+  icm: 'Independent Chip Model: in a tournament you are paid by finishing place, so the chips you can lose are worth more than the chips you can win.',
+  'independent chip model':
+    'The idea that tournament chips are not cash: because busting pays nothing, the chips you can lose are worth more than the chips you can win.',
+  'pay jump': 'A point in a tournament where finishing one place higher pays more, like moving into the money.',
+  'push or fold': 'Short-stack strategy: move all-in or fold, with no small raises in between.',
+  'push fold': 'Short-stack strategy: move all-in or fold, with no small raises in between.',
+
   // --- other useful terms that appear in the lessons ---
   'playing the board':
     "When the five community cards are your best hand and your hole cards don't help. You can only tie.",
