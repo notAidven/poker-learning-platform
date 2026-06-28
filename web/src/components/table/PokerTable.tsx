@@ -750,8 +750,8 @@ export function PokerTable({
                     <div className="relative flex flex-col items-center">
                       <span className="suited-pot-glow" aria-hidden />
                       {hand.pot > 0 && (
-                        <div className={`mb-1.5 ${handOver ? 'pck-pot-pop' : ''}`}>
-                          <ChipStack amount={hand.pot} size={32} />
+                        <div className={`mb-2 ${handOver ? 'pck-pot-pop' : ''}`}>
+                          <ChipStack amount={hand.pot} size={40} />
                         </div>
                       )}
                       {/* The pile above is the chip imagery; this pill is the clean value
@@ -805,8 +805,9 @@ export function PokerTable({
                     )}
                   </div>
 
-                  {/* Each player's committed bet, shown as a real chip stack on the felt
-                      between them and the pot (the chips then rake into the pot). */}
+                  {/* Each player's committed bet — a clean amount label on the felt between
+                      them and the pot. No per-seat chip graphic: the only chip stack on the
+                      felt is the central pot, so the bets stay readable without clutter. */}
                   {hand.seats.map((seat, index) => {
                     if (seat.folded || seat.committed <= 0) return null
                     const sp = positions[index]
@@ -817,12 +818,16 @@ export function PokerTable({
                     return (
                       <div
                         key={`bet-${seat.id}`}
-                        className="absolute z-[8] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+                        className="absolute z-[8] -translate-x-1/2 -translate-y-1/2"
                         style={{ left: `${bp.x}%`, top: `${bp.y}%` }}
                       >
-                        <ChipStack amount={seat.committed} size={16} />
-                        <span className="rounded-full bg-night-950/75 px-1.5 py-0.5 text-[0.58rem] font-bold tabular-nums text-gold-100 ring-1 ring-inset ring-white/10">
-                          {seat.committed.toLocaleString()}
+                        <span className="inline-flex items-baseline gap-1 rounded-full bg-night-950/80 px-2 py-0.5 shadow-md ring-1 ring-inset ring-gold-300/30">
+                          <span className="text-[0.5rem] font-semibold uppercase tracking-wide text-gold-200/70">
+                            Bet
+                          </span>
+                          <span className="text-[0.66rem] font-bold tabular-nums text-gold-100">
+                            {seat.committed.toLocaleString()}
+                          </span>
                         </span>
                       </div>
                     )
