@@ -29,6 +29,11 @@ type SeatProps = {
   compact?: boolean
   /** Optional in-character table-talk quip (AI tables; hidden when null). */
   talk?: string | null
+  /**
+   * Draw the active-seat countdown ring. Off in the coached room (Room 1) so there is
+   * no time pressure; on by default elsewhere (the glow + plate still flag the turn).
+   */
+  showTurnTimer?: boolean
 }
 
 /** Cosmetic seat clock (seconds) — paces the active glow; it never auto-acts. */
@@ -61,6 +66,7 @@ export function Seat({
   animate,
   compact = false,
   talk,
+  showTurnTimer = true,
 }: SeatProps) {
   const cardSize = compact ? 'sm' : 'md'
   const heroTone = seat.isHero ? 'gold' : 'blue'
@@ -107,7 +113,7 @@ export function Seat({
           >
             {initial}
           </span>
-          {active && <TurnTimerRing size={avatarSize} animate={animate} />}
+          {active && showTurnTimer && <TurnTimerRing size={avatarSize} animate={animate} />}
         </div>
 
         <div className="relative min-w-0 flex-1 leading-tight">

@@ -20,6 +20,7 @@ import { topDenom, type ChipDenom } from '../lesson/interactions/cards/chipDenom
 import { Seat } from './Seat'
 import { ActionControls } from './ActionControls'
 import { CoachPanel } from './CoachPanel'
+import { CoachVerdictModal, type CoachVerdict } from './CoachVerdictModal'
 import { HintBar } from './HintBar'
 import { FirstTableIntro } from './FirstTableIntro'
 import { hasSeenFirstTableIntro } from './tableIntro'
@@ -378,6 +379,13 @@ export function PokerTable({
   // nudge keyed to the spot it belongs to (so it auto-clears once the spot moves on).
   const [drillSession, setDrillSession] = useState<DrillSessionState>(initialDrillSession)
   const [nudge, setNudge] = useState<{ sig: string; text: string } | null>(null)
+  // Decision Drill (Room 1 only): the per-decision coach verdict popup shown after
+  // every hero action. A sound play holds its action here (`pendingAction`) until the
+  // hero has read the read, then applies it on "Continue"; a clear mistake shows the
+  // "why" and is NOT applied, so "Choose again" simply returns them to the spot.
+  const [verdictModal, setVerdictModal] = useState<
+    (CoachVerdict & { pendingAction: AppliedAction | null }) | null
+  >(null)
   // A one-time "how this table works" intro, shown on the first casino entry only.
   const [showIntro, setShowIntro] = useState(() => !hasSeenFirstTableIntro())
 
@@ -568,16 +576,29 @@ export function PokerTable({
         const sig = drillSpotSignature(handIndex, hand, heroIndex)
         setDrillSession((s) => recordDrillResult(s, sig, grade.verdict))
 
+        // Every decision gets a coach verdict popup explaining WHY it was good or not.
+        // The verdict's fields all come from the deterministic grade, so the grading,
+        // accuracy and XP behaviour above are untouched — this only presents the read.
+        const verdict: CoachVerdict = {
+          verdict: grade.verdict,
+          reason: grade.reason,
+          message: grade.message,
+          action: applied.action,
+          amount: applied.amount,
+        }
+
         if (grade.verdict === 'mistake') {
-          // Hold the hero on this spot: surface the WHY hint, do not apply the action.
+          // Hold the hero on this spot: explain WHY in the popup and keep a quiet
+          // rethink reminder in the panel for after they dismiss. Action NOT applied.
           setNudge({ sig, text: grade.message })
+          setVerdictModal({ ...verdict, pendingAction: null })
           return
         }
 
-        // Sound: clear any rethink hint, show the supportive note, and take the action.
+        // Sound: clear any rethink hint, affirm the play in the popup, and hold the
+        // action until they acknowledge it so they can read the coach before play moves.
         setNudge(null)
-        if (grade.message) setReaction({ handIndex, text: grade.message })
-        applyHeroAction(applied)
+        setVerdictModal({ ...verdict, pendingAction: applied })
         return
       }
 
@@ -592,12 +613,22 @@ export function PokerTable({
     [drill, config.support, heroIndex, hand, handIndex, applyHeroAction],
   )
 
+  // Acknowledge the coach verdict popup: a sound play's held action is taken now (so
+  // play only resumes once the read has been seen); a mistake applied nothing, so the
+  // hero simply returns to the spot (the panel keeps the rethink reminder).
+  const dismissVerdict = useCallback(() => {
+    const pending = verdictModal?.pendingAction ?? null
+    setVerdictModal(null)
+    if (pending) applyHeroAction(pending)
+  }, [verdictModal, applyHeroAction])
+
   const startNextHand = useCallback(() => {
     const next = createNextHand(hand, config)
     if (!next) return
     setTalk({})
     setReaction(null)
     setNudge(null)
+    setVerdictModal(null)
     setHandIndex((i) => i + 1)
     setHand(next)
   }, [hand, config])
@@ -641,7 +672,10 @@ export function PokerTable({
   // (the hero's turn, same signature), so it auto-hides once the action moves on.
   const currentSpotSig =
     drill && isHeroTurn && heroIndex >= 0 ? drillSpotSignature(handIndex, hand, heroIndex) : null
-  const liveNudge = nudge && currentSpotSig && nudge.sig === currentSpotSig ? nudge.text : null
+  // The popup carries the rethink "why" while it is open; the panel keeps a quiet
+  // reminder only once the popup is dismissed (so the same line is never doubled).
+  const liveNudge =
+    nudge && currentSpotSig && nudge.sig === currentSpotSig && !verdictModal ? nudge.text : null
   const sessionStats = drill
     ? {
         decisions: drillSession.decisions,
@@ -851,6 +885,9 @@ export function PokerTable({
                           animate={animate}
                           compact={!seat.isHero}
                           talk={talk[seat.id] ?? null}
+                          // Coaching room (Room 1): drop the active-seat countdown ring so
+                          // there is no time pressure (the glow + plate still flag the turn).
+                          showTurnTimer={!drill}
                         />
                       </div>
                     )
@@ -887,7 +924,15 @@ export function PokerTable({
                 bustedNote={bustedNote}
               />
             ) : isHeroTurn && heroIndex >= 0 ? (
-              <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} animate={animate} />
+              <ActionControls
+                state={hand}
+                heroIndex={heroIndex}
+                onAct={heroAct}
+                animate={animate}
+                // Coaching room (Room 1): no turn timer, so the player reads the coach
+                // at their own pace. Casino / Room 2 keep the timer (showTimer default).
+                showTimer={!drill}
+              />
             ) : (
               <div className="suited-apron flex items-center justify-center gap-2.5 rounded-2xl px-4 py-5 text-sm font-semibold text-white/75">
                 <span className="suited-apron-dot opacity-70" aria-hidden />
@@ -919,6 +964,9 @@ export function PokerTable({
 
       {/* Hand log — grouped by street for an easy read */}
       {logGroups.length > 0 && <HandLog key={handIndex} groups={logGroups} />}
+
+      {/* Coaching room (Room 1) only: the per-decision coach verdict popup. */}
+      {drill && <CoachVerdictModal verdict={verdictModal} onContinue={dismissVerdict} />}
     </div>
   )
 }
