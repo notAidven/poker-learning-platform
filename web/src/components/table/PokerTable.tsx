@@ -13,7 +13,6 @@ import {
   CardKitStyles,
   Chip,
   ChipDisc,
-  ChipStack,
   DeckPile,
   EmptySlot,
 } from '../lesson/interactions/cards/PlayingCardKit'
@@ -749,18 +748,18 @@ export function PokerTable({
                   <div className="absolute left-1/2 top-[43%] z-[4] flex w-[82%] max-w-[21rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2.5">
                     <div className="relative flex flex-col items-center">
                       <span className="suited-pot-glow" aria-hidden />
-                      {hand.pot > 0 && (
-                        <div className={`mb-2 ${handOver ? 'pck-pot-pop' : ''}`}>
-                          <ChipStack amount={hand.pot} size={40} />
-                        </div>
-                      )}
-                      {/* The pile above is the chip imagery; this pill is the clean value
-                          label (no extra chip glyph — the stack already carries that read). */}
-                      <span className="inline-flex items-baseline gap-2 rounded-full bg-night-950/70 px-4 py-1.5 shadow-lg ring-1 ring-inset ring-gold-300/40">
-                        <span className="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-gold-200/85">
+                      {/* The pot is a single clean coin pill — cohesive with the bankroll
+                          pills and the per-seat "Bet" labels. No chip stack on the felt. */}
+                      <span
+                        className={`inline-flex items-center gap-2 rounded-full bg-night-950/70 px-4 py-2 shadow-lg ring-1 ring-inset ring-gold-300/40 ${
+                          handOver ? 'pck-pot-pop' : ''
+                        }`}
+                      >
+                        <Chip size={18} tone="gold" />
+                        <span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-gold-200/85">
                           Pot
                         </span>
-                        <span className="text-lg font-bold tabular-nums text-white">
+                        <span className="text-xl font-bold tabular-nums text-white">
                           {hand.pot.toLocaleString()}
                         </span>
                       </span>

@@ -1,8 +1,8 @@
 /**
  * Standard casino chip denominations + their classic colors, shared by the chip
- * visuals in `PlayingCardKit` (the face-on `ChipDisc` and the `ChipStack` of
- * edge-on discs) and by the poker table (to color chips in flight). Kept in its
- * own module so the card-kit file only exports React components (fast-refresh).
+ * visuals in `PlayingCardKit` (the face-on `ChipDisc`) and by the poker table (to
+ * color the chips in flight). Kept in its own module so the card-kit file only
+ * exports React components (fast-refresh).
  *
  * Colors: 1 white, 5 red, 25 green, 100 black, 500 purple, 1000 gold — tuned to the
  * app palette (brass gold, felt-green, oxblood-leaning red, blackened-emerald black)
@@ -23,7 +23,7 @@ const DENOM_STYLE: Record<ChipDenom, DenomStyle> = {
   1000: { hi: '#f6e4ac', face: '#d4ad57', lo: '#9a7029', rim: '#6f5220', spot: '#fff7df', txt: '#4a3712' },
 }
 
-/** Denominations from highest to lowest — the order chips are broken down + stacked. */
+/** Denominations from highest to lowest — used to pick the top denom that colours a chip. */
 export const DENOMS: ChipDenom[] = [1000, 500, 100, 25, 5, 1]
 
 /** CSS custom properties that color a single chip for a given denomination. */
@@ -43,18 +43,4 @@ export function denomVars(d: ChipDenom): CSSProperties {
 export function topDenom(amount: number): ChipDenom {
   for (const d of DENOMS) if (amount >= d) return d
   return 1
-}
-
-/** Greedily break an amount into stacks of standard denominations (high → low). */
-export function breakIntoChips(amount: number): { denom: ChipDenom; count: number }[] {
-  let rest = Math.max(0, Math.round(amount))
-  const out: { denom: ChipDenom; count: number }[] = []
-  for (const d of DENOMS) {
-    const count = Math.floor(rest / d)
-    if (count > 0) {
-      out.push({ denom: d, count })
-      rest -= count * d
-    }
-  }
-  return out
 }

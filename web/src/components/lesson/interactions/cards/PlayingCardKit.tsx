@@ -12,7 +12,7 @@ import type { CSSProperties } from 'react'
 import { motion } from 'motion/react'
 import { EASE } from '../../../../lib/motion'
 import { cardLabel, isRedSuit, parseCardId, type CardId, type CardSuit } from '../../../../types/lesson'
-import { denomVars, topDenom, type ChipDenom } from './chipDenoms'
+import { denomVars, type ChipDenom } from './chipDenoms'
 
 export type CardSize = 'sm' | 'md' | 'lg'
 
@@ -329,14 +329,15 @@ export function Chip({ size = 18, tone = 'gold' }: { size?: number; tone?: ChipT
 
 // --- real, denominated poker chips ------------------------------------------
 //
-// The denomination data + breakdown helpers live in ./chipDenoms (so this file
-// only exports React components). The visuals below render those denominations as
-// a face-on disc (ChipDisc) and a stack of edge-on discs (ChipStack).
+// The denomination data + helpers live in ./chipDenoms (so this file only exports
+// React components). ChipDisc renders a single face-on denominated disc, reused by
+// the lesson pot pile and the casino table's chip-flight animation.
 
 /**
  * A single, face-on poker chip — a domed disc with the classic ring of edge spots
- * and an optional center denomination. Used as the cap of a stack and for chips in
- * flight. `denom` picks the color; `label` shows the value (skipped when too small).
+ * and an optional center denomination. Used for the lesson pot pile and for the
+ * chips in flight on the casino table. `denom` picks the color; `label` shows the
+ * value (skipped when too small).
  */
 export function ChipDisc({
   size = 28,
@@ -360,95 +361,6 @@ export function ChipDisc({
           {denom >= 1000 ? `${denom / 1000}K` : denom}
         </span>
       )}
-    </span>
-  )
-}
-
-/**
- * Chip face styles for the felt's pot stack. Swap CHIP_STACK_STYLE to change the look
- * everywhere the stack is drawn — kept as a single constant so the three directions
- * stay one line apart:
- *   - 'flat'    — flat, minimal modern token: solid fill, thin ring, no gloss or spots.
- *   - 'ceramic' — matte ceramic chip: soft depth, a refined recessed ring, no spots.
- *   - 'clay'    — classic clay chip: matte body with crisp, sparse edge spots.
- */
-export type ChipStyle = 'flat' | 'ceramic' | 'clay'
-export const CHIP_STACK_STYLE: ChipStyle = 'ceramic'
-
-/** Most chips drawn in one stack — capped so even a huge pot stays a tidy stack. */
-const MAX_STACK = 6
-
-/**
- * A prominent stack height for the pot: a few chips for a small pot, then one more per
- * order of magnitude, capped at MAX_STACK. The height is only an at-a-glance cue to
- * size — the precise value is always shown as a number next to the stack — so a
- * growing pot reads as a taller "big stack" without ever fanning into a noisy pile.
- */
-function stackHeight(amount: number): number {
-  return Math.max(3, Math.min(MAX_STACK, Math.floor(Math.log10(amount)) + 2))
-}
-
-/** A single tilted column of edge-on chips topped by a face-on cap. Purely decorative. */
-function ChipColumn({
-  denom,
-  count,
-  width,
-  variant,
-}: {
-  denom: ChipDenom
-  count: number
-  width: number
-  variant: ChipStyle
-}) {
-  const edge = Math.max(4, Math.round(width * 0.3))
-  const step = Math.max(3, Math.round(width * 0.22))
-  const capH = Math.max(6, Math.round(width * 0.46))
-  const n = Math.min(Math.max(1, count), MAX_STACK)
-  const stackTop = (n - 1) * step
-  const height = stackTop + edge + capH * 0.5
-
-  return (
-    <span
-      className={`suited-col suited-col--${variant}`}
-      style={{ width, height, ...denomVars(denom) }}
-      aria-hidden="true"
-    >
-      {Array.from({ length: n }).map((_, i) => (
-        <span key={i} className="suited-edge" style={{ bottom: i * step, height: edge, zIndex: i + 1 }} />
-      ))}
-      <span
-        className="suited-cap"
-        style={{ bottom: stackTop + edge - capH * 0.62, height: capH, zIndex: n + 2 }}
-      />
-    </span>
-  )
-}
-
-/**
- * The felt's "physical chips" for an amount — a single, compact stack of ONE
- * denomination (coloured by the largest chip that fits the amount), tall in rough
- * proportion to the size of the pot. Deliberately NOT broken into every denomination:
- * one quiet token reads far cleaner on a busy felt than a rainbow of columns, and the
- * exact value is always shown as a number beside it (callers pair this with a count
- * label). The face style is set by `variant` (defaults to CHIP_STACK_STYLE). Decorative
- * only — pot math and bets are unchanged.
- */
-export function ChipStack({
-  amount,
-  size = 26,
-  variant = CHIP_STACK_STYLE,
-  className = '',
-}: {
-  amount: number
-  size?: number
-  variant?: ChipStyle
-  className?: string
-}) {
-  const value = Math.round(amount)
-  if (value <= 0) return null
-  return (
-    <span className={`suited-stack ${className}`} aria-hidden="true">
-      <ChipColumn denom={topDenom(value)} count={stackHeight(value)} width={size} variant={variant} />
     </span>
   )
 }
@@ -546,121 +458,6 @@ export const CARD_KIT_STYLES = `
   color: var(--txt);
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
-}
-.suited-stack {
-  display: inline-flex;
-  align-items: flex-end;
-}
-.suited-col {
-  position: relative;
-  display: inline-block;
-}
-.suited-col::before {
-  /* soft contact shadow grounding the stack on the felt */
-  content: '';
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  bottom: -0.18em;
-  height: 0.3em;
-  border-radius: 9999px;
-  background: rgba(7, 21, 15, 0.45);
-  filter: blur(2px);
-}
-/* Base geometry only — the face appearance is supplied by the .suited-col--* variants
-   below (so the chip look is swappable via CHIP_STACK_STYLE without touching anything
-   else). These classes are used ONLY by the pot stack (ChipColumn). */
-.suited-edge {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-radius: 9999px;
-}
-.suited-cap {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-radius: 50%;
-}
-
-/* --- flat: solid fill, thin ring, no gloss or spots (minimal modern token) --- */
-.suited-col--flat .suited-edge {
-  background: var(--face);
-  box-shadow:
-    inset 0 0 0 1px var(--rim),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.14),
-    0 1px 1px rgba(7, 21, 15, 0.4);
-}
-.suited-col--flat .suited-cap {
-  background: var(--face);
-  box-shadow:
-    inset 0 0 0 1px var(--rim),
-    0 1px 2px rgba(7, 21, 15, 0.42);
-}
-.suited-col--flat .suited-cap::after {
-  content: '';
-  position: absolute;
-  inset: 24%;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.22);
-}
-
-/* --- ceramic: soft matte depth, a refined recessed ring, no spots --- */
-.suited-col--ceramic .suited-edge {
-  background: linear-gradient(to bottom, var(--hi) 0%, var(--face) 44%, var(--lo) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-    0 1px 1px rgba(7, 21, 15, 0.38);
-}
-.suited-col--ceramic .suited-cap {
-  background: radial-gradient(circle at 50% 36%, var(--hi) 0%, var(--face) 64%, var(--lo) 100%);
-  box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.22),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.2),
-    inset 0 0 0 1px var(--rim),
-    0 1px 2px rgba(7, 21, 15, 0.45);
-}
-.suited-col--ceramic .suited-cap::after {
-  content: '';
-  position: absolute;
-  inset: 20%;
-  border-radius: 50%;
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.14);
-}
-
-/* --- clay: matte body + crisp, sparse edge spots (the classic chip, refined) --- */
-.suited-col--clay .suited-edge {
-  background: linear-gradient(to bottom, var(--hi) 0%, var(--face) 46%, var(--lo) 100%);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16), 0 1px 1px rgba(7, 21, 15, 0.4);
-}
-.suited-col--clay .suited-edge::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-linear-gradient(90deg, var(--spot) 0 2px, transparent 2px 17px);
-  -webkit-mask: linear-gradient(to bottom, transparent 28%, #000 36% 64%, transparent 72%);
-  mask: linear-gradient(to bottom, transparent 28%, #000 36% 64%, transparent 72%);
-  opacity: 0.72;
-}
-.suited-col--clay .suited-cap {
-  background: radial-gradient(circle at 50% 40%, var(--hi) 0%, var(--face) 60%, var(--lo) 100%);
-  box-shadow:
-    inset 0 0 0 1px var(--rim),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2),
-    0 1px 2px rgba(7, 21, 15, 0.45);
-}
-.suited-col--clay .suited-cap::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-conic-gradient(from 0deg, var(--spot) 0 8deg, transparent 8deg 60deg);
-  -webkit-mask: radial-gradient(circle, transparent 56%, #000 58% 80%, transparent 82%);
-  mask: radial-gradient(circle, transparent 56%, #000 58% 80%, transparent 82%);
 }
 .pck-pot-pop { animation: pck-pop 0.5s cubic-bezier(0.34, 1.5, 0.64, 1); }
 @keyframes pck-pop {
