@@ -133,30 +133,44 @@ rule-based read and the LLM opponents fall back to a deterministic tier-3 strate
 
 ## Why a coach and opponents
 
-Suited teaches with an AI **coach** and AI **opponents** rather than the two obvious
-alternatives. The choice is deliberate, and it follows from the one rule the whole app is built
-on: grade the decision, not the result.
+Suited is built on one rule: **grade the decision, not the result.** A poker trainer has to reward
+decision quality, not the outcome of a hand. Rewarding wins just trains "resulting" (judging a
+decision by how it happened to turn out) in a game where good decisions lose and bad ones win in
+the short run. That single point of view drives the whole architecture, and it rules out the two
+obvious alternatives.
 
-**Not a generator of practice problems.** A model can churn out endless "what is the right play
-here" questions, but in poker that means letting an unverified model decide what counts as
-correct, and that is the one thing this app refuses to do. Poker has a ground truth: outs, equity,
-pot odds, and EV are all computable. So Suited grades decisions in code (the Coaching Room runs a
-deterministic drill grader on top of the rule-based spot read) and uses AI only to explain why a
-graded decision was good or bad. You get checkable feedback, not a guess.
+**Don't reward wins.** Poker is a real skill (Levitt & Miller), but a hand's result is an
+unreliable training signal (Duke). So an app that rewards wins teaches luck, not skill, and Suited
+never grades a hand's outcome.
 
-**Not a one-way tutor.** A lesson reader or a chat tutor can describe pot odds, but reading about
-a fold is not the same as making one when there are chips in the middle. Skill at poker is a
-decision habit under uncertainty, and habits come from doing, not from listening. A passive tutor
-also cannot show you how a hand really unfolds against players who bet, bluff, and trap.
+**Active practice, but only on trustworthy feedback.** Doing beats watching (Freeman) and
+retrieving beats re-reading (Roediger & Karpicke). But a learner who only plays hands and watches
+results is getting active practice on corrupted feedback, which builds bad habits. The fix is
+retrieval against deterministic problems with a ground truth: outs, equity, pot odds, and hand
+rankings are all computable, so Suited grades those choices in code (the Coaching Room runs a
+deterministic drill grader on the rule-based spot read), and skill checks, section gates, and a
+spaced-repetition Daily Review keep you retrieving them.
 
-**So you learn by playing, with help on both sides of the decision.** First you drill in **The
-Coaching Room**, where you play real hands against rule-based opponents and a coach reacts to every
-move with instant, engine-graded feedback. Then you take it to the felt in **The AI Lounge**,
-where you play full hands against LLM opponents (validated against the hand evaluator and clamped
-to legal moves) with a rule-based hint bar at your side, and finally the after-hours **Casino
-Floor**, where the tables get progressively sharper. The coach builds instincts with feedback you
-can trust; the opponents make you use those instincts in live, messy hands where the math finally
-meets a real bet.
+**AI coaches, but never grades.** Skill is real, results are noise, and retention comes from
+retrieving against correct answers, so the only safe role for AI is to coach before a decision or
+reflect after it, never to score a hand's outcome. You then take those instincts to LLM opponents
+in **The AI Lounge** and the after-hours **Casino Floor** (validated against the hand evaluator and
+clamped to legal moves), where the math finally meets a real bet.
+
+**The research behind it:**
+
+- **Levitt & Miller (2011), "Is Poker a Game of Skill or Chance?"** — skilled players at the 2010
+  WSOP earned a **+30.5% ROI** while everyone else lost **−15.6%**; the skill edge is invisible in
+  the short run and only shows across high volume.
+- **Annie Duke, *Thinking in Bets* (2018)** — names **"resulting,"** the error of judging a
+  decision by its outcome; in a noisy game, result-based feedback is unreliable as a training
+  signal.
+- **Freeman et al. (2014, PNAS)** — active learning raises exam scores by **~0.47 SD**, and
+  lecture-only students fail **~1.95×** as often.
+- **Roediger & Karpicke (2006)** — retrieval practice recalled **61%** of material after a week
+  vs. **40%** for restudying, with far less re-reading.
+
+See **[BRAINLIFT.md](BRAINLIFT.md)** for the full AI-first build write-up.
 
 ## Tech stack
 
