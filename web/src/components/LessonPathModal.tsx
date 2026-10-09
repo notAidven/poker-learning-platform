@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import type { LessonMeta } from '../data/lessons'
+import { lessonNumber, type LessonMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { hasLessonContent } from '../data/lessonContent'
 import { hasSkillCheck } from '../data/skillCheckContent'
@@ -65,7 +65,7 @@ export function LessonPathModal({ lesson, status, open, onClose }: LessonPathMod
         </button>
 
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-          {isTable ? 'Casino table' : `Lesson ${lesson.id}`}
+          {isTable ? 'Casino table' : `Lesson ${lessonNumber(lesson.id)}`}
         </p>
         <h2 id="lesson-modal-title" className="mt-1 pr-8 text-lg font-bold text-slate-900">
           {lesson.title}

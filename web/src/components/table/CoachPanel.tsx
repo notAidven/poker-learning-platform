@@ -8,20 +8,26 @@ type CoachPanelProps = {
   turnKey: string
   /** Whether it is currently the hero's turn. */
   active: boolean
+  /**
+   * A short, rule-based reaction to the hero's LAST move (Room 1 only). Shown after
+   * the hero acts, while the opponents play and the hand resolves. Always available
+   * with AI off because it is derived from the rule logic.
+   */
+  reaction?: string | null
 }
 
 type Tip = { text: string; source: 'ai' | 'fallback' }
 
 /**
- * Feature 1 coach. Automatically asks `getCoachTip` for a grounded tip at the
- * start of each hero turn, plus an "Ask coach" button to re-request. A small badge
- * shows whether the tip came from the AI or the built-in rule-based fallback — so
- * the panel always says something useful, even with AI Logic off.
+ * Feature 1 coach. It does two things:
+ *   - BEFORE the hero acts (their turn): asks `getCoachTip` for a grounded tip, with
+ *     an "Ask coach" button to re-request. A badge shows AI vs the built-in rule tip.
+ *   - AFTER the hero acts: shows a short, supportive `reaction` to the move just made.
  *
- * State is keyed to the request (turn + manual nonce) so "loading" is derived, not
- * set synchronously inside the effect.
+ * Everything works with AI off: the tip falls back to the rule-based hint, and the
+ * reaction is always rule-derived.
  */
-export function CoachPanel({ context, turnKey, active }: CoachPanelProps) {
+export function CoachPanel({ context, turnKey, active, reaction }: CoachPanelProps) {
   const [entry, setEntry] = useState<{ key: string; tip: Tip } | null>(null)
   const [nonce, setNonce] = useState(0)
 
@@ -41,11 +47,14 @@ export function CoachPanel({ context, turnKey, active }: CoachPanelProps) {
     }
   }, [requestKey, active, context])
 
+  // After the hero acts it is no longer their turn, so show the supportive reaction.
+  const showReaction = !active && Boolean(reaction)
+
   return (
-    <section className="rounded-2xl border border-brand-200 bg-brand-50/60 p-4 shadow-card">
+    <section className="flex flex-col rounded-2xl border border-brand-200 bg-brand-50/60 p-4 shadow-card">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-bold text-brand-800">
-          <span aria-hidden>♣</span> Coach
+          <span aria-hidden>&clubs;</span> Coach
         </h3>
         {active && fresh && tip && (
           <span
@@ -57,23 +66,30 @@ export function CoachPanel({ context, turnKey, active }: CoachPanelProps) {
             {tip.source === 'ai' ? 'AI' : 'Built-in'}
           </span>
         )}
+        {showReaction && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-emerald-700">
+            Your move
+          </span>
+        )}
       </div>
 
-      <p className="min-h-[2.5rem] text-sm leading-relaxed text-slate-700" aria-live="polite">
-        {!active
-          ? 'Your coach will weigh in when it is your turn.'
-          : loading
-            ? 'Reading the spot…'
-            : tip
-              ? tip.text
-              : 'Thinking about your spot…'}
+      <p className="min-h-[3rem] text-sm leading-relaxed text-slate-700" aria-live="polite">
+        {showReaction
+          ? reaction
+          : !active
+            ? 'Your coach will weigh in when it is your turn, and react after you act.'
+            : loading
+              ? 'Reading the spot…'
+              : tip
+                ? tip.text
+                : 'Thinking about your spot…'}
       </p>
 
       <button
         type="button"
         disabled={!active || loading}
         onClick={() => setNonce((n) => n + 1)}
-        className="mt-3 rounded-xl border border-brand-300 bg-white px-3 py-2 text-xs font-bold text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
+        className="mt-3 self-start rounded-xl border border-brand-300 bg-white px-3 py-2 text-xs font-bold text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
       >
         Ask coach
       </button>

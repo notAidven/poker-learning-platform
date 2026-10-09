@@ -73,38 +73,31 @@ describe('bankroll (local / signed-out path)', () => {
   })
 })
 
-describe('casino unlock gating', () => {
+describe('casino unlock gating (two rooms)', () => {
   it('areAllLessonsComplete ignores ai-table nodes', () => {
     expect(areAllLessonsComplete(ALL_LESSON_IDS)).toBe(true)
     expect(areAllLessonsComplete(ALL_LESSON_IDS.slice(0, -1))).toBe(false)
     expect(areAllLessonsComplete([])).toBe(false)
   })
 
-  it('coached tables require ALL lessons; later coached tables chain', () => {
-    const coached1 = getTable('tbl-coached-1')!
-    expect(isTableUnlocked(coached1, [])).toBe(false)
-    expect(isTableUnlocked(coached1, ALL_LESSON_IDS)).toBe(true)
-
-    // The second coached table also needs the first cleared.
-    const coached2 = getTable('tbl-coached-2')!
-    expect(isTableUnlocked(coached2, ALL_LESSON_IDS)).toBe(false)
-
-    localStorage.setItem('cleared-table-ids', JSON.stringify(['tbl-coached-1']))
-    expect(isTableUnlocked(coached2, ALL_LESSON_IDS)).toBe(true)
+  it('Room 1 opens once every lesson is complete', () => {
+    const room1 = getTable('room-1')!
+    expect(isTableUnlocked(room1, [])).toBe(false)
+    expect(isTableUnlocked(room1, ALL_LESSON_IDS)).toBe(true)
   })
 
-  it('AI tables require ALL lessons AND a cleared coached table', () => {
-    const ai1 = getTable('tbl-ai-1')!
+  it('Room 2 needs ALL lessons AND Room 1 cleared', () => {
+    const room2 = getTable('room-2')!
 
     expect(hasClearedAnyCoachedTable()).toBe(false)
-    // All lessons done, but no coached table cleared yet → still locked.
-    expect(isTableUnlocked(ai1, ALL_LESSON_IDS)).toBe(false)
+    // All lessons done, but Room 1 is not cleared yet → still locked.
+    expect(isTableUnlocked(room2, ALL_LESSON_IDS)).toBe(false)
 
-    localStorage.setItem('cleared-table-ids', JSON.stringify(['tbl-coached-1']))
+    localStorage.setItem('cleared-table-ids', JSON.stringify(['room-1']))
     expect(hasClearedAnyCoachedTable()).toBe(true)
-    expect(isTableUnlocked(ai1, ALL_LESSON_IDS)).toBe(true)
+    expect(isTableUnlocked(room2, ALL_LESSON_IDS)).toBe(true)
 
     // …but only once every lesson is complete.
-    expect(isTableUnlocked(ai1, [])).toBe(false)
+    expect(isTableUnlocked(room2, [])).toBe(false)
   })
 })

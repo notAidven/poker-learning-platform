@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
+import { lessonNumber, sections, type LessonMeta, type SectionId, type SectionMeta } from '../data/lessons'
 import { getTable } from '../data/tables'
 import { isTableCleared, isTableUnlocked } from '../lib/lessonProgress'
 import { LessonPathModal } from './LessonPathModal'
@@ -507,6 +507,7 @@ function PathNode({
     .join(' ')
 
   const isTable = lesson.kind === 'ai-table'
+  const number = lessonNumber(lesson.id)
   const content =
     status === 'completed' ? (
       <CheckIcon className="h-8 w-8" strokeWidth={3} />
@@ -517,17 +518,17 @@ function PathNode({
     ) : isLast ? (
       <StarIcon className="h-8 w-8" />
     ) : (
-      <span className="text-2xl font-bold">{lesson.id}</span>
+      <span className="text-2xl font-bold">{number}</span>
     )
 
-  const badgeText = isTable ? 'Play' : lesson.id === '1' ? 'Start' : 'Up next'
+  const badgeText = isTable ? 'Play' : number === 1 ? 'Start' : 'Up next'
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-4"
-      aria-label={isTable ? `Table: ${lesson.title}` : `Lesson ${lesson.id}: ${lesson.title}`}
+      aria-label={isTable ? `Table: ${lesson.title}` : `Lesson ${number}: ${lesson.title}`}
     >
       <div className={shell}>
         {content}

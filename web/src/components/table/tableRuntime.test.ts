@@ -25,10 +25,12 @@ import {
 import { getTable } from '../../data/tables'
 import {
   buildLLMContext,
+  composeCoachReaction,
   createInitialHand,
   createNextHand,
   decideRuleAction,
   finalizeHand,
+  groupHandLog,
   liveOpponents,
   makeTier3Fallback,
   positionFor,
@@ -37,6 +39,7 @@ import {
   toRuntimeConfig,
   type TableRuntimeConfig,
 } from './tableRuntime'
+import type { SpotAnalysis } from '../../lib/poker/hints'
 
 const COACHED_CFG: TableRuntimeConfig = {
   tableId: 't',
@@ -206,14 +209,16 @@ describe('casino table runtime — AI disabled', () => {
 })
 
 describe('casino table runtime — hand lifecycle helpers', () => {
-  it('maps a TableConfig to the right decision source + support mode', () => {
-    const coached = toRuntimeConfig(getTable('tbl-coached-1')!)
-    expect(coached.opponentSource).toBe('rule')
-    expect(coached.support).toBe('coach')
+  it('maps each room to the right decision source + support mode', () => {
+    const room1 = toRuntimeConfig(getTable('room-1')!)
+    expect(room1.feature).toBe('coached')
+    expect(room1.opponentSource).toBe('rule')
+    expect(room1.support).toBe('coach')
 
-    const ai = toRuntimeConfig(getTable('tbl-ai-1')!)
-    expect(ai.opponentSource).toBe('llm')
-    expect(ai.support).toBe('hints')
+    const room2 = toRuntimeConfig(getTable('room-2')!)
+    expect(room2.feature).toBe('ai')
+    expect(room2.opponentSource).toBe('llm')
+    expect(room2.support).toBe('hints')
   })
 
   it('seats the hero first and posts blinds on the initial hand', () => {
@@ -309,5 +314,91 @@ describe('casino table runtime — hand lifecycle helpers', () => {
     })
     expect(roleFor(headsUp, 0)).toBe('BTN') // button is the small blind heads-up
     expect(roleFor(headsUp, 1)).toBe('BB')
+  })
+})
+
+describe('coach reaction (Room 1, rule-based, AI off)', () => {
+  function analysis(partial: Partial<SpotAnalysis>): SpotAnalysis {
+    return {
+      street: 'flop',
+      madeLabel: null,
+      madeCategory: null,
+      drawName: null,
+      outs: null,
+      equityPct: null,
+      potOddsPct: null,
+      pricedIn: null,
+      facingBet: false,
+      bigBet: false,
+      facts: [],
+      tip: '',
+      ...partial,
+    }
+  }
+
+  it('affirms a value raise with a strong made hand', () => {
+    const text = composeCoachReaction(
+      'raise',
+      'raise',
+      analysis({ madeCategory: 'two-pair', madeLabel: 'Two pair, Kings and Sevens' }),
+    )
+    expect(text.toLowerCase()).toContain('value')
+    expect(text).toContain('two pair')
+  })
+
+  it('supports a disciplined fold the rules also like', () => {
+    const text = composeCoachReaction('fold', 'fold', analysis({ facingBet: true }))
+    expect(text.toLowerCase()).toContain('good fold')
+  })
+
+  it('gently flags a call the rules would fold (with the price)', () => {
+    const text = composeCoachReaction(
+      'call',
+      'fold',
+      analysis({ facingBet: true, potOddsPct: 40 }),
+    )
+    expect(text.toLowerCase()).toContain('loose')
+    expect(text).toContain('40%')
+  })
+
+  it('always returns a non-empty, em-dash-free sentence', () => {
+    for (const a of ['fold', 'check', 'call', 'bet', 'raise'] as const) {
+      for (const r of ['fold', 'check', 'call', 'bet', 'raise'] as const) {
+        const text = composeCoachReaction(a, r, analysis({}))
+        expect(text.length).toBeGreaterThan(0)
+        expect(text).not.toContain('\u2014')
+      }
+    }
+  })
+})
+
+describe('hand log grouping', () => {
+  it('groups a hand by street, drops dealing noise, and carries the board cards', () => {
+    const log = [
+      'You posts SB 5',
+      'Villain posts BB 10',
+      'Dealt You AS KS',
+      'Dealt Villain two cards',
+      'You raises to 30',
+      'Villain calls 20',
+      'Flop: 2H 7D KC',
+      'Villain checks',
+      'You bets 40',
+      'Villain calls 40',
+      'Turn: 9S',
+      'Villain checks',
+      'You checks',
+      'River: 3C',
+      'Villain checks',
+      'You bets 80',
+      'Villain folds',
+      'You wins 200 (uncontested)',
+    ]
+    const groups = groupHandLog(log)
+    expect(groups.map((g) => g.label)).toEqual(['Preflop', 'Flop', 'Turn', 'River', 'Result'])
+    expect(groups[0].entries.every((e) => !e.startsWith('Dealt '))).toBe(true)
+    expect(groups[1].cards).toBe('2H 7D KC')
+    const result = groups.find((g) => g.label === 'Result')!
+    expect(result.entries.some((e) => e.includes('wins 200'))).toBe(true)
   })
 })

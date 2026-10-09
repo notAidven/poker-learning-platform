@@ -25,11 +25,13 @@ import { HintBar } from './HintBar'
 import {
   buildCoachContext,
   buildHintContext,
+  coachReactionFor,
   createInitialHand,
   createNextHand,
   decideLLMAction,
   decideRuleAction,
   finalizeHand,
+  groupHandLog,
   roleFor,
   summarizeHand,
   type HandSummary,
@@ -51,6 +53,28 @@ type PokerTableProps = {
   onRequestRebuy?: () => void
 }
 
+/**
+ * Seat centers on an oval (percent of the felt box). Index 0 (the hero) sits at the
+ * bottom-center; the opponents spread across the TOP arc (215deg to 325deg in screen
+ * space, y pointing down) so they ring the felt up top and never crowd the central
+ * board, which keeps the layout clean for both 3-handed and 4-handed rooms.
+ */
+function ovalPositions(count: number): { x: number; y: number }[] {
+  const cx = 50
+  const cy = 50
+  const rx = 40
+  const ry = 37
+  // Hero pinned a touch inside the bottom edge so a big seat never clips the felt.
+  const positions: { x: number; y: number }[] = [{ x: cx, y: 86 }]
+  const opponents = Math.max(0, count - 1)
+  for (let k = 0; k < opponents; k++) {
+    const t = opponents === 1 ? 0.5 : k / (opponents - 1)
+    const rad = ((215 + t * 110) * Math.PI) / 180
+    positions.push({ x: cx + rx * Math.cos(rad), y: cy + ry * Math.sin(rad) })
+  }
+  return positions
+}
+
 export function PokerTable({
   config,
   heroName = 'You',
@@ -69,6 +93,8 @@ export function PokerTable({
   )
   const [handIndex, setHandIndex] = useState(0)
   const [talk, setTalk] = useState<Record<string, string>>({})
+  // Room 1 only: a supportive, rule-based reaction to the hero's last move.
+  const [reaction, setReaction] = useState<{ handIndex: number; text: string } | null>(null)
 
   const clearedRef = useRef(false)
   const reportedHandRef = useRef(-1)
@@ -165,19 +191,33 @@ export function PokerTable({
     }
   }, [handOver, hand, aiOff, personaForSeat])
 
-  const heroAct = useCallback((applied: AppliedAction) => {
-    setHand((cur) => {
-      if (cur.toActIndex == null || cur.phase === 'complete' || !cur.seats[cur.toActIndex].isHero) {
-        return cur
+  const heroAct = useCallback(
+    (applied: AppliedAction) => {
+      // Coach (Room 1) reacts to the move using the PRE-action state. Pure + AI-free.
+      if (
+        config.support === 'coach' &&
+        heroIndex >= 0 &&
+        hand.toActIndex === heroIndex &&
+        hand.phase !== 'complete'
+      ) {
+        const text = coachReactionFor(hand, heroIndex, applied.action)
+        if (text) setReaction({ handIndex, text })
       }
-      return finalizeHand(applyAction(cur, applied))
-    })
-  }, [])
+      setHand((cur) => {
+        if (cur.toActIndex == null || cur.phase === 'complete' || !cur.seats[cur.toActIndex].isHero) {
+          return cur
+        }
+        return finalizeHand(applyAction(cur, applied))
+      })
+    },
+    [config.support, heroIndex, hand, handIndex],
+  )
 
   const startNextHand = useCallback(() => {
     const next = createNextHand(hand, config)
     if (!next) return
     setTalk({})
+    setReaction(null)
     setHandIndex((i) => i + 1)
     setHand(next)
   }, [hand, config])
@@ -199,9 +239,7 @@ export function PokerTable({
   )
 
   const animate = !reduceMotion
-  const opponents = hand.seats
-    .map((seat, index) => ({ seat, index }))
-    .filter((s) => !s.seat.isHero)
+  const positions = ovalPositions(hand.seats.length)
 
   const survivors = hand.seats.filter((s) => s.stack > 0)
   const heroLiveStack = heroSeat?.stack ?? 0
@@ -210,9 +248,11 @@ export function PokerTable({
   const tableCleared = handOver && survivors.length < 2 && heroLiveStack > 0
 
   const toActName = hand.toActIndex != null ? hand.seats[hand.toActIndex]?.name : undefined
+  const logGroups = useMemo(() => groupHandLog(hand.log), [hand.log])
+  const liveReaction = reaction?.handIndex === handIndex ? reaction.text : null
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <CardKitStyles />
 
       {/* Header */}
@@ -221,8 +261,8 @@ export function PokerTable({
           <h1 className="font-display text-xl font-bold text-ink sm:text-2xl">{config.title}</h1>
           <p className="mt-0.5 text-sm text-night-700/70">
             {config.feature === 'coached'
-              ? `Coached table · Tier ${config.tier} opponents`
-              : 'AI opponents · live table'}
+              ? 'Room 1 · Coached · rule-based opponents'
+              : 'Room 2 · AI opponents · hint bar'}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
@@ -238,136 +278,167 @@ export function PokerTable({
               </span>
             </span>
           )}
-          <Link
-            to="/course"
-            className="rounded-lg border border-night-900/12 bg-white px-3 py-1.5 text-xs font-semibold text-night-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700"
-          >
-            ← Leave table
-          </Link>
-          {aiOff && (
-            <span
-              className="rounded-full bg-slate-800 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-amber-200"
-              title="Firebase AI Logic is not provisioned; opponents and tips use the built-in strategy."
+          <div className="flex items-center gap-1.5">
+            {aiOff && (
+              <span
+                className="rounded-full bg-slate-800 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-amber-200"
+                title="Firebase AI Logic is not provisioned; opponents and tips use the built-in strategy."
+              >
+                AI offline · built-in strategy
+              </span>
+            )}
+            <Link
+              to="/course"
+              className="rounded-lg border border-night-900/12 bg-white px-3 py-1.5 text-xs font-semibold text-night-700 shadow-sm transition hover:border-brand-300 hover:text-brand-700"
             >
-              AI offline · built-in strategy
-            </span>
+              ← Leave
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Table (round felt) + side rail (actions + support), so everything is in view. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
+        {/* Round felt */}
+        <div className="pck-scene relative mx-auto w-full max-w-2xl">
+          <div className="pck-felt relative aspect-square w-full overflow-visible rounded-[44%] border border-emerald-900/40 shadow-xl ring-1 ring-black/25 sm:aspect-[7/5]">
+            {/* Inner felt line */}
+            <div
+              className="pointer-events-none absolute inset-[7%] rounded-[44%] ring-2 ring-white/10"
+              aria-hidden
+            />
+
+            {/* Center: pot, board, deck + burns */}
+            <div className="absolute left-1/2 top-1/2 flex max-w-[64%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+              <div className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-1">
+                <PotPile pop={handOver} />
+                <span className="flex items-center gap-1.5 text-sm font-bold text-amber-100">
+                  <Chip size={14} tone="gold" />
+                  <span className="tabular-nums">Pot {hand.pot.toLocaleString()}</span>
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-1">
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const card = hand.board[i]
+                  return card ? (
+                    <CardFace key={card} id={card} size="sm" animate={animate} delay={i * 60} />
+                  ) : (
+                    <EmptySlot key={`board-${i}`} size="sm" />
+                  )
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <DeckPile size="sm" count={hand.deck.length} />
+                {hand.burns.length > 0 && (
+                  <div className="flex items-center">
+                    {hand.burns.map((c) => (
+                      <BurnCard key={c} size="sm" animate={animate} className="-ml-3 first:ml-0" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Seats around the oval */}
+            {hand.seats.map((seat, index) => {
+              const pos = positions[index]
+              return (
+                <div
+                  key={seat.id}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                >
+                  <Seat
+                    seat={seat}
+                    active={hand.toActIndex === index && !handOver}
+                    thinking={activeOppIndex === index}
+                    role={roleFor(hand, index)}
+                    revealHole={seat.isHero || (Boolean(results?.reachedShowdown) && !seat.folded)}
+                    winner={Boolean(results && results.winnerIds.includes(seat.id))}
+                    animate={animate}
+                    compact={!seat.isHero}
+                    talk={talk[seat.id] ?? null}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right rail: action / results on top (high + visible), then support panel */}
+        <div className="flex flex-col gap-3">
+          {results ? (
+            <ResultsPanel
+              hand={hand}
+              summary={results}
+              canContinue={canContinue}
+              heroBusted={heroBusted}
+              tableCleared={tableCleared}
+              onNextHand={startNextHand}
+              onRequestRebuy={onRequestRebuy}
+            />
+          ) : isHeroTurn && heroIndex >= 0 ? (
+            <div className="space-y-2">
+              <p className="text-center text-sm font-bold text-brand-700">Your turn to act</p>
+              <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} />
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-night-900/10 bg-white p-4 text-center text-sm font-semibold text-night-700/70 shadow-card">
+              {toActName ? `Waiting for ${toActName}…` : 'Dealing…'}
+            </p>
+          )}
+
+          {config.support === 'coach' ? (
+            <CoachPanel
+              context={coachContext}
+              turnKey={turnKey}
+              active={isHeroTurn}
+              reaction={liveReaction}
+            />
+          ) : (
+            <HintBar context={hintContext} active={isHeroTurn} />
           )}
         </div>
       </div>
 
-      {/* The felt */}
-      <div className="pck-scene pck-felt rounded-[2rem] p-4 shadow-xl ring-1 ring-black/20 sm:p-6">
-        {/* Opponents */}
-        <div className="flex flex-wrap items-start justify-center gap-3">
-          {opponents.map(({ seat, index }) => (
-            <Seat
-              key={seat.id}
-              seat={seat}
-              active={hand.toActIndex === index && !handOver}
-              thinking={activeOppIndex === index}
-              role={roleFor(hand, index)}
-              revealHole={Boolean(results?.reachedShowdown) && !seat.folded}
-              winner={Boolean(results && results.winnerIds.includes(seat.id))}
-              animate={animate}
-              compact
-              talk={talk[seat.id] ?? null}
-            />
-          ))}
-        </div>
-
-        {/* Center: deck, burns, board, pot */}
-        <div className="my-5 flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center gap-3">
-            <DeckPile size="sm" count={hand.deck.length} />
-            {hand.burns.length > 0 && (
-              <div className="flex items-center">
-                {hand.burns.map((c) => (
-                  <BurnCard key={c} size="sm" animate={animate} className="-ml-3 first:ml-0" />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-center gap-1.5">
-            {Array.from({ length: 5 }).map((_, i) => {
-              const card = hand.board[i]
-              return card ? (
-                <CardFace key={card} id={card} size="md" animate={animate} delay={i * 60} />
-              ) : (
-                <EmptySlot key={`board-${i}`} size="md" />
-              )
-            })}
-          </div>
-
-          <div className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5">
-            <PotPile pop={handOver} />
-            <span className="flex items-center gap-1.5 text-sm font-bold text-amber-100">
-              <Chip size={15} tone="gold" />
-              <span className="tabular-nums">Pot {hand.pot.toLocaleString()}</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Hero */}
-        {heroSeat && (
-          <div className="flex justify-center">
-            <Seat
-              seat={heroSeat}
-              active={isHeroTurn}
-              thinking={false}
-              role={roleFor(hand, heroIndex)}
-              revealHole
-              winner={Boolean(results && results.winnerIds.includes(heroSeat.id))}
-              animate={animate}
-              talk={talk[heroSeat.id] ?? null}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Action area */}
-      {results ? (
-        <ResultsPanel
-          hand={hand}
-          summary={results}
-          canContinue={canContinue}
-          heroBusted={heroBusted}
-          tableCleared={tableCleared}
-          onNextHand={startNextHand}
-          onRequestRebuy={onRequestRebuy}
-        />
-      ) : isHeroTurn && heroIndex >= 0 ? (
-        <div className="space-y-2">
-          <p className="text-center text-sm font-bold text-brand-700">Your turn to act</p>
-          <ActionControls state={hand} heroIndex={heroIndex} onAct={heroAct} />
-        </div>
-      ) : (
-        <p className="rounded-2xl border border-night-900/10 bg-white p-4 text-center text-sm font-semibold text-night-700/70 shadow-card">
-          {toActName ? `Waiting for ${toActName}…` : 'Dealing…'}
-        </p>
-      )}
-
-      {/* Support: coach (Feature 1) or hint bar (Feature 2) */}
-      {config.support === 'coach' ? (
-        <CoachPanel context={coachContext} turnKey={turnKey} active={isHeroTurn} />
-      ) : (
-        <HintBar context={hintContext} active={isHeroTurn} />
-      )}
-
-      {/* Table feed */}
-      {hand.log.length > 0 && (
-        <details className="rounded-2xl border border-night-900/10 bg-white p-3 text-sm shadow-card">
-          <summary className="cursor-pointer font-semibold text-night-700">Hand log</summary>
-          <ul className="mt-2 space-y-0.5 text-night-700/80">
-            {hand.log.slice(-8).map((line, i) => (
-              <li key={`${handIndex}-${i}`} className="tabular-nums">
-                {line}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      {/* Hand log — grouped by street for an easy read */}
+      {logGroups.length > 0 && <HandLog key={handIndex} groups={logGroups} />}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Hand log
+// ---------------------------------------------------------------------------
+
+function HandLog({ groups }: { groups: ReturnType<typeof groupHandLog> }) {
+  return (
+    <details className="rounded-2xl border border-night-900/10 bg-white p-3 text-sm shadow-card">
+      <summary className="cursor-pointer font-semibold text-night-700">Hand log</summary>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {groups.map((group, gi) => (
+          <div key={`${group.label}-${gi}`} className="rounded-xl bg-night-900/[0.03] p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wide text-night-700/70">
+                {group.label}
+              </span>
+              {group.cards && (
+                <span className="font-mono text-xs font-semibold tabular-nums text-night-700">
+                  {group.cards}
+                </span>
+              )}
+            </div>
+            <ul className="mt-1.5 space-y-0.5 text-[0.8rem] leading-snug text-night-700/85">
+              {group.entries.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </details>
   )
 }
 
@@ -425,7 +496,7 @@ function ResultsPanel({
                 ? `${pot.winnerSeatIds.map(nameFor).join(', ')}${
                     pot.winnerSeatIds.length > 1 ? ' (split)' : ''
                   }`
-                : '—'}
+                : 'no winner'}
             </span>
           </li>
         ))}
@@ -439,7 +510,7 @@ function ResultsPanel({
       )}
       {tableCleared && (
         <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-          You busted every opponent — table cleared!
+          You busted every opponent. Table cleared!
         </p>
       )}
 

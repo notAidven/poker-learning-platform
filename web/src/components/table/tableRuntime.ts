@@ -14,7 +14,7 @@
  * with AI un-provisioned. Nothing here imports React, so it is unit-testable.
  */
 import type { CardId } from '../../types/lesson'
-import type { PokerStreet } from '../../types/poker'
+import type { BettingAction, HandCategory, PokerStreet } from '../../types/poker'
 import {
   createHand,
   legalActions,
@@ -29,7 +29,7 @@ import {
 import { decideAI, type AIDecisionInput, type AITier } from '../../lib/poker/opponentAI'
 import { decideWithLLM, type LLMOpponentContext, type OppDecision } from '../../lib/ai/llmOpponent'
 import type { CoachContext } from '../../lib/ai/coach'
-import type { HintContext } from '../../lib/poker/hints'
+import { analyzeSpot, type HintContext, type SpotAnalysis } from '../../lib/poker/hints'
 import type { TableConfig, TableFeature } from '../../data/tables'
 import type { SeatRole } from './Seat'
 
@@ -399,4 +399,180 @@ export function roleFor(state: HandState, index: number): SeatRole {
   if (index === sb) return 'SB'
   if (index === bb) return 'BB'
   return null
+}
+
+// ---------------------------------------------------------------------------
+// Rule-based coach reaction (Room 1) — a supportive, GUIDING note about the play
+// the hero just made. Pure and AI-free: it reads the spot with `analyzeSpot` and
+// compares the hero's action to the Tier-3 rule recommendation (`decideAI`), so it
+// works fully with AI off. Tested directly in tableRuntime.test.ts.
+// ---------------------------------------------------------------------------
+
+const STRONG_MADE: Set<HandCategory> = new Set([
+  'two-pair',
+  'trips',
+  'straight',
+  'flush',
+  'full-house',
+  'quads',
+  'straight-flush',
+  'royal-flush',
+])
+
+function lowerFirst(s: string): string {
+  return s.length > 0 ? s[0].toLowerCase() + s.slice(1) : s
+}
+
+function upperFirst(s: string): string {
+  return s.length > 0 ? s[0].toUpperCase() + s.slice(1) : s
+}
+
+/**
+ * A short, supportive coaching reaction to the action the hero just took, derived
+ * from the rule logic (no AI). `state` is the pre-action hand (the hero's turn),
+ * `action` is what they chose. Returns '' when there is nothing to read.
+ */
+export function coachReactionFor(
+  state: HandState,
+  heroIndex: number,
+  action: BettingAction,
+): string {
+  const seat = state.seats[heroIndex]
+  if (!seat || !seat.holeCards) return ''
+  const analysis = analyzeSpot(buildHintContext(state, heroIndex))
+  const rec = decideAI(buildAIDecisionInput(state, heroIndex, 3))
+  return composeCoachReaction(action, rec.action, analysis)
+}
+
+/** Pure formatter for the coach reaction (exported for tests). */
+export function composeCoachReaction(
+  hero: BettingAction,
+  rec: BettingAction,
+  a: SpotAnalysis,
+): string {
+  const strong = a.madeCategory ? STRONG_MADE.has(a.madeCategory) : false
+  const handBit = a.madeLabel
+    ? `your ${lowerFirst(a.madeLabel)}`
+    : a.drawName
+      ? `your ${a.drawName}`
+      : 'this hand'
+  const odds = a.potOddsPct
+
+  switch (hero) {
+    case 'fold':
+      if (rec === 'fold') {
+        return a.drawName
+          ? `Good discipline. A ${a.drawName} that is not getting the right price is a fine fold, and you keep your chips for a better spot.`
+          : 'Good fold. With little to continue with, folding keeps your chips for a stronger hand.'
+      }
+      return strong
+        ? `That is a safe fold, but ${handBit} was strong enough to keep going. No harm done, just one to notice next time.`
+        : `Folding is safe here, though ${handBit} could have continued. You can trust spots like this a little more.`
+    case 'check':
+      if (rec === 'bet' || rec === 'raise') {
+        return strong
+          ? `Steady, but with ${handBit} you can bet for value and get paid by weaker hands. Try a bet here next time.`
+          : 'Checking keeps the pot small, which is fine. When you hold a strong hand, look to bet it for value.'
+      }
+      return 'Good check. With a marginal hand, taking a free card and keeping the pot small is the disciplined play.'
+    case 'call':
+      if (rec === 'raise') {
+        return `Solid call, and nice that you stayed in. With ${handBit} you could even raise for value to build the pot.`
+      }
+      if (rec === 'fold') {
+        return odds != null
+          ? `That call is on the loose side. You needed about ${odds}% to call, so make sure the hand clears that price.`
+          : 'That call is a touch loose. Weigh your hand strength against the price before you call.'
+      }
+      return a.drawName && a.pricedIn
+        ? `Good call. Your ${a.drawName} is getting the right price, so chasing it is profitable.`
+        : `Good call. ${upperFirst(handBit)} is worth continuing at this price.`
+    case 'bet':
+      if (rec === 'bet' || rec === 'raise') {
+        return strong
+          ? `Great value bet with ${handBit}. Betting while you are ahead builds the pot you will usually win.`
+          : a.drawName
+            ? `Nice aggression. Betting your ${a.drawName} adds fold equity to the outs you already have.`
+            : 'Nice bet. Putting on pressure can win the pot right now.'
+      }
+      return 'Betting can work as a bluff, but with a weak hand checking is often safer. Bet with a clear plan for why.'
+    case 'raise':
+      if (rec === 'raise' || rec === 'bet') {
+        return strong
+          ? `Great raise. With ${handBit} you raise for value and make weaker hands pay.`
+          : 'Strong, aggressive play. Keep your bluff-raises balanced so you are not doing it too often.'
+      }
+      if (rec === 'call') {
+        return `Aggressive line. Raising is fine, though calling also kept you in cheaply with ${handBit}.`
+      }
+      return 'Bold raise. With little equity that is a bluff, which can work, but pick your spots so you do not bluff too much.'
+    default:
+      return 'Nice. Keep weighing your hand strength against the price before each move.'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hand log — grouped by street for a clean, readable feed
+// ---------------------------------------------------------------------------
+
+export type HandLogGroup = {
+  /** 'Preflop' | 'Flop' | 'Turn' | 'River' | 'Result'. */
+  label: string
+  /** Community cards dealt on this street (Flop/Turn/River), as a "AS KD 2C" string. */
+  cards?: string
+  entries: string[]
+}
+
+/**
+ * Turn the engine's flat `log` into clean per-street groups: the blind posts and
+ * preflop action, then one group per dealt street (carrying its cards), then a
+ * "Result" group for the showdown / payout lines. Pure dealing noise
+ * ("Dealt ... two cards") is dropped so the feed stays concise. Used by the table
+ * hand-log panel; pure, so it is unit-tested directly.
+ */
+export function groupHandLog(log: string[]): HandLogGroup[] {
+  const groups: HandLogGroup[] = []
+  let current: HandLogGroup = { label: 'Preflop', entries: [] }
+
+  const flush = () => {
+    if (current.entries.length > 0 || current.cards) groups.push(current)
+  }
+
+  for (const line of log) {
+    if (line.startsWith('Dealt ')) continue // dealing noise
+
+    const flop = /^Flop:\s*(.+)$/.exec(line)
+    const turn = /^Turn:\s*(.+)$/.exec(line)
+    const river = /^River:\s*(.+)$/.exec(line)
+    if (flop) {
+      flush()
+      current = { label: 'Flop', cards: flop[1], entries: [] }
+      continue
+    }
+    if (turn) {
+      flush()
+      current = { label: 'Turn', cards: turn[1], entries: [] }
+      continue
+    }
+    if (river) {
+      flush()
+      current = { label: 'River', cards: river[1], entries: [] }
+      continue
+    }
+
+    // Showdown / payout lines collect into a single "Result" group at the end.
+    if (/\b(shows|wins|split)\b/.test(line)) {
+      if (current.label !== 'Result') {
+        flush()
+        current = { label: 'Result', entries: [] }
+      }
+      current.entries.push(line)
+      continue
+    }
+
+    current.entries.push(line)
+  }
+
+  flush()
+  return groups
 }

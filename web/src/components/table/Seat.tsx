@@ -48,9 +48,13 @@ export function Seat({
       ? 'ring-2 ring-white shadow-[0_0_18px_-2px_rgba(255,255,255,0.65)]'
       : 'ring-1 ring-white/10'
 
+  // Opponents render narrow so several seats fit around the oval on a phone; the
+  // hero seat (always at the bottom, with bigger cards) gets a little more room.
+  const sizeCls = compact ? 'w-[5.75rem] gap-0.5 px-2 py-1.5' : 'w-[7.25rem] gap-1 px-3 py-2'
+
   return (
     <div
-      className={`relative flex w-[7.5rem] flex-col items-center gap-1 rounded-2xl bg-black/25 px-3 py-2 backdrop-blur-sm transition ${ring} ${
+      className={`relative flex flex-col items-center rounded-2xl bg-black/25 backdrop-blur-sm transition ${sizeCls} ${ring} ${
         seat.folded ? 'opacity-50' : ''
       }`}
     >
