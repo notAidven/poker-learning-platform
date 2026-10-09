@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveStreak, getLevelProgress } from '../lib/gamification'
 import { AnimalAvatar } from '../components/AnimalAvatar'
 import { SetPasswordCard } from '../components/SetPasswordCard'
+import { AccountSettings } from '../components/account/AccountSettings'
+import { SET_PASSWORD_ANCHOR_ID } from '../components/account/PasswordSetting'
 import { Button, buttonVariants } from '../components/ui/Button'
 import { NightPanel } from '../components/ui/NightPanel'
 import { StatToken } from '../components/ui/StatToken'
@@ -57,7 +59,14 @@ export function ProfilePage() {
         </div>
       </NightPanel>
 
-      <SetPasswordCard />
+      <AccountSettings />
+
+      {/* The canonical "set a password" flow for Google-only accounts. The
+          Account settings password row scrolls/focuses this when needed, so we
+          keep a single source of truth instead of duplicating the link flow. */}
+      <div id={SET_PASSWORD_ANCHOR_ID} tabIndex={-1} className="scroll-mt-24 focus:outline-none">
+        <SetPasswordCard />
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link to="/course" className={buttonVariants({ variant: 'primary', size: 'lg', className: 'w-full' })}>

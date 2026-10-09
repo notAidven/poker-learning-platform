@@ -4,10 +4,13 @@ import {
   createUserWithEmailAndPassword,
   linkWithCredential,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   reauthenticateWithPopup,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updatePassword,
+  verifyBeforeUpdateEmail,
   type User,
 } from 'firebase/auth'
 import {
@@ -23,11 +26,14 @@ import { auth } from '../lib/firebase'
 import { E2E_BYPASS_AUTH, E2E_MOCK_PROFILE } from '../lib/e2eBypass'
 import {
   getProviderIds,
+  hasPasswordProvider,
+  hasGoogleProvider,
   needsPasswordSetup as deriveNeedsPasswordSetup,
 } from '../lib/authProviders'
 import {
   getEmailForUsername,
   getUserProfile,
+  syncProfileEmail,
   type UserProfile,
 } from '../lib/userProfile'
 import { syncProgressOnAuth } from '../lib/progressSync'
@@ -42,6 +48,8 @@ type AuthContextValue = {
    * credential yet, so they should "set a password" to enable email sign-in.
    */
   needsPasswordSetup: boolean
+  /** True when an email/password credential is linked (email sign-in works). */
+  hasPassword: boolean
   refreshProfile: () => Promise<void>
   signUpWithEmail: (email: string, password: string) => Promise<void>
   signInWithUsername: (username: string, password: string) => Promise<void>
@@ -53,6 +61,21 @@ type AuthContextValue = {
    * fresh login before the link.
    */
   linkEmailPassword: (password: string) => Promise<void>
+  /**
+   * The single re-authentication flow shared by the email + password changes.
+   * Pass the current password for accounts that have one; Google-only accounts
+   * re-auth through a Google popup (the `password` arg is ignored). Throws the
+   * raw Firebase error so callers can map it via `getAuthErrorMessage(_, 'reauth')`.
+   */
+  reauthenticate: (password?: string) => Promise<void>
+  /**
+   * Start an email change. Sends a confirmation link to the NEW address via
+   * `verifyBeforeUpdateEmail`; the account email only changes after the user
+   * opens that link. May throw `auth/requires-recent-login` — re-auth and retry.
+   */
+  changeEmail: (newEmail: string) => Promise<void>
+  /** Set a new password (caller must `reauthenticate` first). */
+  changePassword: (newPassword: string) => Promise<void>
   logOut: () => Promise<void>
 }
 
@@ -68,6 +91,34 @@ function isRecentLoginError(error: unknown): boolean {
     'code' in error &&
     (error as { code?: unknown }).code === 'auth/requires-recent-login'
   )
+}
+
+/**
+ * After `verifyBeforeUpdateEmail`, the auth email flips only once the user opens
+ * the confirmation link (usually surfaced on the next load with a fresh token).
+ * When we notice the live auth email no longer matches the stored profile email,
+ * reconcile Firestore so the profile + username-login lookup track the new
+ * address. Best-effort: a failure just leaves the prior profile and never throws.
+ */
+async function reconcileProfileEmail(
+  user: User,
+  profile: UserProfile | null,
+): Promise<UserProfile | null> {
+  if (
+    !profile ||
+    !user.email ||
+    !profile.username ||
+    profile.email === user.email.toLowerCase()
+  ) {
+    return profile
+  }
+  try {
+    await syncProfileEmail(user.uid, profile.username, user.email)
+    return await getUserProfile(user.uid)
+  } catch (err) {
+    console.warn('Could not sync the updated email into the profile:', err)
+    return profile
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -90,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     const data = await getUserProfile(current.uid)
-    setProfile(data)
+    setProfile(await reconcileProfileEmail(current, data))
   }, [])
 
   useEffect(() => {
@@ -112,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         if (nextUser) {
           const data = await getUserProfile(nextUser.uid)
-          setProfile(data)
+          setProfile(await reconcileProfileEmail(nextUser, data))
           await syncProgressOnAuth(nextUser.uid)
         } else {
           setProfile(null)
@@ -195,6 +246,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProviderIds(getProviderIds(auth.currentUser))
   }, [])
 
+  const reauthenticate = useCallback(async (password?: string) => {
+    const current = auth.currentUser
+    if (!current) {
+      throw new Error('You need to be signed in to do that.')
+    }
+    const ids = getProviderIds(current)
+    // Prefer the password path when the account has one (the user typed it).
+    if (hasPasswordProvider(ids)) {
+      if (!current.email) {
+        throw new Error('Your account has no email address.')
+      }
+      if (!password) {
+        throw new Error('Enter your current password to continue.')
+      }
+      const credential = EmailAuthProvider.credential(current.email, password)
+      await reauthenticateWithCredential(current, credential)
+    } else if (hasGoogleProvider(ids)) {
+      await reauthenticateWithPopup(current, googleProvider)
+    } else {
+      throw new Error('Re-authentication is not available for this account.')
+    }
+  }, [])
+
+  const changeEmail = useCallback(async (newEmail: string) => {
+    const current = auth.currentUser
+    if (!current) {
+      throw new Error('You need to be signed in to change your email.')
+    }
+    // Firebase normalizes the address; the change only applies once the user
+    // opens the confirmation link sent to the NEW address.
+    await verifyBeforeUpdateEmail(current, newEmail.trim())
+  }, [])
+
+  const changePassword = useCallback(async (newPassword: string) => {
+    const current = auth.currentUser
+    if (!current) {
+      throw new Error('You need to be signed in to change your password.')
+    }
+    await updatePassword(current, newPassword)
+  }, [])
+
   const logOut = useCallback(async () => {
     await signOut(auth)
     // Shared-device safety: drop this user's local progress immediately so the
@@ -210,17 +302,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [providerIds],
   )
 
+  const hasPassword = useMemo(
+    () => hasPasswordProvider(providerIds),
+    [providerIds],
+  )
+
   const value = useMemo(
     () => ({
       user,
       profile,
       loading,
       needsPasswordSetup,
+      hasPassword,
       refreshProfile,
       signUpWithEmail,
       signInWithUsername,
       signInWithGoogle,
       linkEmailPassword,
+      reauthenticate,
+      changeEmail,
+      changePassword,
       logOut,
     }),
     [
@@ -228,11 +329,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       needsPasswordSetup,
+      hasPassword,
       refreshProfile,
       signUpWithEmail,
       signInWithUsername,
       signInWithGoogle,
       linkEmailPassword,
+      reauthenticate,
+      changeEmail,
+      changePassword,
       logOut,
     ],
   )
